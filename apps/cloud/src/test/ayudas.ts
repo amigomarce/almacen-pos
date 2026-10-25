@@ -6,7 +6,7 @@ import type {
 } from '../instalaciones/servicio.js';
 import type { categories, products, saleItems, sales, stockMovements } from '../db/schema.js';
 import type { EventoSaliente, RepoSyncNube } from '../sincronizacion/servicio.js';
-import type { ProductoCloud, RepoProductos } from '../productos/servicio.js';
+import type { FiltroPrecios, ProductoCloud, RepoProductos } from '../productos/servicio.js';
 
 export const SECRETO_JWT = 'secreto-de-prueba-suficientemente-largo-para-hs256';
 
@@ -189,6 +189,28 @@ export function repoProductosFalso(iniciales: ProductoCloud[] = []): RepoProduct
         op: 'UPDATE',
         payload: { id: p.id, priceClp: p.priceClp, version: p.version },
       });
+      return Promise.resolve();
+    },
+    listarPorFiltro(ownerId, filtro: FiltroPrecios) {
+      const coinciden = filas.filter(
+        (f) =>
+          f.ownerId === ownerId &&
+          (!filtro.categoriaId || f.categoryId === filtro.categoriaId) &&
+          (!filtro.marca || f.brand === filtro.marca),
+      );
+      return Promise.resolve(coinciden);
+    },
+    guardarCambios(ownerId, productos) {
+      for (const p of productos) {
+        const idx = filas.findIndex((f) => f.id === p.id && f.ownerId === ownerId);
+        if (idx >= 0) filas[idx] = p;
+        encolados.push({
+          entity: 'products',
+          entityId: p.id,
+          op: 'UPDATE',
+          payload: { id: p.id, priceClp: p.priceClp, version: p.version },
+        });
+      }
       return Promise.resolve();
     },
   };

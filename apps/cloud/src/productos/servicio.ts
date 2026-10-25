@@ -19,6 +19,15 @@ export interface RepoProductos {
   listar(ownerId: string, buscar: string, limite: number): Promise<ProductoCloud[]>;
   /** Actualiza el producto y encola el evento hacia la caja en la misma transacción. */
   guardarCambio(ownerId: string, p: ProductoCloud): Promise<void>;
+  listarPorFiltro(ownerId: string, filtro: FiltroPrecios): Promise<ProductoCloud[]>;
+  /** Actualiza varios productos y encola un evento por cada uno (atómico). */
+  guardarCambios(ownerId: string, productos: readonly ProductoCloud[]): Promise<void>;
+}
+
+/** Filtro para el cambio masivo de precios (al menos uno de los dos). */
+export interface FiltroPrecios {
+  categoriaId?: string;
+  marca?: string;
 }
 
 export type ResultadoEdicion =
@@ -46,4 +55,28 @@ export async function editarProducto(
   };
   await repo.guardarCambio(args.ownerId, actualizado);
   return { ok: true, producto: actualizado };
+}
+
+export interface ResultadoCambioMasivo {
+  cantidad: number;
+  productos: ProductoCloud[];
+}
+
+/**
+ * Cambio masivo de precios por categoría y/o marca, con un porcentaje (+5 o −10). Cada
+ * producto sube su `version` y se encola un evento hacia la caja (el dueño gana).
+ */
+export async function cambioMasivoPrecio(
+  repo: RepoProductos,
+  args: { ownerId: string; filtro: FiltroPrecios; porcentaje: number; ahora: Date },
+): Promise<ResultadoCambioMasivo> {
+  const afectados = await repo.listarPorFiltro(args.ownerId, args.filtro);
+  const actualizados = afectados.map((p) => ({
+    ...p,
+    priceClp: Math.max(1, Math.round(p.priceClp * (1 + args.porcentaje / 100))),
+    version: p.version + 1,
+    updatedAt: args.ahora,
+  }));
+  await repo.guardarCambios(args.ownerId, actualizados);
+  return { cantidad: actualizados.length, productos: actualizados };
 }

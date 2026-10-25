@@ -60,6 +60,27 @@ describe('rutas de productos del dueño', () => {
     expect(res.json()).not.toHaveProperty('version');
   });
 
+  it('cambio masivo por categoría', async () => {
+    const app = crearApp({
+      db: dbFalsa(),
+      repoProductos: repoProductosFalso([
+        productoCloud({ id: 'p1', name: 'A', categoryId: 'c1', priceClp: 1000 }),
+        productoCloud({ id: 'p2', name: 'B', categoryId: 'c1', priceClp: 2000 }),
+        productoCloud({ id: 'p3', name: 'C', categoryId: 'c2', priceClp: 500 }),
+      ]),
+      verificarJwt: crearVerificadorJwt(SECRETO_JWT),
+    });
+    const token = await firmarJwt('dueno-1');
+    const res = await app.inject({
+      method: 'POST',
+      url: '/products/bulk-price',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { filtro: { categoriaId: 'c1' }, porcentaje: 10 },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ cantidad: number }>().cantidad).toBe(2);
+  });
+
   it('rechaza sin JWT válido', async () => {
     const res = await crearAppDePrueba().inject({ method: 'GET', url: '/products' });
     expect(res.statusCode).toBe(401);

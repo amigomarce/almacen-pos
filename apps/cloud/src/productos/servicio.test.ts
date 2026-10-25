@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editarProducto } from './servicio.js';
+import { cambioMasivoPrecio, editarProducto } from './servicio.js';
 import { productoCloud, repoProductosFalso } from '../test/ayudas.js';
 
 describe('editarProducto (dueño)', () => {
@@ -38,5 +38,37 @@ describe('editarProducto (dueño)', () => {
       ahora: new Date(),
     });
     expect(r).toEqual({ ok: false, error: 'PRECIO_INVALIDO' });
+  });
+});
+
+describe('cambioMasivoPrecio', () => {
+  it('sube el precio por marca y encola cada producto afectado', async () => {
+    const repo = repoProductosFalso([
+      productoCloud({ id: 'p1', brand: 'Marca A', priceClp: 1000 }),
+      productoCloud({ id: 'p2', brand: 'Marca A', priceClp: 2000 }),
+      productoCloud({ id: 'p3', brand: 'Marca B', priceClp: 500 }),
+    ]);
+    const r = await cambioMasivoPrecio(repo, {
+      ownerId: 'dueno-1',
+      filtro: { marca: 'Marca A' },
+      porcentaje: 10,
+      ahora: new Date(),
+    });
+    expect(r.cantidad).toBe(2);
+    expect(repo.filas.find((f) => f.id === 'p1')?.priceClp).toBe(1100);
+    expect(repo.filas.find((f) => f.id === 'p2')?.priceClp).toBe(2200);
+    expect(repo.filas.find((f) => f.id === 'p3')?.priceClp).toBe(500);
+    expect(repo.encolados).toHaveLength(2);
+  });
+
+  it('admite porcentajes negativos y nunca deja el precio bajo $1', async () => {
+    const repo = repoProductosFalso([productoCloud({ id: 'p1', categoryId: 'c1', priceClp: 10 })]);
+    await cambioMasivoPrecio(repo, {
+      ownerId: 'dueno-1',
+      filtro: { categoriaId: 'c1' },
+      porcentaje: -90,
+      ahora: new Date(),
+    });
+    expect(repo.filas.find((f) => f.id === 'p1')?.priceClp).toBe(1);
   });
 });

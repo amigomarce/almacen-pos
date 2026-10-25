@@ -2,8 +2,10 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { requiereDueno } from '../auth/requerir.js';
 import type { VerificadorJwt } from '../auth/supabase.js';
 import {
+  cambioMasivoPrecio,
   editarProducto,
   type CambiosProducto,
+  type FiltroPrecios,
   type ProductoCloud,
   type RepoProductos,
 } from './servicio.js';
@@ -106,6 +108,44 @@ export function registrarProductos(
           : reply.code(400).send({ error: 'PRECIO_INVALIDO', mensaje: 'Precio inválido' });
       }
       return publico(r.producto);
+    },
+  );
+
+  /** Cambio masivo de precios por categoría y/o marca, con un porcentaje (+5, −10...). */
+  app.post<{ Body: { filtro: FiltroPrecios; porcentaje: number } }>(
+    '/products/bulk-price',
+    {
+      onRequest: conDueno,
+      schema: {
+        body: {
+          type: 'object',
+          required: ['filtro', 'porcentaje'],
+          additionalProperties: false,
+          properties: {
+            filtro: {
+              type: 'object',
+              minProperties: 1,
+              additionalProperties: false,
+              properties: {
+                categoriaId: { type: 'string', minLength: 1, maxLength: 64 },
+                marca: { type: 'string', minLength: 1, maxLength: 60 },
+              },
+            },
+            porcentaje: { type: 'number', minimum: -90, maximum: 1000 },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const ownerId = duenoDe(req, reply);
+      if (!ownerId) return;
+      const r = await cambioMasivoPrecio(repo, {
+        ownerId,
+        filtro: req.body.filtro,
+        porcentaje: req.body.porcentaje,
+        ahora: new Date(),
+      });
+      return { cantidad: r.cantidad, productos: r.productos.map(publico) };
     },
   );
 }

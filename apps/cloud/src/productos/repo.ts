@@ -2,7 +2,7 @@ import { and, eq, isNull, like, or } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { outbox, products } from '../db/schema.js';
 import { productoAWire } from '../sincronizacion/mapping.js';
-import type { ProductoCloud, RepoProductos } from './servicio.js';
+import type { FiltroPrecios, ProductoCloud, RepoProductos } from './servicio.js';
 
 /** Repositorio real de productos del dueño sobre PostgreSQL (Drizzle). */
 export function crearRepoProductos(db: Db): RepoProductos {
@@ -49,6 +49,38 @@ export function crearRepoProductos(db: Db): RepoProductos {
           op: 'UPDATE',
           payload: productoAWire(p),
         });
+      });
+    },
+    async listarPorFiltro(ownerId, filtro: FiltroPrecios) {
+      return db
+        .select()
+        .from(products)
+        .where(
+          and(
+            eq(products.ownerId, ownerId),
+            isNull(products.deletedAt),
+            ...(filtro.categoriaId ? [eq(products.categoryId, filtro.categoriaId)] : []),
+            ...(filtro.marca ? [eq(products.brand, filtro.marca)] : []),
+          ),
+        );
+    },
+    async guardarCambios(ownerId, productos: readonly ProductoCloud[]) {
+      if (productos.length === 0) return;
+      await db.transaction(async (tx) => {
+        for (const p of productos) {
+          const { id: _id, ...set } = p;
+          await tx
+            .update(products)
+            .set(set)
+            .where(and(eq(products.id, p.id), eq(products.ownerId, ownerId)));
+          await tx.insert(outbox).values({
+            ownerId,
+            entity: 'products',
+            entityId: p.id,
+            op: 'UPDATE',
+            payload: productoAWire(p),
+          });
+        }
       });
     },
   };
