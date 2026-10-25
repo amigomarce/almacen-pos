@@ -1,10 +1,21 @@
 import { formatearCantidad, formatearClp, MILI } from '@almacen/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ErrorApi, type ClienteApi, type Cotizacion, type ProductoLocal } from '../api.js';
+import {
+  ErrorApi,
+  type BotonRapido,
+  type ClienteApi,
+  type Cotizacion,
+  type ProductoLocal,
+} from '../api.js';
 import { useTeclado } from '../useTeclado.js';
 import {
+  agregarMontoLibre,
+  agregarPorMonto,
   agregarProducto,
+  aPedido,
   cambiarCantidad,
+  cambiarMonto,
+  montoLocal,
   CARRITO_VACIO,
   contarArticulos,
   lineaSeleccionada,
@@ -18,9 +29,19 @@ import { DetectorEscaneo } from '../venta/detector.js';
 import { leerEntrada } from '../venta/entrada.js';
 import { ModalBuscar } from '../venta/ModalBuscar.js';
 import { ModalCantidad } from '../venta/ModalCantidad.js';
+import { ModalMontoLibre } from '../venta/ModalMontoLibre.js';
+import { ModalPesoMonto, type ResultadoPesoMonto } from '../venta/ModalPesoMonto.js';
 
 type Mensaje = { tipo: 'error' | 'aviso'; texto: string } | null;
-type Ventana = { tipo: 'BUSCAR'; texto: string } | { tipo: 'CANTIDAD' } | null;
+type Ventana =
+  | { tipo: 'BUSCAR'; texto: string }
+  | { tipo: 'CANTIDAD' }
+  /** Producto por peso nuevo: kg o monto. */
+  | { tipo: 'PESO_MONTO'; producto: ProductoLocal }
+  /** F4 sobre una línea por peso. */
+  | { tipo: 'EDITAR_PESO' }
+  | { tipo: 'MONTO_LIBRE'; nombre: string }
+  | null;
 
 /** Esc dos veces dentro de este tiempo cancela la venta (sin ventana de confirmación). */
 const ESPERA_CANCELAR_MS = 3000;
@@ -39,22 +60,41 @@ export function PantallaVenta({ api }: Props) {
   const [mensaje, setMensaje] = useState<Mensaje>(null);
   const [ventana, setVentana] = useState<Ventana>(null);
   const [confirmarCancelar, setConfirmarCancelar] = useState(false);
+  const [botones, setBotones] = useState<BotonRapido[]>([]);
   const campo = useRef<HTMLInputElement>(null);
   const detector = useRef(new DetectorEscaneo());
 
-  // Foco permanente en el campo de escaneo (el lector "tipea" ahí).
+  // Foco permanente en el campo de escaneo (el lector "tipea" ahí), salvo con una ventana abierta.
+  const hayVentana = useRef(false);
+  useEffect(() => {
+    hayVentana.current = ventana !== null;
+  });
   const enfocar = useCallback(() => {
-    setTimeout(() => campo.current?.focus(), 0);
+    setTimeout(() => {
+      if (!hayVentana.current) campo.current?.focus();
+    }, 0);
   }, []);
+
+  // Botones de venta rápida (pan, huevos, verduras...). Si fallan, la caja vende igual.
+  useEffect(() => {
+    let vigente = true;
+    api
+      .botonesRapidos()
+      .then((b) => {
+        if (vigente) setBotones(b);
+      })
+      .catch(() => undefined);
+    return () => {
+      vigente = false;
+    };
+  }, [api]);
 
   // Cotiza en el servidor cada vez que cambia el carrito: precios vigentes y promociones.
   useEffect(() => {
     if (carrito.lineas.length === 0) return;
     let vigente = true;
     api
-      .cotizar(
-        carrito.lineas.map((l) => ({ productoId: l.productoId, cantidadMilli: l.cantidadMilli })),
-      )
+      .cotizar(aPedido(carrito.lineas))
       .then((datos) => {
         if (vigente) setCotizacion({ carrito, datos });
       })
@@ -70,22 +110,39 @@ export function PantallaVenta({ api }: Props) {
   const actualizada = cotizacion?.carrito === carrito ? cotizacion.datos : null;
   const total = carrito.lineas.length === 0 ? 0 : (actualizada?.totalClp ?? totalLocal(carrito));
 
-  const agregar = useCallback((p: ProductoLocal, cantidadMilli: number) => {
-    setCarrito((c) =>
-      agregarProducto(
-        c,
-        { productoId: p.id, nombre: p.name, unidad: p.unit, precioUnitarioClp: p.priceClp },
-        cantidadMilli,
-        nuevaClave(),
-      ),
-    );
+  const agregar = useCallback((p: ProductoLocal, como: ResultadoPesoMonto) => {
+    const datos = {
+      productoId: p.id,
+      nombre: p.name,
+      unidad: p.unit,
+      precioUnitarioClp: p.priceClp,
+    };
+    let estimado = 0;
+    setCarrito((c) => {
+      const nuevo =
+        como.tipo === 'PESO'
+          ? agregarProducto(c, datos, como.cantidadMilli, nuevaClave())
+          : agregarPorMonto(c, datos, como.montoClp, nuevaClave());
+      estimado = lineaSeleccionada(nuevo)?.cantidadMilli ?? 0;
+      return nuevo;
+    });
     setConfirmarCancelar(false);
+    const cantidad = como.tipo === 'PESO' ? como.cantidadMilli : estimado;
     setMensaje(
-      p.stockQtyMilli - cantidadMilli <= 0
+      p.stockQtyMilli - cantidad <= 0
         ? { tipo: 'aviso', texto: `Stock en 0 o negativo: ${p.name}. Revisa el inventario.` }
         : null,
     );
   }, []);
+
+  /** Por unidad se agrega directo; por peso se pregunta kg o monto. */
+  const elegirProducto = useCallback(
+    (p: ProductoLocal, unidades = 1) => {
+      if (p.unit === 'KG') setVentana({ tipo: 'PESO_MONTO', producto: p });
+      else agregar(p, { tipo: 'PESO', cantidadMilli: unidades * MILI });
+    },
+    [agregar],
+  );
 
   const procesarCodigo = useCallback(
     async (codigo: string, multiplicador: number | null) => {
@@ -93,14 +150,7 @@ export function PantallaVenta({ api }: Props) {
         const r = await api.buscarCodigo(codigo);
         if (r.origen === 'LOCAL') {
           const p = r.producto;
-          if (r.balanza?.tipo === 'PRECIO') {
-            setMensaje({
-              tipo: 'aviso',
-              texto: 'Las etiquetas de balanza con precio todavía no se pueden vender.',
-            });
-            return;
-          }
-          if (r.balanza?.tipo === 'PESO') {
+          if (r.balanza) {
             if (p.unit !== 'KG') {
               setMensaje({
                 tipo: 'error',
@@ -108,16 +158,16 @@ export function PantallaVenta({ api }: Props) {
               });
               return;
             }
-            agregar(p, r.balanza.pesoGramos);
+            // Etiqueta con peso: ese peso. Etiqueta con precio: ese monto exacto (ADR-006).
+            agregar(
+              p,
+              r.balanza.tipo === 'PESO'
+                ? { tipo: 'PESO', cantidadMilli: r.balanza.pesoGramos }
+                : { tipo: 'MONTO', montoClp: r.balanza.precioClp },
+            );
             return;
           }
-          if (p.unit === 'KG') {
-            // Producto por peso con código normal: se agrega 1 kg y se pide el peso.
-            agregar(p, MILI);
-            setVentana({ tipo: 'CANTIDAD' });
-            return;
-          }
-          agregar(p, (multiplicador ?? 1) * MILI);
+          elegirProducto(p, multiplicador ?? 1);
           return;
         }
         if (r.origen === 'NO_ENCONTRADO') {
@@ -135,7 +185,7 @@ export function PantallaVenta({ api }: Props) {
         });
       }
     },
-    [api, agregar],
+    [api, agregar, elegirProducto],
   );
 
   const alEnter = () => {
@@ -159,6 +209,7 @@ export function PantallaVenta({ api }: Props) {
   };
 
   const cerrarVentana = () => {
+    hayVentana.current = false;
     setVentana(null);
     enfocar();
   };
@@ -181,6 +232,17 @@ export function PantallaVenta({ api }: Props) {
   }, [confirmarCancelar]);
 
   const seleccionada = lineaSeleccionada(carrito);
+
+  /** F4: unidades, o kg/monto si la línea es por peso. */
+  const abrirCantidad = () => {
+    if (!seleccionada) return;
+    setVentana(seleccionada.unidad === 'KG' ? { tipo: 'EDITAR_PESO' } : { tipo: 'CANTIDAD' });
+  };
+
+  const alBotonRapido = (b: BotonRapido) => {
+    if (b.producto) elegirProducto(b.producto);
+    else setVentana({ tipo: 'MONTO_LIBRE', nombre: b.label });
+  };
 
   useTeclado((e) => {
     // Con una ventana abierta, un escaneo igual se reconoce: cierra la ventana y lo agrega.
@@ -208,7 +270,7 @@ export function PantallaVenta({ api }: Props) {
         return;
       case 'F4':
         e.preventDefault();
-        if (seleccionada) setVentana({ tipo: 'CANTIDAD' });
+        abrirCantidad();
         return;
       case 'Escape':
         e.preventDefault();
@@ -265,15 +327,43 @@ export function PantallaVenta({ api }: Props) {
         <p className={mensaje?.tipo === 'error' ? 'mensaje-error' : 'mensaje-aviso'} role="alert">
           {confirmarCancelar ? 'Presiona Esc otra vez para cancelar la venta' : mensaje?.texto}
         </p>
+        <div className="botones-rapidos" role="group" aria-label="Venta rápida">
+          {botones.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              className="boton boton-rapido"
+              onClick={() => {
+                alBotonRapido(b);
+              }}
+            >
+              {b.label}
+              {b.producto && (
+                <span className="suave">
+                  {formatearClp(b.producto.priceClp)}
+                  {b.producto.unit === 'KG' ? '/kg' : ''}
+                </span>
+              )}
+            </button>
+          ))}
+          <button
+            type="button"
+            className="boton boton-rapido"
+            onClick={() => {
+              setVentana({ tipo: 'MONTO_LIBRE', nombre: 'Varios' });
+            }}
+          >
+            Sin código
+            <span className="suave">monto libre</span>
+          </button>
+        </div>
         {carrito.lineas.length === 0 ? (
           <p className="venta-vacia">Escanea un producto para empezar</p>
         ) : (
           <ul className="lineas" aria-label="Productos de la venta">
             {carrito.lineas.map((l, i) => {
               const cot = actualizada?.lineas[i];
-              const totalLinea = cot
-                ? cot.totalLineaClp
-                : Math.round((l.cantidadMilli * l.precioUnitarioClp) / MILI);
+              const totalLinea = cot ? cot.totalLineaClp : montoLocal(l);
               return (
                 <li key={l.clave} aria-selected={l.clave === carrito.seleccionada}>
                   <button
@@ -285,9 +375,11 @@ export function PantallaVenta({ api }: Props) {
                   >
                     <span className="linea-nombre">{l.nombre}</span>
                     <span className="linea-detalle">
+                      {l.montoFijoClp !== undefined ? '≈' : ''}
                       {formatearCantidad(l.cantidadMilli, l.unidad)} x{' '}
                       {formatearClp(cot?.precioUnitarioClp ?? l.precioUnitarioClp)}
                       {l.unidad === 'KG' ? '/kg' : ''}
+                      {l.montoFijoClp !== undefined ? ' · por monto' : ''}
                       {cot && cot.descuentoClp > 0
                         ? ` · promoción ${formatearClp(-cot.descuentoClp)}`
                         : ''}
@@ -327,14 +419,7 @@ export function PantallaVenta({ api }: Props) {
           >
             Buscar (F2)
           </button>
-          <button
-            type="button"
-            className="boton"
-            disabled={!seleccionada}
-            onClick={() => {
-              setVentana({ tipo: 'CANTIDAD' });
-            }}
-          >
+          <button type="button" className="boton" disabled={!seleccionada} onClick={abrirCantidad}>
             Cantidad (F4)
           </button>
           <button
@@ -388,10 +473,7 @@ export function PantallaVenta({ api }: Props) {
           alCerrar={cerrarVentana}
           alElegir={(p) => {
             cerrarVentana();
-            if (p.unit === 'KG') {
-              agregar(p, MILI);
-              setVentana({ tipo: 'CANTIDAD' });
-            } else agregar(p, MILI);
+            elegirProducto(p);
           }}
         />
       )}
@@ -401,6 +483,45 @@ export function PantallaVenta({ api }: Props) {
           alCerrar={cerrarVentana}
           alAceptar={(milli) => {
             setCarrito((c) => cambiarCantidad(c, seleccionada.clave, milli));
+            cerrarVentana();
+          }}
+        />
+      )}
+      {ventana?.tipo === 'PESO_MONTO' && (
+        <ModalPesoMonto
+          nombre={ventana.producto.name}
+          precioPorKgClp={ventana.producto.priceClp}
+          alCerrar={cerrarVentana}
+          alAceptar={(r) => {
+            agregar(ventana.producto, r);
+            cerrarVentana();
+          }}
+        />
+      )}
+      {ventana?.tipo === 'EDITAR_PESO' && seleccionada && (
+        <ModalPesoMonto
+          nombre={seleccionada.nombre}
+          precioPorKgClp={seleccionada.precioUnitarioClp}
+          modoInicial={seleccionada.montoFijoClp !== undefined ? 'MONTO' : 'PESO'}
+          alCerrar={cerrarVentana}
+          alAceptar={(r) => {
+            setCarrito((c) =>
+              r.tipo === 'PESO'
+                ? cambiarCantidad(c, seleccionada.clave, r.cantidadMilli)
+                : cambiarMonto(c, seleccionada.clave, r.montoClp),
+            );
+            cerrarVentana();
+          }}
+        />
+      )}
+      {ventana?.tipo === 'MONTO_LIBRE' && (
+        <ModalMontoLibre
+          nombreInicial={ventana.nombre}
+          alCerrar={cerrarVentana}
+          alAceptar={(nombre, monto) => {
+            setCarrito((c) => agregarMontoLibre(c, nombre, monto, nuevaClave()));
+            setMensaje(null);
+            setConfirmarCancelar(false);
             cerrarVentana();
           }}
         />

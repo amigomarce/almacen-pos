@@ -3,6 +3,7 @@ import {
   calcularTotalesDocumento,
   calcularVenta,
   calcularVuelto,
+  estimarCantidadPorMonto,
   formatearClp,
   type LineaVentaEntrada,
   type MedioPago,
@@ -45,6 +46,11 @@ export interface LineaPedido {
   precioUnitarioClp?: number;
   tipoImpuesto?: TipoImpuesto;
   descuentoManualClp?: number;
+  /**
+   * Solo productos por peso: cobrar este monto exacto ("$1.000 de pan" o etiqueta de balanza
+   * con precio). El servidor recalcula el peso estimado; `cantidadMilli` se ignora (ADR-006).
+   */
+  montoFijoClp?: number;
 }
 
 export interface PedidoVenta {
@@ -267,6 +273,21 @@ function armarLineas(db: Db, pedido: readonly LineaPedido[]): LineaVentaEntrada[
 
   return pedido.map((l, i): LineaVentaEntrada => {
     const descuento = l.descuentoManualClp ?? 0;
+    /** Con monto fijo, el peso se estima con el precio por kg (nunca se confía en la caja). */
+    const porMonto = (unidad: Unidad, precio: number) => {
+      if (l.montoFijoClp === undefined) return { cantidadMilli: l.cantidadMilli };
+      if (unidad !== 'KG') {
+        throw new ErrorHttp(
+          'MONTO_SOLO_KG',
+          `Línea ${i + 1}: solo los productos por peso se venden por monto`,
+          400,
+        );
+      }
+      return {
+        cantidadMilli: estimarCantidadPorMonto(l.montoFijoClp, precio),
+        subtotalFijoClp: l.montoFijoClp,
+      };
+    };
     if (l.productoId) {
       const p = porId.get(l.productoId);
       if (!p?.active) {
@@ -281,7 +302,7 @@ function armarLineas(db: Db, pedido: readonly LineaPedido[]): LineaVentaEntrada[
         productoId: p.id,
         nombre: p.name,
         unidad: p.unit,
-        cantidadMilli: l.cantidadMilli,
+        ...porMonto(p.unit, p.priceClp),
         precioUnitarioClp: p.priceClp,
         tipoImpuesto: p.taxType,
         descuentoManualClp: descuento,
@@ -298,7 +319,7 @@ function armarLineas(db: Db, pedido: readonly LineaPedido[]): LineaVentaEntrada[
       productoId: null,
       nombre: l.nombre.trim(),
       unidad: l.unidad,
-      cantidadMilli: l.cantidadMilli,
+      ...porMonto(l.unidad, l.precioUnitarioClp),
       precioUnitarioClp: l.precioUnitarioClp,
       tipoImpuesto: l.tipoImpuesto ?? 'AFECTO',
       descuentoManualClp: descuento,

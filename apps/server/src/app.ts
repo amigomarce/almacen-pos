@@ -8,13 +8,14 @@ import { registrarAuth } from './auth/rutas.js';
 import { Sesiones } from './auth/sesiones.js';
 import { registrarCaja } from './caja/rutas.js';
 import { registrarConfiguracion } from './configuracion/rutas.js';
-import { leerConfiguracion } from './configuracion/servicio.js';
+import { configBalanzaDe, leerConfiguracion } from './configuracion/servicio.js';
 import type { Db } from './db/client.js';
 import { ErrorHttp } from './errores.js';
 import { registrarImpresion } from './impresion/rutas.js';
 import { ServicioImpresion } from './impresion/servicio.js';
 import type { Ejecutar } from './impresion/transportes.js';
 import { registrarVentas } from './ventas/rutas.js';
+import { registrarBotones } from './productos/botones.js';
 import { buscarProductos } from './productos/busqueda.js';
 import { buscarProducto, type DependenciasLookup } from './productos/lookup.js';
 import { requiereSesion } from './auth/rutas.js';
@@ -84,6 +85,7 @@ export function crearApp({
   registrarCaja(app, { db, sesiones });
   registrarConfiguracion(app, { db, sesiones, permitirModoPrueba });
   registrarVentas(app, { db, sesiones, intentos });
+  registrarBotones(app, { db, sesiones });
   registrarImpresion(app, { db, sesiones, impresion, ...(ejecutar ? { ejecutar } : {}) });
 
   app.get('/health', () => {
@@ -145,7 +147,7 @@ export function crearApp({
 
   app.get<{ Params: { barcode: string } }>('/products/lookup/:barcode', async (req, reply) => {
     const r = await buscarProducto(
-      { db, semilla, off, ...(configBalanza ? { configBalanza } : {}) },
+      { db, semilla, off, configBalanza: configBalanza ?? configBalanzaDe(leerConfiguracion(db)) },
       req.params.barcode,
     );
     if ('error' in r) return reply.code(400).send(r);

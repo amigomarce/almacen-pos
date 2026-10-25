@@ -78,6 +78,8 @@ export const storeSettings = sqliteTable(
       .default('SOLO_NO_ELECTRONICOS'),
     dteProvider: text('dte_provider', { enum: PROVIDERS }).notNull().default('PUENTE_MANUAL'),
     cashRoundingEnabled: booleano('cash_rounding_enabled', true),
+    /** Prefijos de balanza (20–29) cuyas etiquetas traen precio, ej. "26,27". El resto, peso. */
+    scalePricePrefixes: text('scale_price_prefixes'),
     updatedAt: ahora('updated_at'),
     version: integer('version').notNull().default(1),
   },

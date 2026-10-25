@@ -24,6 +24,11 @@ export interface LineaVentaEntrada {
   precioUnitarioClp: Clp;
   tipoImpuesto: TipoImpuesto;
   descuentoManualClp?: Clp;
+  /**
+   * Solo por peso: el monto se cobra exacto (venta "por monto" o etiqueta de balanza con
+   * precio) y `cantidadMilli` es el peso estimado para el stock (ADR-006).
+   */
+  subtotalFijoClp?: Clp;
 }
 
 /** "N x $P": por ejemplo 2 x $1.500. Solo productos por unidad. */
@@ -48,6 +53,20 @@ export interface ResultadoVenta {
   totales: TotalesDocumento;
 }
 
+/**
+ * Peso estimado (milésimas de kg) para un monto pedido: "$1.000 de pan" a $1.990/kg → 503 g.
+ * Half-up, mínimo 1 g. Solo sirve para el stock: el monto se cobra exacto (ADR-006).
+ */
+export function estimarCantidadPorMonto(montoClp: Clp, precioPorKgClp: Clp): number {
+  asegurarEntero(montoClp, 'monto');
+  asegurarEntero(precioPorKgClp, 'precio por kg');
+  if (montoClp <= 0) throw new ErrorDominio('MONTO_INVALIDO', 'El monto debe ser mayor a $0');
+  if (precioPorKgClp <= 0) {
+    throw new ErrorDominio('PRECIO_INVALIDO', 'El producto no tiene precio por kg');
+  }
+  return Math.max(1, dividirRedondeado(multiplicarSeguro(montoClp, MILI), precioPorKgClp));
+}
+
 /** Monto de una línea: round(cantidadMilli × precio / 1000), half-up a peso entero. */
 export function calcularSubtotalLinea(cantidadMilli: number, precioUnitarioClp: Clp): Clp {
   return dividirRedondeado(multiplicarSeguro(cantidadMilli, precioUnitarioClp), MILI);
@@ -69,6 +88,18 @@ function validarLinea(l: LineaVentaEntrada, i: number): void {
   }
   if (l.precioUnitarioClp < 0) {
     throw new ErrorDominio('PRECIO_NEGATIVO', `${donde}: el precio no puede ser negativo`);
+  }
+  if (l.subtotalFijoClp !== undefined) {
+    asegurarEntero(l.subtotalFijoClp, `${donde}: monto`);
+    if (l.unidad !== 'KG') {
+      throw new ErrorDominio(
+        'MONTO_SOLO_KG',
+        `${donde}: solo los productos por peso se venden por monto`,
+      );
+    }
+    if (l.subtotalFijoClp <= 0) {
+      throw new ErrorDominio('MONTO_INVALIDO', `${donde}: el monto debe ser mayor a $0`);
+    }
   }
 }
 
@@ -132,7 +163,9 @@ export function calcularVenta(
 
   const lineas = entradas.map((entrada, i): LineaVentaCalculada => {
     validarLinea(entrada, i);
-    const subtotal = calcularSubtotalLinea(entrada.cantidadMilli, entrada.precioUnitarioClp);
+    const subtotal =
+      entrada.subtotalFijoClp ??
+      calcularSubtotalLinea(entrada.cantidadMilli, entrada.precioUnitarioClp);
     const manual = entrada.descuentoManualClp ?? 0;
     asegurarEntero(manual, `línea ${i + 1}: descuento`);
     if (manual < 0 || manual > subtotal) {

@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  agregarMontoLibre,
+  agregarPorMonto,
   agregarProducto,
+  aPedido,
   cambiarCantidad,
+  cambiarMonto,
+  montoLocal,
   CARRITO_VACIO,
   contarArticulos,
   lineaSeleccionada,
@@ -86,5 +91,60 @@ describe('carrito', () => {
     c = agregarProducto(c, tomate, 1250, 'b');
     expect(totalLocal(c)).toBe(3780 + 1863);
     expect(contarArticulos(c)).toBe(3);
+  });
+});
+
+describe('monto fijo y monto libre', () => {
+  const pan = { productoId: 'pan', nombre: 'Pan', unidad: 'KG' as const, precioUnitarioClp: 1990 };
+
+  it('"$1.000 de pan": peso estimado, monto exacto', () => {
+    const c = agregarPorMonto(CARRITO_VACIO, pan, 1000, 'a');
+    expect(c.lineas[0]).toMatchObject({ cantidadMilli: 503, montoFijoClp: 1000 });
+    expect(totalLocal(c)).toBe(1000);
+    expect(aPedido(c.lineas)).toEqual([
+      { productoId: 'pan', cantidadMilli: 503, montoFijoClp: 1000 },
+    ]);
+  });
+
+  it('cambiar a peso quita el monto; cambiar a monto lo pone', () => {
+    let c = agregarPorMonto(CARRITO_VACIO, pan, 1000, 'a');
+    c = cambiarCantidad(c, 'a', 750);
+    expect(c.lineas[0]).not.toHaveProperty('montoFijoClp');
+    const linea = c.lineas[0];
+    expect(linea && montoLocal(linea)).toBe(1493);
+    c = cambiarMonto(c, 'a', 2000);
+    expect(c.lineas[0]).toMatchObject({ cantidadMilli: 1005, montoFijoClp: 2000 });
+  });
+
+  it('cambiarMonto no aplica a productos por unidad', () => {
+    const c = agregarProducto(CARRITO_VACIO, { ...pan, unidad: 'UN' }, 1000, 'a');
+    expect(cambiarMonto(c, 'a', 500).lineas[0]).not.toHaveProperty('montoFijoClp');
+  });
+
+  it('monto libre: línea sin producto, y el pedido lleva nombre y precio', () => {
+    let c = agregarMontoLibre(CARRITO_VACIO, '  ', 1500, 'a');
+    c = agregarMontoLibre(c, 'Bolsa', 50, 'b');
+    expect(c.lineas.map((l) => l.nombre)).toEqual(['Varios', 'Bolsa']);
+    expect(totalLocal(c)).toBe(1550);
+    expect(aPedido(c.lineas)[0]).toEqual({
+      productoId: null,
+      cantidadMilli: 1000,
+      nombre: 'Varios',
+      unidad: 'UN',
+      precioUnitarioClp: 1500,
+    });
+  });
+
+  it('un producto por unidad con monto fijo no se junta con otro', () => {
+    const huevo = {
+      productoId: 'h',
+      nombre: 'Huevo',
+      unidad: 'UN' as const,
+      precioUnitarioClp: 250,
+    };
+    let c = agregarProducto(CARRITO_VACIO, huevo, 1000, 'a');
+    c = { ...c, lineas: c.lineas.map((l) => ({ ...l, montoFijoClp: 1 })) };
+    c = agregarProducto(c, huevo, 1000, 'b');
+    expect(c.lineas).toHaveLength(2);
   });
 });

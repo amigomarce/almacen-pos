@@ -51,6 +51,7 @@ const ESQUEMA_VENTA = {
           precioUnitarioClp: MONTO,
           tipoImpuesto: { type: 'string', enum: ['AFECTO', 'EXENTO'] },
           descuentoManualClp: MONTO,
+          montoFijoClp: ENTERO_POSITIVO,
         },
       },
     },

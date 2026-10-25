@@ -1,14 +1,18 @@
-import { calcularSubtotalLinea, MILI, type Unidad } from '@almacen/core';
+import { calcularSubtotalLinea, estimarCantidadPorMonto, MILI, type Unidad } from '@almacen/core';
 
 export interface LineaCarrito {
   /** Identificador de la línea en pantalla (no del producto). */
   clave: string;
-  productoId: string;
+  /** `null` = venta rápida sin producto (monto libre). */
+  productoId: string | null;
   nombre: string;
   unidad: Unidad;
+  /** Con monto fijo es el peso estimado (el servidor lo recalcula). */
   cantidadMilli: number;
   /** Precio que se mostró; el servidor recalcula con el precio vigente al cotizar y cobrar. */
   precioUnitarioClp: number;
+  /** Por peso: se cobra este monto exacto ("$1.000 de pan", etiqueta con precio). ADR-006. */
+  montoFijoClp?: number;
 }
 
 export interface Carrito {
@@ -36,7 +40,9 @@ export function agregarProducto(
   clave: string,
 ): Carrito {
   if (p.unidad === 'UN') {
-    const existente = c.lineas.find((l) => l.productoId === p.productoId && l.unidad === 'UN');
+    const existente = c.lineas.find(
+      (l) => l.productoId === p.productoId && l.unidad === 'UN' && l.montoFijoClp === undefined,
+    );
     if (existente) {
       return {
         lineas: c.lineas.map((l) =>
@@ -58,9 +64,84 @@ export function agregarProducto(
   };
 }
 
+/** Producto por peso vendido por monto: "$1.000 de pan" o etiqueta de balanza con precio. */
+export function agregarPorMonto(
+  c: Carrito,
+  p: ProductoParaCarrito,
+  montoClp: number,
+  clave: string,
+): Carrito {
+  const linea: LineaCarrito = {
+    clave,
+    ...p,
+    cantidadMilli: estimarCantidadPorMonto(montoClp, p.precioUnitarioClp),
+    montoFijoClp: montoClp,
+  };
+  return { lineas: [...c.lineas, linea], seleccionada: clave };
+}
+
+/** Venta rápida sin producto: "Varios $1.500". */
+export function agregarMontoLibre(
+  c: Carrito,
+  nombre: string,
+  montoClp: number,
+  clave: string,
+): Carrito {
+  const linea: LineaCarrito = {
+    clave,
+    productoId: null,
+    nombre: nombre.trim() || 'Varios',
+    unidad: 'UN',
+    cantidadMilli: MILI,
+    precioUnitarioClp: montoClp,
+  };
+  return { lineas: [...c.lineas, linea], seleccionada: clave };
+}
+
+/** Cambia la cantidad (o el peso). Quita el monto fijo si lo tenía. */
 export function cambiarCantidad(c: Carrito, clave: string, cantidadMilli: number): Carrito {
   if (cantidadMilli <= 0) return quitarLinea(c, clave);
-  return { ...c, lineas: c.lineas.map((l) => (l.clave === clave ? { ...l, cantidadMilli } : l)) };
+  return {
+    ...c,
+    lineas: c.lineas.map((l) => {
+      if (l.clave !== clave) return l;
+      const { montoFijoClp: _montoFijoClp, ...resto } = l;
+      return { ...resto, cantidadMilli };
+    }),
+  };
+}
+
+/** Pasa una línea por peso a "por monto". */
+export function cambiarMonto(c: Carrito, clave: string, montoClp: number): Carrito {
+  return {
+    ...c,
+    lineas: c.lineas.map((l) =>
+      l.clave === clave && l.unidad === 'KG'
+        ? {
+            ...l,
+            montoFijoClp: montoClp,
+            cantidadMilli: estimarCantidadPorMonto(montoClp, l.precioUnitarioClp),
+          }
+        : l,
+    ),
+  };
+}
+
+/** Monto de una línea sin promociones (para mostrar mientras llega la cotización). */
+export function montoLocal(l: LineaCarrito): number {
+  return l.montoFijoClp ?? calcularSubtotalLinea(l.cantidadMilli, l.precioUnitarioClp);
+}
+
+/** Líneas como las pide el servidor (cotizar y cobrar). */
+export function aPedido(lineas: readonly LineaCarrito[]) {
+  return lineas.map((l) => ({
+    productoId: l.productoId,
+    cantidadMilli: l.cantidadMilli,
+    ...(l.productoId === null
+      ? { nombre: l.nombre, unidad: l.unidad, precioUnitarioClp: l.precioUnitarioClp }
+      : {}),
+    ...(l.montoFijoClp !== undefined ? { montoFijoClp: l.montoFijoClp } : {}),
+  }));
 }
 
 /** +1 / −1 unidad en un producto por unidad. Llegar a 0 quita la línea. */
@@ -95,10 +176,7 @@ export function lineaSeleccionada(c: Carrito): LineaCarrito | null {
 
 /** Total sin promociones, para mostrar mientras llega la cotización del servidor. */
 export function totalLocal(c: Carrito): number {
-  return c.lineas.reduce(
-    (s, l) => s + calcularSubtotalLinea(l.cantidadMilli, l.precioUnitarioClp),
-    0,
-  );
+  return c.lineas.reduce((s, l) => s + montoLocal(l), 0);
 }
 
 /** Artículos para mostrar: unidades + 1 por cada línea por peso. */

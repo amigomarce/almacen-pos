@@ -46,6 +46,11 @@ export function registrarConfiguracion(
               enum: ['MOCK', 'PUENTE_MANUAL', 'SII_DIRECTO', 'PROVEEDOR_EXTERNO'],
             },
             cashRoundingEnabled: { type: 'boolean' },
+            prefijosBalanzaPrecio: {
+              type: 'array',
+              maxItems: 10,
+              items: { type: 'string', pattern: '^2[0-9]$' },
+            },
           },
         },
       },

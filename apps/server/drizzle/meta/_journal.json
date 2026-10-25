@@ -29,6 +29,13 @@
       "when": 1792935328553,
       "tag": "0003_impresora_por_caja",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792941734892,
+      "tag": "0004_balanza_prefijos_precio",
+      "breakpoints": true
     }
   ]
 }

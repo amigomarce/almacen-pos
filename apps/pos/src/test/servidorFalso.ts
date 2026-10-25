@@ -26,6 +26,7 @@ export const PRODUCTOS_FALSOS: ProductoLocal[] = [
   producto('p4', 'Galletas de vino', 'UN', 890, 30000, '78040000'),
   producto('p5', 'Leche entera 1 L', 'UN', 1190, 1000, '7805'),
   producto('p6', 'Harina a granel', 'KG', 1200, 20000, '7806'),
+  producto('p7', 'Pan corriente', 'KG', 1990, 0, null),
 ];
 
 interface UsuarioFalso {
@@ -150,19 +151,31 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
       }
       case 'POST /sales/quote': {
         if (!usuario) return sinSesion();
-        const lineas = (cuerpo['lineas'] ?? []) as { productoId: string; cantidadMilli: number }[];
+        type L = {
+          productoId: string | null;
+          cantidadMilli: number;
+          nombre?: string;
+          unidad?: 'UN' | 'KG';
+          precioUnitarioClp?: number;
+          montoFijoClp?: number;
+        };
+        const lineas = (cuerpo['lineas'] ?? []) as L[];
         const calculadas = lineas.map((l) => {
           const p = estado.productos.find((x) => x.id === l.productoId);
-          const precio = p?.priceClp ?? 0;
-          const subtotal = Math.round((l.cantidadMilli * precio) / 1000);
+          const precio = p?.priceClp ?? l.precioUnitarioClp ?? 0;
+          const cantidad =
+            l.montoFijoClp !== undefined
+              ? Math.max(1, Math.round((l.montoFijoClp * 1000) / precio))
+              : l.cantidadMilli;
+          const subtotal = l.montoFijoClp ?? Math.round((cantidad * precio) / 1000);
           // Promoción falsa: galletas 2 × $1.500.
-          const packs = p?.id === 'p4' ? Math.floor(l.cantidadMilli / 2000) : 0;
+          const packs = p?.id === 'p4' ? Math.floor(cantidad / 2000) : 0;
           const descuento = packs * (2 * 890 - 1500);
           return {
             productoId: l.productoId,
-            nombre: p?.name ?? '?',
-            unidad: p?.unit ?? 'UN',
-            cantidadMilli: l.cantidadMilli,
+            nombre: p?.name ?? l.nombre ?? '?',
+            unidad: p?.unit ?? l.unidad ?? 'UN',
+            cantidadMilli: cantidad,
             precioUnitarioClp: precio,
             descuentoClp: descuento,
             totalLineaClp: subtotal - descuento,
@@ -173,6 +186,20 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
           descuentoTotalClp: calculadas.reduce((a, l) => a + l.descuentoClp, 0),
           lineas: calculadas,
         });
+      }
+      case 'GET /quick-buttons': {
+        if (!usuario) return sinSesion();
+        const p = (id: string) => estado.productos.find((x) => x.id === id) ?? null;
+        return json(200, [
+          {
+            id: 'b1',
+            label: 'Pan',
+            posicion: 1,
+            producto: p('p7'),
+          },
+          { id: 'b2', label: 'Leche', posicion: 2, producto: p('p5') },
+          { id: 'b3', label: 'Bolsa', posicion: 3, producto: null },
+        ]);
       }
       default: {
         const busqueda = /^GET \/products\?buscar=(.*)$/.exec(clave);

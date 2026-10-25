@@ -96,6 +96,24 @@ export interface Cotizacion {
   lineas: LineaCotizada[];
 }
 
+/** Línea como la pide el servidor al cotizar o cobrar. */
+export interface LineaPedido {
+  productoId: string | null;
+  cantidadMilli: number;
+  nombre?: string;
+  unidad?: 'UN' | 'KG';
+  precioUnitarioClp?: number;
+  montoFijoClp?: number;
+}
+
+export interface BotonRapido {
+  id: string;
+  label: string;
+  posicion: number;
+  /** `null` = monto libre con este nombre. */
+  producto: ProductoLocal | null;
+}
+
 type Fetch = typeof fetch;
 
 function esObjeto(v: unknown): v is Record<string, unknown> {
@@ -187,9 +205,11 @@ export class ClienteApi {
     return this.pedir<ProductoLocal[]>(`/products?buscar=${encodeURIComponent(texto)}`);
   }
 
-  cotizar(
-    lineas: readonly { productoId: string | null; cantidadMilli: number }[],
-  ): Promise<Cotizacion> {
+  botonesRapidos(): Promise<BotonRapido[]> {
+    return this.pedir<BotonRapido[]>('/quick-buttons');
+  }
+
+  cotizar(lineas: readonly LineaPedido[]): Promise<Cotizacion> {
     return this.pedir<Cotizacion>('/sales/quote', { metodo: 'POST', cuerpo: { lineas } });
   }
 }

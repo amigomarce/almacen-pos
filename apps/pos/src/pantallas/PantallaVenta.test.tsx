@@ -52,10 +52,6 @@ describe('pantalla de venta', () => {
 
   it('avisa etiquetas con precio, balanza mal configurada, códigos desconocidos y de la base de productos', async () => {
     const { escanear, lineas } = montar();
-    await escanear('2601234012000');
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Las etiquetas de balanza con precio todavía no se pueden vender.',
-    );
     await escanear('2509999002500');
     expect(
       await screen.findByText('Bebida cola 1,5 L está configurado por unidad, no por peso.'),
@@ -82,6 +78,13 @@ describe('pantalla de venta', () => {
     expect(lineas()).toHaveLength(1);
   });
 
+  it('etiqueta de balanza con precio: cobra ese monto exacto', async () => {
+    const { escanear, lineas, total } = montar();
+    await escanear('2601234012000');
+    expect(lineas()).toEqual(['Queso laminado≈0,100 kg x $11.990/kg · por monto$1.200']);
+    await waitFor(() => expect(total()).toHaveTextContent('$1.200'));
+  });
+
   it('F2 busca por nombre; un producto por peso pide los kg', async () => {
     const { u, lineas } = montar();
     await u.keyboard('{F2}');
@@ -89,8 +92,10 @@ describe('pantalla de venta', () => {
     await u.type(within(ventana).getByLabelText('Nombre, marca o código'), 'tom');
     await within(ventana).findByText('Tomate');
     await u.keyboard('{Enter}');
-    expect(await screen.findByRole('dialog', { name: 'Peso (kg)' })).toBeInTheDocument();
-    await u.keyboard('1,25{Enter}');
+    expect(await screen.findByRole('dialog', { name: 'Tomate' })).toBeInTheDocument();
+    await u.keyboard('1,25');
+    expect(screen.getByLabelText('Equivale a')).toHaveTextContent('= $1.863');
+    await u.keyboard('{Enter}');
     expect(lineas()).toEqual(['Tomate1,250 kg x $1.490/kg$1.863']);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
@@ -146,10 +151,10 @@ describe('pantalla de venta', () => {
   it('un producto por peso con código normal pide el peso', async () => {
     const { u, escanear, lineas } = montar();
     await escanear('7806');
-    expect(await screen.findByRole('dialog', { name: 'Peso (kg)' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Harina a granel' })).toBeInTheDocument();
     await u.click(screen.getByRole('button', { name: ',' }));
     await u.click(screen.getByRole('button', { name: '5' }));
-    await u.click(screen.getByRole('button', { name: 'Aceptar' }));
+    await u.click(screen.getByRole('button', { name: 'Agregar' }));
     expect(lineas()).toEqual(['Harina a granel0,500 kg x $1.200/kg$600']);
   });
 
@@ -232,5 +237,74 @@ describe('pantalla de venta', () => {
     });
     await escanear('7801');
     expect(await screen.findByText('Línea 1: el producto ya no existe')).toBeInTheDocument();
+  });
+
+  it('botones de venta rápida: por unidad agrega directo; por peso pide kg o monto', async () => {
+    const { u, lineas, total } = montar();
+    await u.click(await screen.findByRole('button', { name: /Leche/ }));
+    expect(lineas()[0]).toContain('Leche entera 1 L');
+    await u.click(screen.getByRole('button', { name: /Pan/ }));
+    const ventana = screen.getByRole('dialog', { name: 'Pan corriente' });
+    await u.click(within(ventana).getByRole('button', { name: 'Monto ($)' }));
+    await u.keyboard('1000');
+    expect(screen.getByLabelText('Equivale a')).toHaveTextContent('≈ 0,503 kg');
+    await u.keyboard('{Enter}');
+    expect(lineas()[1]).toBe('Pan corriente≈0,503 kg x $1.990/kg · por monto$1.000');
+    await waitFor(() => expect(total()).toHaveTextContent('$2.190'));
+  });
+
+  it('Tab cambia entre peso y monto; valida lo escrito', async () => {
+    const { u } = montar();
+    await u.click(await screen.findByRole('button', { name: /Pan/ }));
+    await u.keyboard('{Enter}');
+    expect(screen.getByText('Escribe el peso en kg, por ejemplo 1,250')).toBeInTheDocument();
+    await u.keyboard('{Tab}');
+    expect(screen.getByRole('button', { name: 'Monto ($)' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await u.keyboard('{Enter}');
+    expect(screen.getByText('Escribe el monto que pide el cliente')).toBeInTheDocument();
+    await u.keyboard('05{Backspace}7,');
+    expect(screen.getByLabelText('Monto')).toHaveTextContent('$7');
+  });
+
+  it('F4 sobre una línea por peso permite pasarla a monto y de vuelta a kg', async () => {
+    const { u, escanear, lineas } = montar();
+    await escanear('2501234002500'); // queso 0,250 kg
+    await u.keyboard('{F4}');
+    expect(screen.getByRole('button', { name: 'Peso (kg)' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await u.keyboard('{Tab}3000{Enter}');
+    expect(lineas()[0]).toContain('· por monto$3.000');
+    await u.keyboard('{F4}');
+    expect(screen.getByRole('button', { name: 'Monto ($)' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await u.keyboard('{Tab}0,5{Enter}');
+    expect(lineas()[0]).toBe('Queso laminado0,500 kg x $11.990/kg$5.995');
+  });
+
+  it('venta sin código: botón con nombre o "Sin código" con monto libre', async () => {
+    const { u, lineas, total } = montar();
+    await u.click(await screen.findByRole('button', { name: 'Bolsa' }));
+    const ventana = screen.getByRole('dialog', { name: 'Venta sin código' });
+    expect(within(ventana).getByLabelText('Qué se vende')).toHaveValue('Bolsa');
+    await u.keyboard('{Enter}');
+    expect(within(ventana).getByText('Escribe el monto')).toBeInTheDocument();
+    await u.click(within(ventana).getByRole('button', { name: '5' }));
+    await u.click(within(ventana).getByRole('button', { name: '0' }));
+    await u.click(within(ventana).getByRole('button', { name: 'Agregar' }));
+    expect(lineas()).toEqual(['Bolsa1 x $50$50']);
+
+    await u.click(screen.getByRole('button', { name: /Sin código/ }));
+    const otra = screen.getByRole('dialog', { name: 'Venta sin código' });
+    await u.clear(within(otra).getByLabelText('Qué se vende'));
+    await u.type(within(otra).getByLabelText('Monto'), '1500{Enter}');
+    expect(lineas()[1]).toBe('Varios1 x $1.500$1.500');
+    await waitFor(() => expect(total()).toHaveTextContent('$1.550'));
   });
 });

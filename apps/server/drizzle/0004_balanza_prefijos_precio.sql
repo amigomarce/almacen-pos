@@ -1,0 +1,1 @@
+ALTER TABLE `store_settings` ADD `scale_price_prefixes` text;

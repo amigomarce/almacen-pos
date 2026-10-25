@@ -1,4 +1,9 @@
-import { ErrorDominio, formatearRut } from '@almacen/core';
+import {
+  CONFIG_BALANZA_POR_DEFECTO,
+  ErrorDominio,
+  formatearRut,
+  type ConfigBalanza,
+} from '@almacen/core';
 import {
   MODALIDAD_INICIAL,
   modalidadDisponible,
@@ -21,6 +26,8 @@ export interface Configuracion {
   /** `true` con MOCK: la caja debe mostrar "MODO PRUEBA – no emite boletas". */
   modoPrueba: boolean;
   cashRoundingEnabled: boolean;
+  /** Prefijos de balanza (20–29) cuyas etiquetas traen precio; el resto trae peso. */
+  prefijosBalanzaPrecio: string[];
   version: number;
   updatedAt: string;
 }
@@ -34,6 +41,7 @@ export interface CambiosConfiguracion {
   modeloEmision?: ModeloEmision;
   dteProvider?: NombreProvider;
   cashRoundingEnabled?: boolean;
+  prefijosBalanzaPrecio?: string[];
 }
 
 type Fila = typeof storeSettings.$inferSelect;
@@ -48,6 +56,9 @@ const aConfiguracion = (f: Fila): Configuracion => ({
   dteProvider: f.dteProvider,
   modoPrueba: f.dteProvider === 'MOCK',
   cashRoundingEnabled: f.cashRoundingEnabled,
+  prefijosBalanzaPrecio: f.scalePricePrefixes
+    ? f.scalePricePrefixes.split(',').filter(Boolean)
+    : [],
   version: f.version,
   updatedAt: f.updatedAt.toISOString(),
 });
@@ -111,6 +122,10 @@ export function actualizarConfiguracion(
       modeloEmision: cambios.modeloEmision,
       dteProvider: cambios.dteProvider,
       cashRoundingEnabled: cambios.cashRoundingEnabled,
+      scalePricePrefixes:
+        cambios.prefijosBalanzaPrecio === undefined
+          ? undefined
+          : [...new Set(cambios.prefijosBalanzaPrecio)].sort().join(',') || null,
     };
     const definidos = Object.fromEntries(
       Object.entries(valores).filter(([, v]) => v !== undefined),
@@ -123,4 +138,18 @@ export function actualizarConfiguracion(
       .get();
     return { antes, despues: aConfiguracion(fila) };
   });
+}
+
+/** Cómo leer las etiquetas de balanza según la configuración del local. */
+export function configBalanzaDe(c: Configuracion): ConfigBalanza {
+  const precio = new Set(c.prefijosBalanzaPrecio);
+  return {
+    ...CONFIG_BALANZA_POR_DEFECTO,
+    prefijos: Object.fromEntries(
+      Array.from({ length: 10 }, (_, i) => `2${i}`).map((p) => [
+        p,
+        precio.has(p) ? 'PRECIO' : 'PESO',
+      ]),
+    ),
+  };
 }

@@ -122,3 +122,37 @@ describe('modalidad de boleta', () => {
     expect((await editar(payload)).statusCode).toBe(400);
   });
 });
+
+describe('etiquetas de balanza con precio', () => {
+  it('por defecto todos los prefijos traen peso; el dueño indica cuáles traen precio', async () => {
+    const leer = async () =>
+      (await c.app.inject({ method: 'GET', url: '/settings', headers: dueno })).json<{
+        prefijosBalanzaPrecio: string[];
+      }>();
+    expect((await leer()).prefijosBalanzaPrecio).toEqual([]);
+    const r = await editar({ prefijosBalanzaPrecio: ['27', '26', '27'] });
+    expect(r.json()).toMatchObject({ prefijosBalanzaPrecio: ['26', '27'] });
+    expect((await editar({ prefijosBalanzaPrecio: ['30'] })).statusCode).toBe(400);
+    expect((await editar({ prefijosBalanzaPrecio: [] })).json()).toMatchObject({
+      prefijosBalanzaPrecio: [],
+    });
+  });
+
+  it('el lookup lee la etiqueta según esa configuración', async () => {
+    // Queso laminado tiene código de balanza 01234. "2601234 01200 d": $1.200 o 1,200 kg.
+    const codigo = '260123401200';
+    const d =
+      (10 - (Array.from(codigo).reduce((s, ch, i) => s + Number(ch) * (i % 2 ? 3 : 1), 0) % 10)) %
+      10;
+    const url = `/products/lookup/${codigo}${d}`;
+    const peso = await c.app.inject({ method: 'GET', url });
+    expect(peso.json()).toMatchObject({ balanza: { tipo: 'PESO', pesoGramos: 1200 } });
+    await editar({ prefijosBalanzaPrecio: ['26'] });
+    const precio = await c.app.inject({ method: 'GET', url });
+    expect(precio.json()).toMatchObject({
+      origen: 'LOCAL',
+      producto: { name: 'Queso laminado' },
+      balanza: { tipo: 'PRECIO', precioClp: 1200 },
+    });
+  });
+});

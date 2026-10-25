@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { ErrorDominio } from './errores.js';
-import { calcularSubtotalLinea, calcularVenta, type LineaVentaEntrada } from './venta.js';
+import {
+  calcularSubtotalLinea,
+  calcularVenta,
+  estimarCantidadPorMonto,
+  type LineaVentaEntrada,
+} from './venta.js';
 
 const linea = (o: Partial<LineaVentaEntrada> = {}): LineaVentaEntrada => ({
   productoId: 'p1',
@@ -181,6 +186,55 @@ describe('calcularVenta: promociones "N x $P"', () => {
   it('rechaza dos promociones del mismo producto', () => {
     expect(() => calcularVenta([linea()], [promo, promo])).toThrow(
       expect.objectContaining({ codigo: 'PROMO_DUPLICADA' }) as ErrorDominio,
+    );
+  });
+});
+
+describe('venta por monto / etiqueta con precio (ADR-006)', () => {
+  const pan = {
+    productoId: 'pan',
+    nombre: 'Pan',
+    unidad: 'KG' as const,
+    precioUnitarioClp: 1990,
+    tipoImpuesto: 'AFECTO' as const,
+  };
+
+  it('estima el peso para un monto, half-up y con mínimo 1 g', () => {
+    expect(estimarCantidadPorMonto(1000, 1990)).toBe(503); // 502,51 g
+    expect(estimarCantidadPorMonto(1200, 11990)).toBe(100); // 100,08 g
+    expect(estimarCantidadPorMonto(1, 50000)).toBe(1); // 0,02 g → 1 g
+  });
+
+  it.each([
+    [0, 1990, 'MONTO_INVALIDO'],
+    [1000, 0, 'PRECIO_INVALIDO'],
+    [10.5, 1990, 'NO_ENTERO'],
+  ])('estimar(%s, %s) → %s', (monto, precio, codigo) => {
+    expect(() => estimarCantidadPorMonto(monto, precio)).toThrow(
+      expect.objectContaining({ codigo }) as Error,
+    );
+  });
+
+  it('cobra el monto exacto aunque el peso × precio dé otro número', () => {
+    const r = calcularVenta([{ ...pan, cantidadMilli: 503, subtotalFijoClp: 1000 }]);
+    expect(r.lineas[0]).toMatchObject({ subtotalClp: 1000, totalLineaClp: 1000 });
+    expect(r.totalClp).toBe(1000); // 503 g × $1.990 serían $1.001
+  });
+
+  it('el monto fijo admite descuento manual', () => {
+    const r = calcularVenta([
+      { ...pan, cantidadMilli: 503, subtotalFijoClp: 1000, descuentoManualClp: 100 },
+    ]);
+    expect(r.totalClp).toBe(900);
+  });
+
+  it.each([
+    [{ unidad: 'UN' as const, cantidadMilli: 1000, subtotalFijoClp: 1000 }, 'MONTO_SOLO_KG'],
+    [{ cantidadMilli: 503, subtotalFijoClp: 0 }, 'MONTO_INVALIDO'],
+    [{ cantidadMilli: 503, subtotalFijoClp: 1.5 }, 'NO_ENTERO'],
+  ])('rechaza montos fijos inválidos (%#)', (cambios, codigo) => {
+    expect(() => calcularVenta([{ ...pan, ...cambios }])).toThrow(
+      expect.objectContaining({ codigo }) as Error,
     );
   });
 });

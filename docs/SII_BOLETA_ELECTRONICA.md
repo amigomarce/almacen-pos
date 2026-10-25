@@ -411,6 +411,9 @@ Normativa pendiente de confirmar (`TODO(SII)`):
   se anula en la caja? ¿Nota de crédito en el sitio del SII, en la misma app, o basta otra vía?
   Hoy la caja muestra "anúlala en sii.cl con una nota de crédito" (`TODO(SII)` en
   `apps/server/src/ventas/servicio.ts`).
+- Venta por monto / etiqueta de balanza con precio (ADR-006): la línea cobra un monto exacto
+  con un peso estimado, así que `QtyItem × PrcItem` puede diferir en $1 de `MontoItem`. ¿El
+  validador del SII lo acepta, o hay que informar "1 × monto" con unidad kg?
 - Impuesto a bebidas analcohólicas (art. 42): confirmar que no se desglosa (solo hay oficio para ILA).
 - Ley 20.956 art. 13: confirmar texto en leychile.cl y cómo mostrar el redondeo en el ticket.
 - e-Boleta: ¿permite emitir sin detalle (solo monto)? ¿Cómo sincroniza lo emitido offline?
