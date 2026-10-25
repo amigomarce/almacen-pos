@@ -70,3 +70,168 @@ body {
 .aviso {
   color: var(--texto-suave);
 }
+
+/* --- Aviso de modo prueba (MOCK): siempre visible --- */
+.aviso-modo-prueba {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 0.5rem 1rem;
+  background: #b00020;
+  color: #fff;
+  font-weight: 800;
+  font-size: 1.1rem;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.barra-usuario {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+}
+
+.pantalla-centrada {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 520px;
+  margin: 1.5rem auto;
+  text-align: center;
+}
+
+.pantalla-centrada h2 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.mensaje-error {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--error);
+  font-weight: 600;
+}
+
+/* --- Botones --- */
+.boton {
+  min-height: 3rem;
+  padding: 0.5rem 1.25rem;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boton-chico {
+  min-height: 2.25rem;
+  padding: 0.25rem 0.9rem;
+}
+
+.boton-texto {
+  border: none;
+  background: transparent;
+  color: var(--primario);
+}
+
+.lista-usuarios {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+.boton-usuario {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1.5rem 1rem;
+  border: 2px solid var(--borde);
+  border-radius: 14px;
+  background: var(--superficie);
+  color: var(--texto);
+  cursor: pointer;
+}
+
+.boton-usuario:hover,
+.boton-usuario:focus-visible {
+  border-color: var(--primario);
+}
+
+.boton-usuario-nombre {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.boton-usuario-rol {
+  color: var(--texto-suave);
+}
+
+/* --- PIN y montos --- */
+.puntos-pin {
+  display: flex;
+  gap: 0.75rem;
+  min-height: 1.5rem;
+}
+
+.punto {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 2px solid var(--texto-suave);
+  border-radius: 50%;
+}
+
+.punto.lleno {
+  background: var(--texto);
+  border-color: var(--texto);
+}
+
+.monto-grande {
+  font-size: 3rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Teclado numérico --- */
+.teclado {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  width: min(360px, 100%);
+}
+
+.tecla {
+  min-height: 4rem;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: 1.6rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tecla:active {
+  background: var(--borde);
+}
+
+.tecla:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.tecla-secundaria {
+  font-size: 1rem;
+}
+
+.tecla-primaria {
+  background: var(--primario);
+  border-color: var(--primario);
+  color: #fff;
+  font-size: 1.1rem;
+}

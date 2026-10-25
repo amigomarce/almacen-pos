@@ -14,7 +14,7 @@ describe('ClienteApi', () => {
     const fetchFn = responder(200, { status: 'ok', version: '0.1.0' });
     const cliente = new ClienteApi('/api', fetchFn);
     await expect(cliente.estado()).resolves.toEqual({ status: 'ok', version: '0.1.0' });
-    expect(fetchFn).toHaveBeenCalledWith('/api/health', undefined);
+    expect(fetchFn).toHaveBeenCalledWith('/api/health', { method: 'GET', headers: {} });
   });
 
   it('traduce un error del servidor con su código y mensaje', async () => {
@@ -48,6 +48,42 @@ describe('ClienteApi', () => {
       estado: 0,
       codigo: 'SIN_CONEXION',
       message: MENSAJE_SIN_CONEXION,
+    });
+  });
+
+  it('envía el token y el cuerpo JSON', async () => {
+    const fetchFn = responder(200, { token: 't', usuario: {} });
+    const cliente = new ClienteApi('/api', fetchFn);
+    cliente.usarToken('abc');
+    await cliente.entrar('u1', '1234');
+    expect(fetchFn).toHaveBeenCalledWith('/api/auth/login', {
+      method: 'POST',
+      headers: { authorization: 'Bearer abc', 'content-type': 'application/json' },
+      body: JSON.stringify({ usuarioId: 'u1', pin: '1234' }),
+    });
+  });
+
+  it('avisa a quien escucha cuando el servidor pierde la sesión, y deja de avisar', async () => {
+    const cliente = new ClienteApi(
+      '/api',
+      responder(401, { error: 'SIN_SESION', mensaje: 'Ingresa tu PIN' }),
+    );
+    const oyente = vi.fn();
+    const dejar = cliente.alPerderSesion(oyente);
+    await expect(cliente.estadoCaja()).rejects.toMatchObject({ codigo: 'SIN_SESION' });
+    expect(oyente).toHaveBeenCalledTimes(1);
+    dejar();
+    await expect(cliente.estadoCaja()).rejects.toThrow();
+    expect(oyente).toHaveBeenCalledTimes(1);
+  });
+
+  it('guarda los datos extra del error', async () => {
+    const cliente = new ClienteApi(
+      '/api',
+      responder(401, { error: 'PIN_INCORRECTO', mensaje: 'PIN incorrecto', intentosRestantes: 3 }),
+    );
+    await expect(cliente.entrar('u', '1111')).rejects.toMatchObject({
+      datos: { intentosRestantes: 3 },
     });
   });
 });
