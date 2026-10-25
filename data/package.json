@@ -1,0 +1,18 @@
+{
+  "name": "@almacen/data",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ETL de la base semilla de productos chilenos (Open Food Facts y proyectos hermanos, ODbL).",
+  "scripts": {
+    "medir": "tsx src/medir-cli.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@almacen/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15"
+  }
+}
