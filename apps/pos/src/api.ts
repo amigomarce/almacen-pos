@@ -522,4 +522,11 @@ export class ClienteApi {
   }
 }
 
-export const api = new ClienteApi();
+/**
+ * En el navegador (desarrollo) se usa `/api` y Vite lo redirige al servidor. Dentro de Tauri
+ * no hay proxy: `pnpm --filter @almacen/pos build:tauri` usa `.env.tauri` con la dirección
+ * directa del servidor local (ADR-005).
+ */
+export const BASE_API: string = import.meta.env.VITE_ALMACEN_API ?? '/api';
+
+export const api = new ClienteApi(BASE_API);

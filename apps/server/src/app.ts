@@ -10,6 +10,7 @@ import { registrarCaja } from './caja/rutas.js';
 import { registrarConfiguracion } from './configuracion/rutas.js';
 import { configBalanzaDe, leerConfiguracion } from './configuracion/servicio.js';
 import type { Db } from './db/client.js';
+import { registrarCors } from './cors.js';
 import { ErrorHttp } from './errores.js';
 import { registrarImpresion } from './impresion/rutas.js';
 import { ServicioImpresion } from './impresion/servicio.js';
@@ -67,6 +68,7 @@ export function crearApp({
     // Sin conversión de tipos: un `null` o "1000" en un monto es un error, no $0 ni $1.000.
     ajv: { customOptions: { coerceTypes: false } },
   });
+  registrarCors(app);
 
   // Mismo formato de error en toda la API: { error, mensaje }.
   app.setErrorHandler<FastifyError>((error, _req, reply) => {

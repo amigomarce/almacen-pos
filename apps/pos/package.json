@@ -8,7 +8,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "build:tauri": "vite build --mode tauri",
+    "tauri": "tauri"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.1",

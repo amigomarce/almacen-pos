@@ -16,3 +16,6 @@ CAF*.xml
 data/raw/
 coverage/
 data/out/
+
+# Configuración pública de la caja en Tauri (sin secretos)
+!apps/pos/.env.tauri
