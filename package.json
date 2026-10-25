@@ -10,7 +10,7 @@
     "dev:pos": "pnpm --parallel --filter @almacen/server --filter @almacen/pos dev",
     "dev:pos:app": "pnpm --filter @almacen/pos tauri dev",
     "dev:mobile": "node scripts/pendiente.mjs dev:mobile 4",
-    "dev:cloud": "node scripts/pendiente.mjs dev:cloud 4",
+    "dev:cloud": "pnpm --filter @almacen/cloud dev",
     "dev:server": "pnpm --filter @almacen/server dev",
     "data:build": "pnpm --filter @almacen/data build",
     "test": "vitest run",

@@ -1,0 +1,27 @@
+{
+  "name": "@almacen/cloud",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "API de la nube (sincronización y app del dueño): Fastify + PostgreSQL (Supabase). Espejo de la caja; nunca bloquea la venta.",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "db:generate": "drizzle-kit generate"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.11",
+    "pg-mem": "^3.0.14",
+    "tsx": "^4.23.15"
+  },
+  "dependencies": {
+    "@almacen/core": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "fastify": "^5.12.7",
+    "pg": "^8.23.1",
+    "uuid": "^14.0.3"
+  }
+}
