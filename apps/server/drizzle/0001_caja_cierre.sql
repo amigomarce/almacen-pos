@@ -1,0 +1,2 @@
+ALTER TABLE `cash_sessions` ADD `expected_cash` integer;--> statement-breakpoint
+CREATE UNIQUE INDEX `cash_sessions_abierta_uq` ON `cash_sessions` (`register_id`) WHERE "cash_sessions"."closed_at" is null;

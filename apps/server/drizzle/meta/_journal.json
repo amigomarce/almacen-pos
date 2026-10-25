@@ -8,6 +8,13 @@
       "when": 1792924296080,
       "tag": "0000_modelo_inicial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792933715565,
+      "tag": "0001_caja_cierre",
+      "breakpoints": true
     }
   ]
 }

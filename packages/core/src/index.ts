@@ -7,3 +7,4 @@ export * from './balanza.js';
 export * from './iva.js';
 export * from './pago.js';
 export * from './venta.js';
+export * from './caja.js';

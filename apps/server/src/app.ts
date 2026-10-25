@@ -1,11 +1,12 @@
 import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
 import { sql } from 'drizzle-orm';
-import type { ConfigBalanza } from '@almacen/core';
+import { ErrorDominio, type ConfigBalanza } from '@almacen/core';
 import { LICENCIA, TEXTO_ATRIBUCION, URL_LICENCIA } from '@almacen/data';
 import pkg from '../package.json' with { type: 'json' };
 import { LimitadorIntentos } from './auth/intentos.js';
 import { registrarAuth } from './auth/rutas.js';
 import { Sesiones } from './auth/sesiones.js';
+import { registrarCaja } from './caja/rutas.js';
 import type { Db } from './db/client.js';
 import { buscarProducto, type DependenciasLookup } from './productos/lookup.js';
 import type { Semilla } from './productos/semilla.js';
@@ -32,7 +33,11 @@ export function crearApp({
   intentos = new LimitadorIntentos(),
   logger = false,
 }: OpcionesApp): FastifyInstance {
-  const app = Fastify({ logger });
+  const app = Fastify({
+    logger,
+    // Sin conversión de tipos: un `null` o "1000" en un monto es un error, no $0 ni $1.000.
+    ajv: { customOptions: { coerceTypes: false } },
+  });
 
   // Mismo formato de error en toda la API: { error, mensaje }.
   app.setErrorHandler<FastifyError>((error, _req, reply) => {
@@ -40,6 +45,10 @@ export function crearApp({
       return reply
         .code(400)
         .send({ error: 'DATOS_INVALIDOS', mensaje: 'Datos inválidos', detalle: error.message });
+    }
+    // Reglas del dominio (packages/core): el mensaje ya está en español para el cajero.
+    if (error instanceof ErrorDominio) {
+      return reply.code(400).send({ error: error.codigo, mensaje: error.message });
     }
     app.log.error(error);
     const estado = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
@@ -50,6 +59,7 @@ export function crearApp({
   });
 
   registrarAuth(app, { db, sesiones, intentos });
+  registrarCaja(app, { db, sesiones });
 
   app.get('/health', () => {
     let estadoDb: 'ok' | 'error' = 'ok';

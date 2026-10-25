@@ -230,8 +230,16 @@ export const cashSessions = sqliteTable(
     closedBy: text('closed_by').references(() => users.id),
     closedAt: integer('closed_at', { mode: 'timestamp_ms' }),
     countedCash: integer('counted_cash'),
+    /** Efectivo esperado al cerrar (inicial + cobrado en efectivo). Queda fijo para auditoría. */
+    expectedCash: integer('expected_cash'),
   },
-  (t) => [check('cash_sessions_apertura', sql`${t.openingCash} >= 0`)],
+  (t) => [
+    check('cash_sessions_apertura', sql`${t.openingCash} >= 0`),
+    // Una sola sesión abierta por caja.
+    uniqueIndex('cash_sessions_abierta_uq')
+      .on(t.registerId)
+      .where(sql`${t.closedAt} is null`),
+  ],
 );
 
 export const sales = sqliteTable(
