@@ -5,3 +5,4 @@ export * from './rut.js';
 export * from './codigo-barras.js';
 export * from './balanza.js';
 export * from './iva.js';
+export * from './pago.js';

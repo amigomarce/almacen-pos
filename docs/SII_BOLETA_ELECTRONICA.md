@@ -281,7 +281,11 @@ otra. "Oficial" = sii.cl o documento firmado por el SII; "proveedor" = blog/siti
 - Fuentes (secundarias que citan la ley: SUSESO, Municipalidad de Providencia):
   https://www.suseso.cl/613/alt-propertyvalue-63802.pdf ·
   https://www.sinim.gov.cl/archivos/home/628/NSPM.0111_MUNICIPALIDAD_DE_PROVIDENCIA_AJUSTE_DE_SENCILLO.pdf
-  `TODO(SII)`: confirmar el texto en leychile.cl (Ley 20.956) antes de Fase 1.
+  Revisado en Fase 1 (2026-10-25): la transcripción de SUSESO cita el art. 13 textual ("las
+  cantidades iguales o inferiores a $5 se depreciarán a la decena inferior, y las cantidades
+  iguales o superiores a $6 se elevarán a la decena superior"). LeyChile no se pudo abrir sin
+  navegador. `TODO(SII)`: cotejar con el texto oficial en bcn.cl cuando sea posible.
+  Implementado en `packages/core/src/pago.ts`.
 - **Consecuencia:** `sales.rounding_clp` se guarda aparte; `tax_documents` usa el total sin
   redondear. En el ticket se puede mostrar "Redondeo efectivo: -$3" fuera del bloque tributario.
 
