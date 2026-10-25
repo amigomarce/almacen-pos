@@ -1,8 +1,11 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
 import { sql } from 'drizzle-orm';
 import type { ConfigBalanza } from '@almacen/core';
 import { LICENCIA, TEXTO_ATRIBUCION, URL_LICENCIA } from '@almacen/data';
 import pkg from '../package.json' with { type: 'json' };
+import { LimitadorIntentos } from './auth/intentos.js';
+import { registrarAuth } from './auth/rutas.js';
+import { Sesiones } from './auth/sesiones.js';
 import type { Db } from './db/client.js';
 import { buscarProducto, type DependenciasLookup } from './productos/lookup.js';
 import type { Semilla } from './productos/semilla.js';
@@ -14,6 +17,9 @@ export interface OpcionesApp {
   /** Consulta en línea a Open Food Facts; `null` o ausente = sin internet. */
   off?: DependenciasLookup['off'];
   configBalanza?: ConfigBalanza;
+  /** Inyectables para tests (reloj controlado). */
+  sesiones?: Sesiones;
+  intentos?: LimitadorIntentos;
   logger?: boolean;
 }
 
@@ -22,9 +28,28 @@ export function crearApp({
   semilla = null,
   off = null,
   configBalanza,
+  sesiones = new Sesiones(),
+  intentos = new LimitadorIntentos(),
   logger = false,
 }: OpcionesApp): FastifyInstance {
   const app = Fastify({ logger });
+
+  // Mismo formato de error en toda la API: { error, mensaje }.
+  app.setErrorHandler<FastifyError>((error, _req, reply) => {
+    if (error.validation) {
+      return reply
+        .code(400)
+        .send({ error: 'DATOS_INVALIDOS', mensaje: 'Datos inválidos', detalle: error.message });
+    }
+    app.log.error(error);
+    const estado = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
+    return reply.code(estado).send({
+      error: estado === 500 ? 'ERROR_INTERNO' : error.code,
+      mensaje: estado === 500 ? 'Error interno del servidor' : error.message,
+    });
+  });
+
+  registrarAuth(app, { db, sesiones, intentos });
 
   app.get('/health', () => {
     let estadoDb: 'ok' | 'error' = 'ok';
