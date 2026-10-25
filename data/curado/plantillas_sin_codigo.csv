@@ -1,0 +1,35 @@
+# Productos típicos de almacén que se venden SIN código de barras propio (granel, por kg o
+# por unidad). La caja los ofrece como botones de venta rápida o para crearlos con un toque.
+# Si el producto tiene código, se le asigna cuando el dueño lo escanea por primera vez.
+# Prohibido poner códigos de barras aquí (el build lo rechaza).
+# unidad: UN (por unidad) o KG (por peso).
+nombre,categoria_slug,unidad,nota
+Pan marraqueta,panaderia,KG,
+Pan hallulla,panaderia,KG,
+Pan amasado,panaderia,KG,
+Pan integral,panaderia,KG,
+Dobladitas,panaderia,KG,
+Huevo blanco,huevos,UN,
+Huevo color,huevos,UN,
+Tomate,frutas-verduras,KG,
+Papa,frutas-verduras,KG,
+Cebolla,frutas-verduras,KG,
+Zanahoria,frutas-verduras,KG,
+Palta,frutas-verduras,KG,
+Limón,frutas-verduras,KG,
+Plátano,frutas-verduras,KG,
+Manzana,frutas-verduras,KG,
+Naranja,frutas-verduras,KG,
+Zapallo,frutas-verduras,KG,
+Lechuga,frutas-verduras,UN,
+Choclo,frutas-verduras,UN,
+Ajo,frutas-verduras,UN,Cabeza
+Cilantro,frutas-verduras,UN,Atado
+Perejil,frutas-verduras,UN,Atado
+Queso laminado,quesos,KG,Granel
+Jamón laminado,cecinas,KG,Granel
+Aceitunas,conservas,KG,Granel
+Maní,frutos-secos,KG,Granel
+Hielo,otros,UN,Bolsa
+Bolsa de papel,otros,UN,
+Cigarro suelto,cigarros,UN,TODO: verificar si la venta por unidad está permitida (Ley 19.419) antes de usarla

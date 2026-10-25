@@ -45,6 +45,7 @@ export function deduplicar(candidatos: Iterable<Candidato>): Fusionado[] {
     if (!ganador) continue;
     const origen =
       PRIORIDAD_ORIGEN.find((o) => grupo.some((c) => c.origen === o)) ?? ganador.origen;
+    const categoriaSlug = grupo.find((c) => c.categoriaSlug)?.categoriaSlug;
     const fechas = grupo.map((c) => c.modificado).filter((m): m is number => m !== null);
     resultado.push({
       barcode,
@@ -62,6 +63,7 @@ export function deduplicar(candidatos: Iterable<Candidato>): Fusionado[] {
       imagen: primero(grupo, (c) => c.imagen, vacioTexto) ?? '',
       modificado: fechas.length > 0 ? Math.max(...fechas) : null,
       fuentes: [...new Set(grupo.map((c) => c.fuente))],
+      ...(categoriaSlug ? { categoriaSlug } : {}),
     });
   }
   return resultado.sort((a, b) => a.barcode.localeCompare(b.barcode));

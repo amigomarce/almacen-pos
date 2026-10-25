@@ -60,4 +60,15 @@ describe('deduplicar', () => {
       ['7802930000548', ['en:soaps']],
     ]);
   });
+
+  it('conserva la categoría fija de la lista curada', () => {
+    const r = deduplicar([
+      c({ barcode: '7802930000548', fuente: 'off', categoriasTags: ['en:snacks'] }),
+      c({ barcode: '7802930000548', fuente: 'curado', origen: 'CURADO', categoriaSlug: 'quesos' }),
+    ]);
+    expect(r[0]?.categoriaSlug).toBe('quesos');
+    expect(deduplicar([c({ barcode: '7802930000548', fuente: 'off' })])[0]).not.toHaveProperty(
+      'categoriaSlug',
+    );
+  });
 });

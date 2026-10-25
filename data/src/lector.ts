@@ -21,6 +21,8 @@ export interface Candidato {
   marca: string;
   cantidad: string;
   categoriasTags: string[];
+  /** Categoría ya decidida (solo la lista curada la trae; OFF trae etiquetas). */
+  categoriaSlug?: string;
   imagen: string;
   /** Unix (s) de la última modificación en la fuente; `null` si no se sabe. */
   modificado: number | null;

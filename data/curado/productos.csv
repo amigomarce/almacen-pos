@@ -1,0 +1,8 @@
+# Lista curada de productos con código de barras REAL, verificado en el envase.
+# Reglas (el build falla si no se cumplen):
+# - barcode: EAN-13, EAN-8 o UPC-A con dígito verificador correcto. Nunca inventado ni
+#   "calculado": se copia del envase escaneándolo o leyéndolo.
+# - verificado_por: quién lo leyó del envase; fecha_verificacion: AAAA-MM-DD.
+# - categoria_slug: una de data/categorias.csv.
+# Esta lista gana sobre Open Food Facts cuando el mismo código está en ambas.
+barcode,nombre,marca,cantidad,categoria_slug,verificado_por,fecha_verificacion,nota
