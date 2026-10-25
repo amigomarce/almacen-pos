@@ -62,9 +62,14 @@ const nuevaClave = () => crypto.randomUUID();
 
 interface Props {
   api: ClienteApi;
+  /**
+   * `false` mientras se usa otra pestaña: la venta en curso se conserva, pero sin teclado ni
+   * foco. Al volver se recargan los botones rápidos y la configuración.
+   */
+  activa?: boolean;
 }
 
-export function PantallaVenta({ api }: Props) {
+export function PantallaVenta({ api, activa = true }: Props) {
   const [carrito, setCarrito] = useState<Carrito>(CARRITO_VACIO);
   const [cotizacion, setCotizacion] = useState<{ carrito: Carrito; datos: Cotizacion } | null>(
     null,
@@ -85,17 +90,23 @@ export function PantallaVenta({ api }: Props) {
 
   // Foco permanente en el campo de escaneo (el lector "tipea" ahí), salvo con una ventana abierta.
   const hayVentana = useRef(false);
+  const estaActiva = useRef(activa);
   useEffect(() => {
     hayVentana.current = ventana !== null;
+    estaActiva.current = activa;
   });
   const enfocar = useCallback(() => {
     setTimeout(() => {
-      if (!hayVentana.current) campo.current?.focus();
+      if (!hayVentana.current && estaActiva.current) campo.current?.focus();
     }, 0);
   }, []);
+  useEffect(() => {
+    if (activa) enfocar();
+  }, [activa, enfocar]);
 
   // Botones de venta rápida (pan, huevos, verduras...). Si fallan, la caja vende igual.
   useEffect(() => {
+    if (!activa) return;
     let vigente = true;
     api
       .botonesRapidos()
@@ -106,10 +117,11 @@ export function PantallaVenta({ api }: Props) {
     return () => {
       vigente = false;
     };
-  }, [api]);
+  }, [api, activa]);
 
   // Configuración del local: redondeo de efectivo y modalidad de boleta.
   useEffect(() => {
+    if (!activa) return;
     let vigente = true;
     api
       .configuracion()
@@ -120,7 +132,7 @@ export function PantallaVenta({ api }: Props) {
     return () => {
       vigente = false;
     };
-  }, [api]);
+  }, [api, activa]);
 
   // Cotiza en el servidor cada vez que cambia el carrito: precios vigentes y promociones.
   useEffect(() => {
@@ -378,11 +390,8 @@ export function PantallaVenta({ api }: Props) {
   useTeclado((e) => {
     // Con la búsqueda o el vuelto en pantalla, un escaneo igual se reconoce: cierra y agrega.
     if (ventana) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        cerrarVentana();
-        return;
-      }
+      // Esc lo maneja la ventana misma (componentes/Modal).
+      if (e.key === 'Escape') return;
       // Solo donde un escaneo significa "siguiente producto". En ventanas donde se escriben
       // números (cobro, cantidad, monto) el detector confundiría un monto con un código.
       if (ventana.tipo !== 'BUSCAR' && ventana.tipo !== 'LISTA') return;
@@ -439,10 +448,10 @@ export function PantallaVenta({ api }: Props) {
         }
         return;
     }
-  });
+  }, activa);
 
   return (
-    <section className="venta">
+    <section className="venta" style={activa ? undefined : { display: 'none' }}>
       <div className="venta-izquierda">
         <input
           ref={campo}
@@ -453,7 +462,7 @@ export function PantallaVenta({ api }: Props) {
           autoComplete="off"
           readOnly={ventana !== null}
           onBlur={() => {
-            if (!ventana) enfocar();
+            if (!ventana && activa) enfocar();
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {

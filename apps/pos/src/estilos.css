@@ -638,3 +638,147 @@ body {
 .sugerido-nombre {
   font-size: 1.4rem;
 }
+
+/* --- Pestañas --- */
+.pestanas {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.pestana {
+  min-height: 2.5rem;
+  padding: 0.25rem 1rem;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--fondo);
+  color: var(--texto);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pestana[aria-selected='true'] {
+  border-color: var(--primario);
+  background: var(--primario);
+  color: #fff;
+}
+
+/* --- Listas de productos --- */
+.pantalla-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.fila-izquierda {
+  justify-content: flex-start;
+}
+
+.fila-izquierda .campo-escaneo {
+  flex: 1;
+  min-width: 260px;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--superficie);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.tabla th,
+.tabla td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--borde);
+  text-align: left;
+}
+
+.tabla th {
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+}
+
+.tabla .numero {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tabla .negativo,
+.negativo {
+  color: var(--error);
+  font-weight: 700;
+}
+
+.fila-tabla {
+  cursor: pointer;
+}
+
+.fila-tabla:hover,
+.fila-tabla:focus-visible {
+  background: #eef4fb;
+}
+
+.formulario {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.6rem 1rem;
+  width: 100%;
+  align-items: end;
+}
+
+.casilla {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.casilla input {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.stock-producto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.lista-botones {
+  width: 100%;
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.lista-botones li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.titulo-seccion {
+  margin: 0;
+}
+
+.campo-chico {
+  min-height: 2.5rem;
+  font-size: 1.05rem;
+  max-width: 10rem;
+}
+
+.resultado-recepcion {
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--ok);
+  border-radius: 12px;
+  background: #eaf6ec;
+}
+
+.resultado-recepcion ul {
+  margin: 0.4rem 0 0;
+}

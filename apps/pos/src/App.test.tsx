@@ -256,4 +256,38 @@ describe('sesión', () => {
       expect(screen.getByRole('heading', { name: 'Abrir Caja 1' })).toBeInTheDocument(),
     );
   });
+
+  it('pestañas: la venta en curso se conserva al ir a Productos o Recepción', async () => {
+    const u = userEvent.setup();
+    const s = servidorFalso({
+      sesionCaja: {
+        id: 's1',
+        abiertaPor: { id: 'u2', name: 'Cajero' },
+        abiertaEn: '',
+        efectivoInicialClp: 0,
+      },
+    });
+    render(<App api={s.api} />);
+    await entrarComoCajero(u);
+    const campo = await screen.findByLabelText('Escanea o escribe un código');
+    await u.type(campo, '7801{Enter}');
+    await waitFor(() =>
+      expect(screen.getAllByRole('listitem')[0]).toHaveTextContent('Bebida cola'),
+    );
+
+    await u.click(screen.getByRole('tab', { name: 'Productos' }));
+    expect(screen.getByLabelText('Buscar producto')).toBeInTheDocument();
+    expect(screen.getByLabelText('Escanea o escribe un código')).not.toBeVisible();
+    // El teclado de la venta no actúa en otra pestaña.
+    await u.keyboard('{F12}');
+    expect(screen.queryByRole('dialog', { name: 'Cobrar' })).not.toBeInTheDocument();
+
+    await u.click(screen.getByRole('tab', { name: 'Recepción' }));
+    expect(screen.getByLabelText('Escanea lo que llegó')).toBeInTheDocument();
+
+    await u.click(screen.getByRole('tab', { name: 'Venta' }));
+    expect(screen.getByRole('tab', { name: 'Venta' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getAllByRole('listitem')[0]).toHaveTextContent('Bebida cola');
+    await waitFor(() => expect(screen.getByLabelText('Escanea o escribe un código')).toHaveFocus());
+  });
 });

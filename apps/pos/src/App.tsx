@@ -9,9 +9,19 @@ import {
 import { AvisoModoPrueba } from './componentes/AvisoModoPrueba.js';
 import { PantallaApertura } from './pantallas/PantallaApertura.js';
 import { PantallaPin } from './pantallas/PantallaPin.js';
+import { PantallaProductos } from './pantallas/PantallaProductos.js';
+import { PantallaRecepcion } from './pantallas/PantallaRecepcion.js';
 import { PantallaVenta } from './pantallas/PantallaVenta.js';
 import { guardarToken, leerToken } from './sesion.js';
 import { useEstadoServidor, type Conexion } from './useEstadoServidor.js';
+
+type Vista = 'VENTA' | 'PRODUCTOS' | 'RECEPCION';
+
+const VISTAS: { vista: Vista; etiqueta: string }[] = [
+  { vista: 'VENTA', etiqueta: 'Venta' },
+  { vista: 'PRODUCTOS', etiqueta: 'Productos' },
+  { vista: 'RECEPCION', etiqueta: 'Recepción' },
+];
 
 type Fase =
   | { tipo: 'CARGANDO' }
@@ -21,6 +31,7 @@ type Fase =
 export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
   const conexion = useEstadoServidor(api);
   // Con un token guardado se intenta retomar la sesión; sin token, directo al PIN.
+  const [vista, setVista] = useState<Vista>('VENTA');
   const [fase, setFase] = useState<Fase>(() =>
     leerToken() ? { tipo: 'CARGANDO' } : { tipo: 'PIN' },
   );
@@ -64,6 +75,7 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
   }, [api, volverAlPin, cargarCaja]);
 
   const alEntrar = (token: string, usuario: Usuario) => {
+    setVista('VENTA');
     guardarToken(token);
     api.usarToken(token);
     void cargarCaja(usuario);
@@ -84,6 +96,24 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
       <header className="barra">
         <h1>Almacén POS</h1>
         {fase.tipo === 'CAJA' && (
+          <nav className="pestanas" role="tablist" aria-label="Secciones">
+            {VISTAS.map((v) => (
+              <button
+                key={v.vista}
+                type="button"
+                role="tab"
+                className="pestana"
+                aria-selected={vista === v.vista}
+                onClick={() => {
+                  setVista(v.vista);
+                }}
+              >
+                {v.etiqueta}
+              </button>
+            ))}
+          </nav>
+        )}
+        {fase.tipo === 'CAJA' && (
           <div className="barra-usuario">
             <span>
               {fase.usuario.name}
@@ -102,6 +132,7 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
         {fase.tipo === 'CAJA' && (
           <Caja
             fase={fase}
+            vista={vista}
             api={api}
             reintentar={() => void cargarCaja(fase.usuario)}
             alAbrir={(caja) => {
@@ -116,11 +147,13 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
 
 function Caja({
   fase,
+  vista,
   api,
   reintentar,
   alAbrir,
 }: {
   fase: Extract<Fase, { tipo: 'CAJA' }>;
+  vista: Vista;
   api: ClienteApi;
   reintentar: () => void;
   alAbrir: (caja: EstadoCaja) => void;
@@ -138,9 +171,21 @@ function Caja({
     );
   }
   if (!fase.caja) return <p className="pantalla-centrada">Cargando…</p>;
-  if (!fase.caja.sesion)
-    return <PantallaApertura api={api} caja={fase.caja.caja.name} alAbrir={alAbrir} />;
-  return <PantallaVenta api={api} />;
+  const esDueno = fase.usuario.role === 'DUENO';
+  return (
+    <>
+      {/* La venta queda montada (oculta) al cambiar de pestaña: no se pierde el carrito. */}
+      {fase.caja.sesion ? (
+        <PantallaVenta api={api} activa={vista === 'VENTA'} />
+      ) : (
+        vista === 'VENTA' && (
+          <PantallaApertura api={api} caja={fase.caja.caja.name} alAbrir={alAbrir} />
+        )
+      )}
+      {vista === 'PRODUCTOS' && <PantallaProductos api={api} esDueno={esDueno} />}
+      {vista === 'RECEPCION' && <PantallaRecepcion api={api} />}
+    </>
+  );
 }
 
 function EstadoConexion({ conexion }: { conexion: Conexion }) {

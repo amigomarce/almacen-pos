@@ -68,6 +68,56 @@ export interface ProductoLocal {
   stockQtyMilli: number;
 }
 
+export type FiltroProductos = 'STOCK_BAJO' | 'SIN_STOCK' | 'SIN_CATEGORIA' | 'INACTIVOS';
+
+export interface ProductoListado extends ProductoLocal {
+  costClp: number | null;
+  stockMinMilli: number | null;
+  active: boolean;
+  categoryId: string | null;
+}
+
+export interface ProductoDetalle extends ProductoListado {
+  barcodesAlternativos: string[];
+  categoria: string | null;
+  margen: number | null;
+  taxType: 'AFECTO' | 'EXENTO';
+  scaleCode: string | null;
+  source: 'SEED' | 'LOCAL';
+}
+
+export interface CambiosProducto {
+  name?: string;
+  brand?: string | null;
+  format?: string | null;
+  priceClp?: number;
+  costClp?: number | null;
+  taxType?: 'AFECTO' | 'EXENTO';
+  stockMinMilli?: number | null;
+  barcode?: string | null;
+  scaleCode?: string | null;
+  active?: boolean;
+}
+
+export interface LineaRecepcion {
+  productoId: string;
+  cantidadMilli: number;
+  costoUnitarioClp?: number;
+}
+
+export interface ResultadoRecepcion {
+  id: string;
+  lineas: {
+    productoId: string;
+    nombre: string;
+    cantidadMilli: number;
+    stockAnteriorMilli: number;
+    stockNuevoMilli: number;
+    costoAnteriorClp: number | null;
+    costoNuevoClp: number | null;
+  }[];
+}
+
 /** Datos de la base de productos (semilla u Open Food Facts): solo falta precio y stock. */
 export interface ProductoSugerido {
   barcode: string;
@@ -292,6 +342,44 @@ export class ClienteApi {
       metodo: 'PATCH',
       cuerpo: { folio },
     });
+  }
+
+  listarProductos(texto: string, filtro: FiltroProductos | null): Promise<ProductoListado[]> {
+    const q = new URLSearchParams({ buscar: texto, limite: '100' });
+    if (filtro) q.set('filtro', filtro);
+    return this.pedir<ProductoListado[]>(`/products?${q.toString()}`);
+  }
+
+  detalleProducto(id: string): Promise<ProductoDetalle> {
+    return this.pedir<ProductoDetalle>(`/products/${encodeURIComponent(id)}`);
+  }
+
+  editarProducto(id: string, cambios: CambiosProducto): Promise<ProductoDetalle> {
+    return this.pedir<ProductoDetalle>(`/products/${encodeURIComponent(id)}`, {
+      metodo: 'PATCH',
+      cuerpo: cambios,
+    });
+  }
+
+  ajustarStock(
+    id: string,
+    ajuste:
+      { tipo: 'CONTEO'; stockContadoMilli: number } | { tipo: 'MERMA'; cantidadMilli: number },
+  ): Promise<ProductoDetalle> {
+    return this.pedir<ProductoDetalle>(`/products/${encodeURIComponent(id)}/stock`, {
+      metodo: 'POST',
+      cuerpo: ajuste,
+    });
+  }
+
+  guardarBotones(
+    botones: readonly { label: string; productoId: string | null }[],
+  ): Promise<BotonRapido[]> {
+    return this.pedir<BotonRapido[]>('/quick-buttons', { metodo: 'PUT', cuerpo: { botones } });
+  }
+
+  recibir(lineas: readonly LineaRecepcion[]): Promise<ResultadoRecepcion> {
+    return this.pedir<ResultadoRecepcion>('/receptions', { metodo: 'POST', cuerpo: { lineas } });
   }
 
   crearProducto(datos: DatosAlta): Promise<ProductoLocal> {

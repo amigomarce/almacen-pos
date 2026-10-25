@@ -45,6 +45,13 @@ export interface EstadoFalso {
   productos: ProductoLocal[];
   /** Cuerpos recibidos en POST /products. */
   creados: Record<string, unknown>[];
+  /** Datos extra por producto (costo, stock mínimo, activo). */
+  extra: Record<string, { costClp: number | null; stockMinMilli: number | null; active: boolean }>;
+  /** Cuerpos recibidos en PATCH /products/:id, POST /products/:id/stock, PUT /quick-buttons y POST /receptions. */
+  ediciones: { id: string; cuerpo: Record<string, unknown> }[];
+  ajustes: { id: string; cuerpo: Record<string, unknown> }[];
+  botonesGuardados: unknown[];
+  recepciones: Record<string, unknown>[];
   dteProvider: 'MOCK' | 'PUENTE_MANUAL';
   redondeo: boolean;
   /** `true` = hay impresora (imprime); `false` = sin impresora configurada. */
@@ -93,6 +100,11 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
     sesionCaja: null,
     productos: [...PRODUCTOS_FALSOS],
     creados: [],
+    extra: {},
+    ediciones: [],
+    ajustes: [],
+    botonesGuardados: [],
+    recepciones: [],
     dteProvider: 'MOCK',
     redondeo: true,
     impresora: true,
@@ -132,6 +144,22 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
       lineas: calculadas,
     };
   };
+
+  const extra = (id: string) =>
+    (estado.extra[id] ??= { costClp: null, stockMinMilli: null, active: true });
+  const listado = (p: ProductoLocal) => ({ ...p, ...extra(p.id), categoryId: null });
+  const detalle = (p: ProductoLocal) => ({
+    ...listado(p),
+    barcodesAlternativos: [],
+    categoria: null,
+    margen:
+      extra(p.id).costClp === null
+        ? null
+        : Math.round(((p.priceClp - (extra(p.id).costClp ?? 0)) * 100) / p.priceClp),
+    taxType: 'AFECTO',
+    scaleCode: null,
+    source: 'LOCAL',
+  });
 
   const fetchFn = vi.fn<typeof fetch>((entrada, init) => {
     const url =
@@ -295,6 +323,38 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
         estado.ventas.set(id, venta);
         return json(201, venta);
       }
+      case 'PUT /quick-buttons':
+        if (!usuario) return sinSesion();
+        estado.botonesGuardados.push(cuerpo['botones']);
+        return json(200, []);
+      case 'POST /receptions': {
+        if (!usuario) return sinSesion();
+        estado.recepciones.push(cuerpo);
+        const lineas = cuerpo['lineas'] as {
+          productoId: string;
+          cantidadMilli: number;
+          costoUnitarioClp?: number;
+        }[];
+        return json(201, {
+          id: 'r1',
+          lineas: lineas.map((l) => {
+            const p = estado.productos.find((x) => x.id === l.productoId);
+            const antes = p?.stockQtyMilli ?? 0;
+            if (p) p.stockQtyMilli = antes + l.cantidadMilli;
+            const costoAntes = extra(l.productoId).costClp;
+            if (l.costoUnitarioClp !== undefined) extra(l.productoId).costClp = l.costoUnitarioClp;
+            return {
+              productoId: l.productoId,
+              nombre: p?.name ?? '?',
+              cantidadMilli: l.cantidadMilli,
+              stockAnteriorMilli: antes,
+              stockNuevoMilli: antes + l.cantidadMilli,
+              costoAnteriorClp: costoAntes,
+              costoNuevoClp: extra(l.productoId).costClp,
+            };
+          }),
+        });
+      }
       case 'GET /quick-buttons': {
         if (!usuario) return sinSesion();
         const p = (id: string) => estado.productos.find((x) => x.id === id) ?? null;
@@ -342,14 +402,56 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
           };
           return json(200, v);
         }
-        const busqueda = /^GET \/products\?buscar=(.*)$/.exec(clave);
+        const busqueda = /^GET \/products\?(.*)$/.exec(clave);
         if (busqueda) {
           if (!usuario) return sinSesion();
-          const q = decodeURIComponent(busqueda[1] ?? '').toLowerCase();
+          const params = new URLSearchParams(busqueda[1] ?? '');
+          const q = (params.get('buscar') ?? '').toLowerCase().trim();
+          const filtro = params.get('filtro');
+          if (q === '' && !filtro) return json(200, []);
           return json(
             200,
-            estado.productos.filter((p) => p.name.toLowerCase().includes(q)),
+            estado.productos
+              .map(listado)
+              .filter((p) => p.name.toLowerCase().includes(q))
+              .filter((p) => (filtro === 'INACTIVOS' ? !p.active : p.active))
+              .filter(
+                (p) =>
+                  filtro !== 'STOCK_BAJO' ||
+                  p.stockQtyMilli <= 0 ||
+                  (p.stockMinMilli !== null && p.stockQtyMilli <= p.stockMinMilli),
+              )
+              .filter((p) => filtro !== 'SIN_STOCK' || p.stockQtyMilli <= 0),
           );
+        }
+        const stock = /^POST \/products\/([^/]+)\/stock$/.exec(clave);
+        if (stock) {
+          if (!usuario) return sinSesion();
+          const p = estado.productos.find((x) => x.id === stock[1]);
+          if (!p) return json(404, { error: 'NO_ENCONTRADO', mensaje: 'Producto no encontrado' });
+          estado.ajustes.push({ id: p.id, cuerpo });
+          p.stockQtyMilli =
+            cuerpo['tipo'] === 'CONTEO'
+              ? Number(cuerpo['stockContadoMilli'])
+              : p.stockQtyMilli - Number(cuerpo['cantidadMilli']);
+          return json(200, detalle(p));
+        }
+        const producto = /^(GET|PATCH) \/products\/([^/]+)$/.exec(clave);
+        if (producto && producto[2] !== 'lookup') {
+          if (!usuario) return sinSesion();
+          const p = estado.productos.find((x) => x.id === producto[2]);
+          if (!p) return json(404, { error: 'NO_ENCONTRADO', mensaje: 'Producto no encontrado' });
+          if (producto[1] === 'PATCH') {
+            estado.ediciones.push({ id: p.id, cuerpo });
+            if (cuerpo['priceClp'] !== undefined) p.priceClp = Number(cuerpo['priceClp']);
+            if (typeof cuerpo['name'] === 'string') p.name = cuerpo['name'];
+            if (cuerpo['costClp'] !== undefined)
+              extra(p.id).costClp = cuerpo['costClp'] as number | null;
+            if (cuerpo['stockMinMilli'] !== undefined)
+              extra(p.id).stockMinMilli = cuerpo['stockMinMilli'] as number | null;
+            if (cuerpo['active'] !== undefined) extra(p.id).active = cuerpo['active'] as boolean;
+          }
+          return json(200, detalle(p));
         }
         const lookup = /^GET \/products\/lookup\/(.+)$/.exec(clave);
         if (lookup) {

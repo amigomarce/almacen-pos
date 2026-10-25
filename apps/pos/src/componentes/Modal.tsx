@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { useTeclado } from '../useTeclado.js';
 
-/** Ventana sobre la pantalla. Se cierra con Esc (lo maneja quien la abre) o con el botón. */
+/** Ventana sobre la pantalla. Se cierra con Esc o con el botón. */
 export function Modal({
   titulo,
   alCerrar,
@@ -11,6 +12,13 @@ export function Modal({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Esc cierra la ventana en cualquier pantalla.
+  useTeclado((e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      alCerrar();
+    }
+  });
   // El foco entra a la ventana (si ningún campo lo tomó), para que Enter no active un botón de fondo.
   useEffect(() => {
     const ventana = ref.current;

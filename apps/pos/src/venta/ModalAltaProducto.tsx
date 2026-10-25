@@ -11,13 +11,22 @@ interface Props {
   sugerido: ProductoSugerido | null;
   alCrear: (p: ProductoLocal) => void;
   alCerrar: () => void;
+  /** En la recepción el stock lo pone la cantidad recibida, así que no se pregunta. */
+  pedirStock?: boolean;
 }
 
 /**
  * Código desconocido en la venta. Si está en la base de productos, solo se pide precio y stock;
  * si no, también el nombre y si se vende por unidad o por kg.
  */
-export function ModalAltaProducto({ api, codigo, sugerido, alCrear, alCerrar }: Props) {
+export function ModalAltaProducto({
+  api,
+  codigo,
+  sugerido,
+  alCrear,
+  alCerrar,
+  pedirStock = true,
+}: Props) {
   const [nombre, setNombre] = useState(sugerido?.name ?? '');
   const [unidad, setUnidad] = useState<'UN' | 'KG'>('UN');
   const [precio, setPrecio] = useState('');
@@ -147,20 +156,22 @@ export function ModalAltaProducto({ api, codigo, sugerido, alCrear, alCerrar }: 
           onKeyDown={alEnter}
         />
       </label>
-      <label className="etiqueta-campo">
-        Stock que hay ahora (opcional)
-        <input
-          className="campo"
-          inputMode="decimal"
-          placeholder={unidad === 'KG' ? 'ej. 2,5 kg' : 'ej. 12'}
-          value={stock}
-          onChange={(e) => {
-            setStock(e.target.value.replace(/[^\d,.]/g, '').slice(0, 9));
-            setError(null);
-          }}
-          onKeyDown={alEnter}
-        />
-      </label>
+      {pedirStock && (
+        <label className="etiqueta-campo">
+          Stock que hay ahora (opcional)
+          <input
+            className="campo"
+            inputMode="decimal"
+            placeholder={unidad === 'KG' ? 'ej. 2,5 kg' : 'ej. 12'}
+            value={stock}
+            onChange={(e) => {
+              setStock(e.target.value.replace(/[^\d,.]/g, '').slice(0, 9));
+              setError(null);
+            }}
+            onKeyDown={alEnter}
+          />
+        </label>
+      )}
       <p className="mensaje-error" role="alert">
         {error}
       </p>
