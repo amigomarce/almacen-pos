@@ -16,8 +16,9 @@
 2. Cambiar precios es lento (sube el proveedor todos los meses). → **Precio desde el celular**,
    cambio masivo por categoría o marca (+5 %), y alerta de margen bajo.
 3. No sabe qué se vende ni cuánto gana. → Ventas del día/semana, top productos, stock bajo.
-4. Obligación de entregar boleta impresa en cada venta (Res. Ex. SII N°12/2025). →
-   Boleta electrónica impresa automáticamente al cobrar.
+4. Obligación de entregar la boleta (impresa o virtual) en cada venta presencial
+   (Res. Ex. SII N°53/2025, que derogó la N°12/2025). →
+   Boleta electrónica impresa automáticamente al cobrar (o enviada al cliente).
 5. Filas en horas punta. → Caja rápida, teclado + lector.
 
 ## Usuarios y permisos
