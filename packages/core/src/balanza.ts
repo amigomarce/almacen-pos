@@ -19,11 +19,9 @@ export interface ConfigBalanza {
   digitosCodigo: number;
 }
 
-/** Formato más común: 2 + PP + CCCCC + VVVVV + D, todos los prefijos con peso en gramos. */
+/** Formato más común: PP + CCCCC + VVVVV + D, todos los prefijos con peso en gramos. */
 export const CONFIG_BALANZA_POR_DEFECTO: ConfigBalanza = {
-  prefijos: Object.fromEntries(
-    Array.from({ length: 10 }, (_, i) => [`2${i}`, 'PESO']),
-  ),
+  prefijos: Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`2${i}`, 'PESO'])),
   digitosCodigo: 5,
 };
 
