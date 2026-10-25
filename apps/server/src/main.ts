@@ -6,6 +6,8 @@ import { migrar } from './db/migrar.js';
 import { RUTA_ENV, cargarEnvLocal, variable } from './env.js';
 import { ClienteOff } from './productos/off.js';
 import { Semilla } from './productos/semilla.js';
+import { iniciarSincronizacion } from './sincronizacion/cliente.js';
+import { obtenerIdentidad } from './sincronizacion/identidad.js';
 
 const conEnv = cargarEnvLocal();
 
@@ -52,6 +54,18 @@ if (off) {
       ? 'Consulta en línea a Open Food Facts desactivada (ALMACEN_OFF=0).'
       : 'Consulta en línea a Open Food Facts desactivada (falta ALMACEN_CONTACTO).',
   );
+}
+
+// Sincronización con la nube (Fase 4): solo si está configurada la URL de la nube.
+const cloudUrl = variable('CLOUD_URL');
+if (cloudUrl) {
+  const identidad = obtenerIdentidad(db);
+  iniciarSincronizacion(db, { cloudUrl, deviceToken: identidad.deviceToken }, 10_000, app.log);
+  app.log.info(
+    `Sincronización con la nube activa (${cloudUrl}; instalación ${identidad.installationId}).`,
+  );
+} else {
+  app.log.warn('CLOUD_URL sin definir: la caja no sincroniza con la nube.');
 }
 
 try {

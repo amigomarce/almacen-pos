@@ -80,6 +80,9 @@ export const storeSettings = sqliteTable(
     cashRoundingEnabled: booleano('cash_rounding_enabled', true),
     /** Prefijos de balanza (20–29) cuyas etiquetas traen precio, ej. "26,27". El resto, peso. */
     scalePricePrefixes: text('scale_price_prefixes'),
+    /** Identidad de la instalación para sincronizar con la nube (Fase 4): se genera una vez. */
+    installationId: text('installation_id'),
+    deviceToken: text('device_token'),
     updatedAt: ahora('updated_at'),
     version: integer('version').notNull().default(1),
   },
