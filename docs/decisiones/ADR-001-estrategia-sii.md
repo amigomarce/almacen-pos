@@ -93,7 +93,11 @@ Estrategia **mixta y por etapas: D ahora → A como objetivo → B como plan de 
 
 - **Cambio de sistema D → A**: por la regla de sistema único, el día del paso a producción
   el dueño debe **desinscribirse** del sistema gratuito del SII (FAQ 001_380_7816). Hay que
-  planificar ese día y no usar e-Boleta después.
+  planificar ese día y no usar e-Boleta después. La salida del sistema gratuito **no es en
+  línea**: requiere el **Formulario N° 2117** en la Dirección Regional/Unidad del SII.
+- **Volver de A a D** es posible y rápido (inscripción en línea, habilitación en máx. 3 h,
+  FAQ 001_380_7818/8145), lo que baja el riesgo del cambio. Pero **no sirve como
+  contingencia**, porque regresar a A exige de nuevo el F2117. (Agregado 2026-10-25.)
 - El dueño necesitará certificado digital (~$12–25 mil + IVA/año) y hacer la postulación con
   su clave/certificado; la app debe guiarlo con un paso a paso.
 - `packages/printer`: el PDF417 pasa a ser **recomendado, no obligatorio** (se puede imprimir

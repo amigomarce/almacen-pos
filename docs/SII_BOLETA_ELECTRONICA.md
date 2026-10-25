@@ -378,6 +378,19 @@ otra. "Oficial" = sii.cl o documento firmado por el SII; "proveedor" = blog/siti
 - Ninguna resolución de 2026 revisada (2, 5, 99, 110, 111, 121) cambia el formato de la boleta
   ni la API. Índice: https://www.sii.cl/normativa_legislacion/resoluciones/2026/res_ind2026.htm
 
+**Cambio de sistema de boletas en ambos sentidos** (consultado 2026-10-25)
+- **Salir del sistema gratuito (D → A)**: no se hace en línea. Se presenta el
+  **Formulario N° 2117** en la Dirección Regional o Unidad del SII del domicilio, y en
+  paralelo se habilita el otro software. No se indica plazo.
+  https://www.sii.cl/preguntas_frecuentes/bol_electr_vtas_serv/001_380_7816.htm (act. 23/07/2026)
+- **Volver al sistema gratuito (A → D)**: inscripción **en línea** en sii.cl (Servicios
+  online → Boletas electrónicas); se sugiere avisar al proveedor del software anterior.
+  La habilitación tarda **máximo 3 horas**.
+  https://www.sii.cl/preguntas_frecuentes/bol_electr_vtas_serv/001_380_7818.htm ·
+  https://www.sii.cl/preguntas_frecuentes/bol_electr_vtas_serv/001_380_8145.htm
+- Consecuencia: volver de A a D es rápido y seguro, pero **no sirve como contingencia
+  de un día**, porque regresar luego a A exige otra vez el F2117 presencial.
+
 ## 6. Preguntas abiertas
 
 Para el usuario / almacén piloto:
@@ -401,4 +414,7 @@ Normativa pendiente de confirmar (`TODO(SII)`):
   hace por él? (la FAQ 7667 dice que el contribuyente certifica; los proveedores hablan de
   "habilitación" de hasta 15 días).
 - Tasa de IVA vigente: 19 % (art. 14 DL 825). Reverificar en Fase 1.
+- Al volver de A a D: ¿qué pasa con los folios (CAF) no usados? ¿Hay que anularlos o informarlos?
+- Contingencia si el equipo de la caja falla por completo con A: ¿qué permite el SII
+  (otro equipo con el mismo CAF, boletas en papel, etc.)?
 - Límite numérico del rate limit de la API (no publicado; leerlo de `X-RateLimit-Limit`).

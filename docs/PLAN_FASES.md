@@ -21,6 +21,11 @@ a la siguiente sin aprobación.
 - Pantalla de venta, lector HID, venta rápida, kg, cobro, vuelto, comprobante interno
   impreso por ESC/POS (con `MockProvider`), apertura/cierre de caja, usuarios con PIN.
 - Gestión de productos y recepción de mercadería en la caja.
+- **Modalidad de boleta** (`store_settings.dte_provider`) elegible en la configuración de
+  la caja. En instalaciones reales el valor inicial es `PUENTE_MANUAL` (Estrategia D);
+  `MOCK` solo en desarrollo y tests, y si la caja está en `MOCK` debe mostrar un **aviso
+  visible permanente** ("MODO PRUEBA – no emite boletas"). Con `PUENTE_MANUAL`, al cobrar
+  se muestra el total para emitir en e-Boleta y un campo opcional "folio SII".
 - Prueba con impresora real (Epson/Xprinter) 80 mm y 58 mm.
 - Pantalla **"Acerca de"** con la versión y la atribución ODbL de los datos de productos
   (obligatoria, ADR-004). El texto sale de `GET /about` del servidor local (`attribution`,
@@ -34,12 +39,23 @@ a la siguiente sin aprobación.
 - Opcional: fiado / cuenta corriente de vecinos.
 
 ## Fase 5 — Boleta electrónica real
-- Implementar el provider elegido en ADR-001. Primero en **ambiente de certificación**.
-- Timbre PDF417 impreso y verificable; cola offline de envío; consulta de estado; reintentos.
-- Proceso de certificación (si estrategia A) o alta con el proveedor (si B).
-- Checklist legal de la boleta impresa.
+- Implementar `SiiDirectoProvider` (Estrategia A, ADR-001). Primero en **ambiente de
+  certificación** (`apicert`/`pangal`); nunca producción en desarrollo.
+- CAF y certificado digital locales y cifrados; TED; firma; `EnvioBOLETA` en lotes;
+  cola offline con envío dentro de 1 hora desde que vuelve la conexión; consulta de
+  estado; reintentos. PDF417 recomendado pero opcional.
+- Proceso de certificación ante el SII (set de pruebas generado automáticamente).
+- El provider es **configurable por instalación**: la Estrategia D (`PuenteManualProvider`
+  + e-Boleta) sigue siendo una modalidad soportada para locales que no certifiquen.
+- Guía de paso a producción para el dueño: certificado digital, postulación, y el
+  **Formulario N° 2117** presencial en el SII para salir del sistema gratuito (no se hace
+  en línea). Volver a D después es posible en línea (máx. 3 h), pero no es contingencia.
+- Contingencia: Estrategia B (OpenFactura) solo si A queda bloqueada.
+- Checklist legal de la boleta (impresa o virtual).
 
 ## Fase 6 — Puesta en marcha
 - Instalador Windows (Tauri bundle) con `seed.sqlite`, asistente de primera configuración
-  (datos del negocio, impresora, prueba de escáner, conexión con el celular por QR).
+  (datos del negocio, impresora, prueba de escáner, conexión con el celular por QR, y
+  **modalidad de boleta**: "¿Emitirá boletas con la app del SII o desde esta caja?" →
+  `PUENTE_MANUAL` o `SII_DIRECTO` cuando esté disponible).
 - Respaldos automáticos (local + nube). Manual de uso de 1 página para el dueño.
