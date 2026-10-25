@@ -1,13 +1,8 @@
 /**
- * Configuración de la app del dueño. Las variables `EXPO_PUBLIC_*` las inyecta Expo al
- * compilar (no son secretos salvo la anon key de Supabase, que es pública por diseño).
+ * Configuración de la app del dueño. Expo inyecta al compilar las variables `EXPO_PUBLIC_*`
+ * (hay que accederlas de forma estática: `process.env.EXPO_PUBLIC_X`, no `process.env[x]`).
+ * La anon key de Supabase es pública por diseño; los permisos los da nuestra API/RLS.
  */
-function variable(nombre: string): string | undefined {
-  const env = process.env as Record<string, string | undefined>;
-  const v = env[nombre];
-  return v && v.trim() !== '' ? v : undefined;
-}
-
-export const CLOUD_URL = variable('EXPO_PUBLIC_CLOUD_URL') ?? 'http://127.0.0.1:3002';
-export const SUPABASE_URL = variable('EXPO_PUBLIC_SUPABASE_URL') ?? '';
-export const SUPABASE_ANON_KEY = variable('EXPO_PUBLIC_SUPABASE_ANON_KEY') ?? '';
+export const CLOUD_URL = process.env.EXPO_PUBLIC_CLOUD_URL ?? 'http://127.0.0.1:3002';
+export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+export const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
