@@ -2,10 +2,11 @@ import type {
   FastifyInstance,
   FastifyReply,
   FastifyRequest,
-  preHandlerAsyncHookHandler,
+  onRequestAsyncHookHandler,
 } from 'fastify';
 import type { Db } from '../db/client.js';
 import { ROLES, type Rol } from '../db/schema.js';
+import { autorizarDueno } from './autorizacion.js';
 import type { LimitadorIntentos } from './intentos.js';
 import type { Sesion, Sesiones } from './sesiones.js';
 import {
@@ -15,7 +16,6 @@ import {
   editarUsuario,
   listarUsuarios,
   listarUsuariosActivos,
-  verificarPinDueno,
   type CambiosUsuario,
 } from './usuarios.js';
 
@@ -36,9 +36,6 @@ const PIN = { type: 'string', pattern: '^[0-9]{4,8}$' } as const;
 const NOMBRE = { type: 'string', minLength: 1, maxLength: 40, pattern: '\\S' } as const;
 const ROL = { type: 'string', enum: [...ROLES] } as const;
 
-/** Clave del limitador para la clave del dueño (es una sola para todos los dueños). */
-const CLAVE_DUENO = 'autorizacion-dueno';
-
 function tokenDe(req: FastifyRequest): string | null {
   const h = req.headers.authorization;
   if (!h?.startsWith('Bearer ')) return null;
@@ -46,11 +43,11 @@ function tokenDe(req: FastifyRequest): string | null {
   return token === '' ? null : token;
 }
 
-/** preHandler: exige sesión y, si se indican, uno de los roles. */
+/** Hook onRequest (antes de validar el cuerpo): exige sesión y, si se indican, uno de los roles. */
 export function requiereSesion(
   sesiones: Sesiones,
   roles?: readonly Rol[],
-): preHandlerAsyncHookHandler {
+): onRequestAsyncHookHandler {
   return async (req: FastifyRequest, reply: FastifyReply) => {
     const token = tokenDe(req);
     const sesion = token ? sesiones.obtener(token) : null;
@@ -125,9 +122,9 @@ export function registrarAuth(
     },
   );
 
-  app.get('/auth/sesion', { preHandler: conSesion }, (req) => ({ usuario: req.sesion?.usuario }));
+  app.get('/auth/sesion', { onRequest: conSesion }, (req) => ({ usuario: req.sesion?.usuario }));
 
-  app.post('/auth/logout', { preHandler: conSesion }, (req, reply) => {
+  app.post('/auth/logout', { onRequest: conSesion }, (req, reply) => {
     if (req.sesion) sesiones.cerrar(req.sesion.token);
     return reply.code(204).send();
   });
@@ -139,7 +136,7 @@ export function registrarAuth(
   app.post<{ Body: { pin: string } }>(
     '/auth/autorizar',
     {
-      preHandler: conSesion,
+      onRequest: conSesion,
       schema: {
         body: {
           type: 'object',
@@ -150,34 +147,20 @@ export function registrarAuth(
       },
     },
     (req, reply) => {
-      const estado = intentos.estado(CLAVE_DUENO);
-      if (estado.bloqueado) return respuestaBloqueo(reply, estado.segundosRestantes);
-      const dueno = verificarPinDueno(db, req.body.pin);
-      if (!dueno) {
-        const restantes = intentos.fallo(CLAVE_DUENO);
-        if (restantes === 0) {
-          const e = intentos.estado(CLAVE_DUENO);
-          return respuestaBloqueo(reply, e.bloqueado ? e.segundosRestantes : 0);
-        }
-        return reply.code(401).send({
-          error: 'PIN_INCORRECTO',
-          mensaje: 'Clave del dueño incorrecta',
-          intentosRestantes: restantes,
-        });
-      }
-      intentos.exito(CLAVE_DUENO);
-      return { autorizadoPor: { id: dueno.id, name: dueno.name } };
+      const r = autorizarDueno(db, intentos, req.body.pin);
+      if (!r.ok) return reply.code(r.estado).send(r.cuerpo);
+      return { autorizadoPor: { id: r.dueno.id, name: r.dueno.name } };
     },
   );
 
   // --- Gestión de usuarios (solo dueño) ---
 
-  app.get('/users', { preHandler: soloDueno }, () => listarUsuarios(db));
+  app.get('/users', { onRequest: soloDueno }, () => listarUsuarios(db));
 
   app.post<{ Body: { name: string; role: Rol; pin: string } }>(
     '/users',
     {
-      preHandler: soloDueno,
+      onRequest: soloDueno,
       schema: {
         body: {
           type: 'object',
@@ -193,7 +176,7 @@ export function registrarAuth(
   app.patch<{ Params: { id: string }; Body: CambiosUsuario }>(
     '/users/:id',
     {
-      preHandler: soloDueno,
+      onRequest: soloDueno,
       schema: {
         body: {
           type: 'object',

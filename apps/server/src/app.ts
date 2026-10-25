@@ -10,6 +10,8 @@ import { registrarCaja } from './caja/rutas.js';
 import { registrarConfiguracion } from './configuracion/rutas.js';
 import { leerConfiguracion } from './configuracion/servicio.js';
 import type { Db } from './db/client.js';
+import { ErrorHttp } from './errores.js';
+import { registrarVentas } from './ventas/rutas.js';
 import { buscarProducto, type DependenciasLookup } from './productos/lookup.js';
 import type { Semilla } from './productos/semilla.js';
 
@@ -52,6 +54,11 @@ export function crearApp({
         .send({ error: 'DATOS_INVALIDOS', mensaje: 'Datos inválidos', detalle: error.message });
     }
     // Reglas del dominio (packages/core): el mensaje ya está en español para el cajero.
+    if (error instanceof ErrorHttp) {
+      return reply
+        .code(error.estadoHttp)
+        .send({ error: error.codigo, mensaje: error.message, ...error.datos });
+    }
     if (error instanceof ErrorDominio) {
       return reply.code(400).send({ error: error.codigo, mensaje: error.message });
     }
@@ -66,6 +73,7 @@ export function crearApp({
   registrarAuth(app, { db, sesiones, intentos });
   registrarCaja(app, { db, sesiones });
   registrarConfiguracion(app, { db, sesiones, permitirModoPrueba });
+  registrarVentas(app, { db, sesiones, intentos });
 
   app.get('/health', () => {
     let estadoDb: 'ok' | 'error' = 'ok';

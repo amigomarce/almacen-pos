@@ -54,11 +54,7 @@ export class PuenteManualProvider implements DocumentoTributarioProvider {
     if (documento.provider !== this.nombre) {
       throw new ErrorDominio('PROVIDER_INCORRECTO', 'El documento no es del puente manual');
     }
-    const limpio = folio.trim();
-    if (!/^\d{1,10}$/.test(limpio) || Number(limpio) === 0) {
-      throw new ErrorDominio('FOLIO_INVALIDO', 'El folio debe ser un número mayor a 0');
-    }
-    return { ...documento, folioExterno: String(Number(limpio)), accionCajero: null };
+    return { ...documento, folioExterno: normalizarFolioExterno(folio), accionCajero: null };
   }
 
   /** Nada que enviar: la boleta la envía e-Boleta. */
@@ -69,4 +65,13 @@ export class PuenteManualProvider implements DocumentoTributarioProvider {
   consultarEstado(_trackId: string): Promise<EstadoSii> {
     return Promise.resolve('NO_APLICA');
   }
+}
+
+/** Folio de e-Boleta: número de 1 a 10 dígitos, mayor a 0. Devuelve el número sin ceros a la izquierda. */
+export function normalizarFolioExterno(folio: string): string {
+  const limpio = folio.trim();
+  if (!/^\d{1,10}$/.test(limpio) || Number(limpio) === 0) {
+    throw new ErrorDominio('FOLIO_INVALIDO', 'El folio debe ser un número mayor a 0');
+  }
+  return String(Number(limpio));
 }

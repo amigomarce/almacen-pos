@@ -30,7 +30,7 @@ export function registrarCaja(
   /** Estado de la caja de este equipo: si está abierta, con su resumen al momento. */
   app.get<{ Querystring: { registerId?: string } }>(
     '/cash/current',
-    { preHandler: conSesion },
+    { onRequest: conSesion },
     (req, reply) => {
       const caja = cajaO404(reply, req.query.registerId);
       if (!caja) return reply;
@@ -42,7 +42,7 @@ export function registrarCaja(
   app.post<{ Body: { efectivoInicialClp: number; registerId?: string } }>(
     '/cash/open',
     {
-      preHandler: conSesion,
+      onRequest: conSesion,
       schema: {
         body: {
           type: 'object',
@@ -73,7 +73,7 @@ export function registrarCaja(
   app.post<{ Body: { efectivoContadoClp: number; registerId?: string } }>(
     '/cash/close',
     {
-      preHandler: conSesion,
+      onRequest: conSesion,
       schema: {
         body: {
           type: 'object',
@@ -101,7 +101,7 @@ export function registrarCaja(
   /** Una sesión pasada (para revisar o reimprimir un cierre). */
   app.get<{ Params: { id: string } }>(
     '/cash/sessions/:id',
-    { preHandler: conSesion },
+    { onRequest: conSesion },
     (req, reply) => {
       const r = sesionPorId(db, req.params.id);
       if (!r)

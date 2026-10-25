@@ -18,7 +18,7 @@ export function registrarConfiguracion(
   const { db, sesiones, permitirModoPrueba } = deps;
 
   /** La caja la necesita para el aviso de modo prueba y el flujo de cobro. */
-  app.get('/settings', { preHandler: requiereSesion(sesiones) }, () => ({
+  app.get('/settings', { onRequest: requiereSesion(sesiones) }, () => ({
     ...leerConfiguracion(db),
     modalidadesDisponibles: MODALIDADES_DISPONIBLES.filter(
       (m) => m !== 'MOCK' || permitirModoPrueba,
@@ -28,7 +28,7 @@ export function registrarConfiguracion(
   app.patch<{ Body: CambiosConfiguracion }>(
     '/settings',
     {
-      preHandler: requiereSesion(sesiones, ['DUENO']),
+      onRequest: requiereSesion(sesiones, ['DUENO']),
       schema: {
         body: {
           type: 'object',
