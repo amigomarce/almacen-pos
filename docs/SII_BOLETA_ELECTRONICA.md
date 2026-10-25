@@ -407,6 +407,10 @@ Normativa pendiente de confirmar (`TODO(SII)`):
 - NC (DTE 61) que anula una boleta, emitida con software propio: ¿requiere certificar DTE 61
   y envío por `EnvioDTE`/SOAP? ¿Se puede seguir usando el aplicativo web del SII aunque las
   boletas se emitan con software propio?
+- Estrategia D (e-Boleta): ¿cómo se anula una boleta emitida en la app e-Boleta cuando la venta
+  se anula en la caja? ¿Nota de crédito en el sitio del SII, en la misma app, o basta otra vía?
+  Hoy la caja muestra "anúlala en sii.cl con una nota de crédito" (`TODO(SII)` en
+  `apps/server/src/ventas/servicio.ts`).
 - Impuesto a bebidas analcohólicas (art. 42): confirmar que no se desglosa (solo hay oficio para ILA).
 - Ley 20.956 art. 13: confirmar texto en leychile.cl y cómo mostrar el redondeo en el ticket.
 - e-Boleta: ¿permite emitir sin detalle (solo monto)? ¿Cómo sincroniza lo emitido offline?
