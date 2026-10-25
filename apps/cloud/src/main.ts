@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import { crearApp } from './app.js';
+import { crearVerificadorJwt } from './auth/supabase.js';
 import { drizzleDb } from './db/client.js';
 import { migrar } from './db/migrar.js';
 import { RUTA_ENV, cargarEnvLocal, variable } from './env.js';
@@ -21,8 +22,17 @@ const pool = new Pool({ connectionString });
 const db = drizzleDb(pool);
 await migrar(db);
 
-const app = crearApp({ db, logger: true });
+// Sin SUPABASE_JWT_SECRET los endpoints del dueño responden 401 (no se puede validar su JWT).
+const secretoJwt = variable('SUPABASE_JWT_SECRET');
+const app = crearApp({
+  db,
+  ...(secretoJwt ? { verificarJwt: crearVerificadorJwt(secretoJwt) } : {}),
+  logger: true,
+});
+
 if (conEnv) app.log.info(`Variables cargadas de ${RUTA_ENV}`);
+if (!secretoJwt)
+  app.log.warn('SUPABASE_JWT_SECRET sin definir: el login del dueño queda deshabilitado.');
 
 try {
   await app.listen({ port: puerto, host });

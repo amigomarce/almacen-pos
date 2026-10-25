@@ -1,15 +1,52 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
 import { sql } from 'drizzle-orm';
+import { ErrorDominio } from '@almacen/core';
 import pkg from '../package.json' with { type: 'json' };
+import type { VerificadorJwt } from './auth/supabase.js';
 import type { Db } from './db/client.js';
+import { ErrorHttp } from './errores.js';
+import { crearRepoInstalaciones } from './instalaciones/repo.js';
+import { registrarInstalaciones } from './instalaciones/rutas.js';
+import type { RepoInstalaciones } from './instalaciones/servicio.js';
 
 export interface OpcionesApp {
   db: Db;
+  /** Inyectables para tests; por defecto el repo real y un verificador que siempre falla. */
+  repoInstalaciones?: RepoInstalaciones;
+  verificarJwt?: VerificadorJwt;
   logger?: boolean;
 }
 
-export function crearApp({ db, logger = false }: OpcionesApp): FastifyInstance {
+export function crearApp({
+  db,
+  repoInstalaciones = crearRepoInstalaciones(db),
+  verificarJwt = () => Promise.resolve(null),
+  logger = false,
+}: OpcionesApp): FastifyInstance {
   const app = Fastify({ logger });
+
+  // Mismo formato de error en toda la API: { error, mensaje }.
+  app.setErrorHandler<FastifyError>((error, _req, reply) => {
+    if (error.validation) {
+      return reply
+        .code(400)
+        .send({ error: 'DATOS_INVALIDOS', mensaje: 'Datos inválidos', detalle: error.message });
+    }
+    if (error instanceof ErrorHttp) {
+      return reply
+        .code(error.estadoHttp)
+        .send({ error: error.codigo, mensaje: error.message, ...error.datos });
+    }
+    if (error instanceof ErrorDominio) {
+      return reply.code(400).send({ error: error.codigo, mensaje: error.message });
+    }
+    app.log.error(error);
+    const estado = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
+    return reply.code(estado).send({
+      error: estado === 500 ? 'ERROR_INTERNO' : error.code,
+      mensaje: estado === 500 ? 'Error interno del servidor' : error.message,
+    });
+  });
 
   // Público: lo consulta el dueño (móvil) y la caja para saber que la nube responde.
   app.get('/health', async () => {
@@ -26,6 +63,8 @@ export function crearApp({ db, logger = false }: OpcionesApp): FastifyInstance {
       hora: new Date().toISOString(),
     };
   });
+
+  registrarInstalaciones(app, { repo: repoInstalaciones, verificarJwt });
 
   return app;
 }
