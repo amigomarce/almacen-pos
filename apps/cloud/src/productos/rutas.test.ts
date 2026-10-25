@@ -15,7 +15,7 @@ function crearAppDePrueba() {
       productoCloud({ id: 'p1', name: 'Bebida cola', priceClp: 1890 }),
       productoCloud({ id: 'p2', name: 'Pan', unit: 'KG', priceClp: 1990 }),
     ]),
-    verificarJwt: crearVerificadorJwt(SECRETO_JWT),
+    verificarJwt: crearVerificadorJwt({ secreto: SECRETO_JWT }),
   });
 }
 
@@ -68,7 +68,7 @@ describe('rutas de productos del dueño', () => {
         productoCloud({ id: 'p2', name: 'B', categoryId: 'c1', priceClp: 2000 }),
         productoCloud({ id: 'p3', name: 'C', categoryId: 'c2', priceClp: 500 }),
       ]),
-      verificarJwt: crearVerificadorJwt(SECRETO_JWT),
+      verificarJwt: crearVerificadorJwt({ secreto: SECRETO_JWT }),
     });
     const token = await firmarJwt('dueno-1');
     const res = await app.inject({

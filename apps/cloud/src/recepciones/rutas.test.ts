@@ -14,7 +14,7 @@ function crearAppDePrueba() {
     repoRecepciones: repoRecepcionesFalso([productoCloud({ id: 'p1', name: 'Bebida' })], {
       p1: 1000,
     }),
-    verificarJwt: crearVerificadorJwt(SECRETO_JWT),
+    verificarJwt: crearVerificadorJwt({ secreto: SECRETO_JWT }),
   });
 }
 

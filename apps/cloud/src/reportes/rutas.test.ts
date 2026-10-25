@@ -36,7 +36,7 @@ function crearAppDePrueba() {
   return crearApp({
     db: dbFalsa(),
     repoReportes: repoReportesFalso(),
-    verificarJwt: crearVerificadorJwt(SECRETO_JWT),
+    verificarJwt: crearVerificadorJwt({ secreto: SECRETO_JWT }),
   });
 }
 

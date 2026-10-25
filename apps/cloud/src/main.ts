@@ -23,17 +23,21 @@ const pool = new Pool({ connectionString });
 const db = drizzleDb(pool);
 await migrar(db);
 
-// Sin SUPABASE_JWT_SECRET los endpoints del dueño responden 401 (no se puede validar su JWT).
+// Con SUPABASE_URL se valida el JWT contra el JWKS del proyecto (ES256). Si no, se usa el
+// JWT secret legacy (HS256). Sin ninguno de los dos, los endpoints del dueño responden 401.
+const supabaseUrl = variable('SUPABASE_URL');
 const secretoJwt = variable('SUPABASE_JWT_SECRET');
 const app = crearApp({
   db,
-  ...(secretoJwt ? { verificarJwt: crearVerificadorJwt(secretoJwt) } : {}),
+  ...(supabaseUrl || secretoJwt
+    ? { verificarJwt: crearVerificadorJwt({ url: supabaseUrl, secreto: secretoJwt }) }
+    : {}),
   logger: true,
 });
 
 if (conEnv) app.log.info(`Variables cargadas de ${RUTA_ENV}`);
-if (!secretoJwt)
-  app.log.warn('SUPABASE_JWT_SECRET sin definir: el login del dueño queda deshabilitado.');
+if (!supabaseUrl && !secretoJwt)
+  app.log.warn('Sin SUPABASE_URL ni SUPABASE_JWT_SECRET: el login del dueño queda deshabilitado.');
 
 try {
   await app.listen({ port: puerto, host });
