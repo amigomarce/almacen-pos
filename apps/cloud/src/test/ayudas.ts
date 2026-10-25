@@ -4,6 +4,8 @@ import type {
   NuevaInstalacion,
   RepoInstalaciones,
 } from '../instalaciones/servicio.js';
+import type { categories, products, saleItems, sales, stockMovements } from '../db/schema.js';
+import type { EventoSaliente, RepoSyncNube } from '../sincronizacion/servicio.js';
 
 export const SECRETO_JWT = 'secreto-de-prueba-suficientemente-largo-para-hs256';
 
@@ -56,4 +58,67 @@ export function repoFalso(iniciales: Instalacion[] = []): RepoFalso {
       return Promise.resolve(f);
     },
   };
+}
+
+export interface RepoSyncFalso extends RepoSyncNube {
+  productos: (typeof products.$inferInsert)[];
+  categorias: (typeof categories.$inferInsert)[];
+  borradosProducto: string[];
+  borradosCategoria: string[];
+  ventas: (typeof sales.$inferInsert)[];
+  lineas: (typeof saleItems.$inferInsert)[];
+  movimientos: (typeof stockMovements.$inferInsert)[];
+  pendientes: EventoSaliente[];
+  sincronizados: string[];
+}
+
+/** Repositorio de sincronización en memoria: registra lo que se ingesta. */
+export function repoSyncFalso(pendientes: EventoSaliente[] = []): RepoSyncFalso {
+  const f: RepoSyncFalso = {
+    productos: [],
+    categorias: [],
+    borradosProducto: [],
+    borradosCategoria: [],
+    ventas: [],
+    lineas: [],
+    movimientos: [],
+    pendientes: [...pendientes],
+    sincronizados: [],
+    upsertProducto(p) {
+      f.productos.push(p);
+      return Promise.resolve();
+    },
+    upsertCategoria(c) {
+      f.categorias.push(c);
+      return Promise.resolve();
+    },
+    borrarProducto(id) {
+      f.borradosProducto.push(id);
+      return Promise.resolve();
+    },
+    borrarCategoria(id) {
+      f.borradosCategoria.push(id);
+      return Promise.resolve();
+    },
+    insertarVenta(v) {
+      f.ventas.push(v);
+      return Promise.resolve();
+    },
+    insertarLinea(l) {
+      f.lineas.push(l);
+      return Promise.resolve();
+    },
+    insertarMovimiento(m) {
+      f.movimientos.push(m);
+      return Promise.resolve();
+    },
+    eventosPendientes() {
+      return Promise.resolve([...f.pendientes]);
+    },
+    marcarSincronizados(_ownerId, ids) {
+      f.sincronizados.push(...ids);
+      return Promise.resolve();
+    },
+  };
+  return f;
 }

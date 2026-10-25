@@ -1,0 +1,16 @@
+{
+  "name": "@almacen/sync",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Contrato de sincronización caja ↔ nube: formato de los eventos del outbox (wire format).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@almacen/core": "workspace:*"
+  }
+}

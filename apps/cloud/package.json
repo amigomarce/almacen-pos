@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@almacen/core": "workspace:*",
+    "@almacen/sync": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "fastify": "^5.12.7",
     "jose": "^6.2.13",

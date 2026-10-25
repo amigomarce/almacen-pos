@@ -205,6 +205,9 @@ importers:
       '@almacen/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@almacen/sync':
+        specifier: workspace:*
+        version: link:../../packages/sync
       drizzle-orm:
         specifier: ^0.45.4
         version: 0.45.4(@types/better-sqlite3@9.6.0)(@types/pg@8.23.1)(better-sqlite3@13.0.3)(pg@8.23.1)
@@ -352,6 +355,12 @@ importers:
       '@almacen/dte':
         specifier: workspace:*
         version: link:../dte
+
+  packages/sync:
+    dependencies:
+      '@almacen/core':
+        specifier: workspace:*
+        version: link:../core
 
 packages:
 
