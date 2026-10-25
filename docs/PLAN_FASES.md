@@ -70,6 +70,10 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
 `outbox` local no se poda; el saldo de stock de la nube se agrega en memoria.
 
 ## Fase 5 — Boleta electrónica real
+- **Orden:** primero el **código** (esta fase), después la **certificación**. La fase deja el
+  módulo completo y probado con fixtures; la certificación real (set de pruebas, F2117) se hace
+  al final, con el certificado y CAF del dueño. Mientras no esté certificado, las instalaciones
+  nuevas siguen en D (ticket de salida + e-Boleta).
 - Implementar `SiiDirectoProvider` (Estrategia A, ADR-001). Primero en **ambiente de
   certificación** (`apicert`/`pangal`); nunca producción en desarrollo.
 - CAF y certificado digital locales y cifrados; TED; firma; `EnvioBOLETA` en lotes;
@@ -86,7 +90,17 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
 
 ## Fase 6 — Puesta en marcha
 - Instalador Windows (Tauri bundle) con `seed.sqlite`, asistente de primera configuración
-  (datos del negocio, impresora, prueba de escáner, conexión con el celular por QR, y
-  **modalidad de boleta**: "¿Emitirá boletas con la app del SII o desde esta caja?" →
-  `PUENTE_MANUAL` o `SII_DIRECTO` cuando esté disponible).
+  (datos del negocio, impresora, prueba de escáner, conexión con el celular por QR).
+- **Modalidad de boleta en el asistente (pregunta obligatoria):** *"¿Cómo emitirá las
+  boletas?"*
+  1. **"Con la app del SII"** (`PUENTE_MANUAL`, siempre disponible): la caja imprime un
+     **ticket de salida** rotulado "comprobante interno — no válido como boleta" y el cajero
+     emite la boleta en e-Boleta por el total exacto. Al elegirla, mostrar el recordatorio de
+     que esta app **no emite DTE**.
+  2. **"Desde esta caja"** (`SII_DIRECTO`): **solo se muestra si el certificado y el CAF están
+     cargados** y la certificación ya se hizo; si no, la opción aparece deshabilitada con el
+     motivo ("falta certificar ante el SII").
+- La elección queda en `store_settings.dte_provider`, es **modificable después** en
+  Configuración, y el cambio D → A se advierte con el trámite del **Formulario N° 2117** y la
+  salida del sistema gratuito (ADR-001).
 - Respaldos automáticos (local + nube). Manual de uso de 1 página para el dueño.

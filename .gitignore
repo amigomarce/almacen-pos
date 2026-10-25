@@ -2,6 +2,7 @@ node_modules/
 dist/
 build/
 .expo/
+.DS_Store
 src-tauri/target/
 *.sqlite
 !data/fixtures/*.sqlite

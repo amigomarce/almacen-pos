@@ -15,7 +15,8 @@ Un sistema de punto de venta (POS) para un **almacén / minimarket de barrio en 
 3. **Base de datos semilla de productos chilenos** — miles de productos con código de barras
    (EAN-13/EAN-8), nombre, marca, formato y categoría, para que el dueño NO tenga que
    inventariar producto por producto: escanea, el sistema lo reconoce, solo pone precio y stock.
-4. **Emisión de boleta electrónica válida ante el SII** (tipo DTE 39 afecta / 41 exenta).
+4. **Emisión de boleta electrónica válida ante el SII** (tipo DTE 39 afecta / 41 exenta), o
+   **ticket de salida + e-Boleta del SII** mientras la instalación no esté certificada (§2).
 
 Contexto detallado del negocio: `docs/CONTEXTO_NEGOCIO.md`.
 Arquitectura y stack: `docs/ARQUITECTURA.md`.
@@ -23,16 +24,30 @@ Base de productos: `docs/BASE_PRODUCTOS.md`.
 SII y boleta electrónica: `docs/SII_BOLETA_ELECTRONICA.md`.
 Plan por fases: `docs/PLAN_FASES.md`.
 
-## 2. Regla de oro: FASE 0 (investigación SII) antes de implementar el módulo tributario
+## 2. Regla de oro: boleta electrónica — dos modalidades (Fase 0 aprobada)
 
-**No escribas código del módulo SII hasta completar y documentar la Fase 0.**
-La Fase 0 está definida en `docs/SII_BOLETA_ELECTRONICA.md` §4. Su resultado debe quedar
-en `docs/decisiones/ADR-001-estrategia-sii.md` y ser aprobado por el usuario.
+La Fase 0 está **completada y aprobada** (`docs/decisiones/ADR-001-estrategia-sii.md`). La
+decisión es **D ahora → A como objetivo**: mientras la instalación no esté certificada ante el
+SII, la caja emite un **ticket de salida** (comprobante interno rotulado "NO VÁLIDO COMO
+BOLETA") y el dueño emite la boleta en la **app e-Boleta del SII**; después de la certificación
+puede emitir la boleta **desde esta aplicación** (`SiiDirectoProvider`).
 
-Mientras la Fase 0 no esté aprobada:
-- El POS imprime un **"comprobante interno (no válido como boleta)"** claramente rotulado.
-- Todo lo tributario se programa detrás de la interfaz `DocumentoTributarioProvider`
-  (ver `docs/ARQUITECTURA.md` §5) con una implementación `MockProvider`.
+Reglas que no se negocian:
+
+- **La modalidad se pregunta en la primera configuración** de la instalación (asistente de la
+  Fase 6): *"¿Cómo emitirá las boletas?"* → **con la app del SII** (`PUENTE_MANUAL`, siempre
+  disponible) o **desde esta caja** (`SII_DIRECTO`). Queda en
+  `store_settings.dte_provider` y el dueño puede cambiarla después en Configuración.
+- **`SII_DIRECTO` solo se ofrece si hay certificado y CAF cargados** y la certificación ya se
+  hizo. No se puede elegir una modalidad que todavía no sabe emitir.
+- **Un solo sistema de boletas por RUT** (ADR-001): en modalidad D esta app **no emite DTE**;
+  al pasar a A el dueño deja de usar e-Boleta. El paso D → A exige el **Formulario N° 2117**
+  presencial; volver de A → D es en línea (máx. 3 h) y no sirve como contingencia.
+- **El código se desarrolla antes que la certificación.** La Fase 5 deja el módulo completo y
+  probado con fixtures; la certificación real (set de pruebas, F2117) se hace **después**, con
+  el certificado y CAF del dueño. Hasta entonces, las instalaciones nuevas quedan en D.
+- Todo lo tributario va detrás de `DocumentoTributarioProvider`; la lógica de venta **nunca**
+  conoce el provider concreto.
 - Nunca uses el ambiente de **producción** del SII (`api.sii.cl`, `rahue.sii.cl`) en desarrollo.
   Solo certificación (`apicert.sii.cl`, `pangal.sii.cl`, `maullin.sii.cl`).
 
