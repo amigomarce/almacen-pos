@@ -27,7 +27,10 @@ const off =
     ? new ClienteOff({ version: pkg.version, contacto, normalizacion: cargarNormalizacion() })
     : null;
 
-const app = crearApp({ db, semilla, off, logger: true });
+// En producción (instalador, Fase 6) no se puede elegir la modalidad MOCK.
+const permitirModoPrueba = variable('NODE_ENV') !== 'production';
+
+const app = crearApp({ db, semilla, off, permitirModoPrueba, logger: true });
 
 if (conEnv) app.log.info(`Variables cargadas de ${RUTA_ENV}`);
 

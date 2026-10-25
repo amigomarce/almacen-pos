@@ -76,7 +76,7 @@ export const storeSettings = sqliteTable(
     modeloEmision: text('modelo_emision', { enum: MODELOS_EMISION })
       .notNull()
       .default('SOLO_NO_ELECTRONICOS'),
-    dteProvider: text('dte_provider', { enum: PROVIDERS }).notNull().default('MOCK'),
+    dteProvider: text('dte_provider', { enum: PROVIDERS }).notNull().default('PUENTE_MANUAL'),
     cashRoundingEnabled: booleano('cash_rounding_enabled', true),
     updatedAt: ahora('updated_at'),
     version: integer('version').notNull().default(1),

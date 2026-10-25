@@ -91,7 +91,7 @@ describe('restricciones', () => {
     expect(s).toMatchObject({
       id: 1,
       modeloEmision: 'SOLO_NO_ELECTRONICOS',
-      dteProvider: 'MOCK',
+      dteProvider: 'PUENTE_MANUAL', // instalación real (ADR-001); MOCK solo en db:seed
       cashRoundingEnabled: true,
     });
     expect(() => db.insert(t.storeSettings).values({ id: 2 }).run()).toThrow(/CHECK/);

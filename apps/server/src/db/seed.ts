@@ -18,7 +18,9 @@ export function sembrar(db: Db): boolean {
 
   db.transaction((tx) => {
     tx.insert(t.storeSettings)
-      .values({ razonSocial: 'Almacén de Prueba', comuna: 'Santiago' })
+      // Datos de desarrollo: MOCK (la caja muestra "MODO PRUEBA"). Una instalación real parte
+      // en PUENTE_MANUAL (valor por defecto de la columna, ADR-001).
+      .values({ razonSocial: 'Almacén de Prueba', comuna: 'Santiago', dteProvider: 'MOCK' })
       .run();
     tx.insert(t.registers).values({ name: 'Caja 1' }).run();
     const [dueno] = tx

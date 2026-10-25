@@ -7,6 +7,8 @@ import { LimitadorIntentos } from './auth/intentos.js';
 import { registrarAuth } from './auth/rutas.js';
 import { Sesiones } from './auth/sesiones.js';
 import { registrarCaja } from './caja/rutas.js';
+import { registrarConfiguracion } from './configuracion/rutas.js';
+import { leerConfiguracion } from './configuracion/servicio.js';
 import type { Db } from './db/client.js';
 import { buscarProducto, type DependenciasLookup } from './productos/lookup.js';
 import type { Semilla } from './productos/semilla.js';
@@ -21,6 +23,8 @@ export interface OpcionesApp {
   /** Inyectables para tests (reloj controlado). */
   sesiones?: Sesiones;
   intentos?: LimitadorIntentos;
+  /** `false` en producción: no se puede elegir la modalidad MOCK. */
+  permitirModoPrueba?: boolean;
   logger?: boolean;
 }
 
@@ -31,6 +35,7 @@ export function crearApp({
   configBalanza,
   sesiones = new Sesiones(),
   intentos = new LimitadorIntentos(),
+  permitirModoPrueba = true,
   logger = false,
 }: OpcionesApp): FastifyInstance {
   const app = Fastify({
@@ -60,6 +65,7 @@ export function crearApp({
 
   registrarAuth(app, { db, sesiones, intentos });
   registrarCaja(app, { db, sesiones });
+  registrarConfiguracion(app, { db, sesiones, permitirModoPrueba });
 
   app.get('/health', () => {
     let estadoDb: 'ok' | 'error' = 'ok';
@@ -68,11 +74,20 @@ export function crearApp({
     } catch {
       estadoDb = 'error';
     }
+    // Público (sin sesión) para que la pantalla de PIN ya muestre el aviso de modo prueba.
+    let modalidadBoleta: string | null = null;
+    try {
+      modalidadBoleta = leerConfiguracion(db).dteProvider;
+    } catch {
+      // Base sin migrar o caída: se informa como null.
+    }
     return {
       status: estadoDb === 'ok' ? 'ok' : 'degradado',
       version: pkg.version,
       db: estadoDb,
       semilla: semilla !== null,
+      modalidadBoleta,
+      modoPrueba: modalidadBoleta === 'MOCK',
       hora: new Date().toISOString(),
     };
   });
