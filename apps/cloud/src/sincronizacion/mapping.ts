@@ -5,6 +5,7 @@ import type {
   ProductoWire,
   VentaWire,
 } from '@almacen/sync';
+import type { TipoImpuesto, Unidad } from '@almacen/core';
 import type { categories, products, saleItems, sales, stockMovements } from '../db/schema.js';
 
 /**
@@ -24,6 +25,21 @@ export function productoDeWire(w: ProductoWire, ownerId: string): typeof product
     createdAt: new Date(w.createdAt),
     updatedAt: new Date(w.updatedAt),
     deletedAt: fecha(w.deletedAt),
+  };
+}
+
+/** Inverso: de la fila de la nube al wire (para encolar el cambio hacia la caja). */
+export function productoAWire(p: typeof products.$inferSelect): ProductoWire {
+  const { ownerId: _owner, createdAt, updatedAt, deletedAt, ...resto } = p;
+  return {
+    ...resto,
+    // Las columnas de la nube no tienen el enum en el tipo (solo el CHECK); se acotan aquí.
+    unit: p.unit as Unidad,
+    taxType: p.taxType as TipoImpuesto,
+    source: p.source as ProductoWire['source'],
+    createdAt: createdAt.toISOString(),
+    updatedAt: updatedAt.toISOString(),
+    deletedAt: deletedAt?.toISOString() ?? null,
   };
 }
 

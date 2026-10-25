@@ -8,6 +8,9 @@ import { ErrorHttp } from './errores.js';
 import { crearRepoInstalaciones } from './instalaciones/repo.js';
 import { registrarInstalaciones } from './instalaciones/rutas.js';
 import type { RepoInstalaciones } from './instalaciones/servicio.js';
+import { crearRepoProductos } from './productos/repo.js';
+import { registrarProductos } from './productos/rutas.js';
+import type { RepoProductos } from './productos/servicio.js';
 import { crearRepoSyncNube } from './sincronizacion/repo.js';
 import { registrarSincronizacion } from './sincronizacion/rutas.js';
 import type { RepoSyncNube } from './sincronizacion/servicio.js';
@@ -16,6 +19,7 @@ export interface OpcionesApp {
   db: Db;
   /** Inyectables para tests; por defecto el repo real y un verificador que siempre falla. */
   repoInstalaciones?: RepoInstalaciones;
+  repoProductos?: RepoProductos;
   repoSync?: RepoSyncNube;
   verificarJwt?: VerificadorJwt;
   logger?: boolean;
@@ -24,6 +28,7 @@ export interface OpcionesApp {
 export function crearApp({
   db,
   repoInstalaciones = crearRepoInstalaciones(db),
+  repoProductos = crearRepoProductos(db),
   repoSync = crearRepoSyncNube(db),
   verificarJwt = () => Promise.resolve(null),
   logger = false,
@@ -71,6 +76,7 @@ export function crearApp({
 
   registrarInstalaciones(app, { repo: repoInstalaciones, verificarJwt });
   registrarSincronizacion(app, { repoInstalaciones, repoSync });
+  registrarProductos(app, { repo: repoProductos, verificarJwt });
 
   return app;
 }

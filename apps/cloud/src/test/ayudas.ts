@@ -6,6 +6,7 @@ import type {
 } from '../instalaciones/servicio.js';
 import type { categories, products, saleItems, sales, stockMovements } from '../db/schema.js';
 import type { EventoSaliente, RepoSyncNube } from '../sincronizacion/servicio.js';
+import type { ProductoCloud, RepoProductos } from '../productos/servicio.js';
 
 export const SECRETO_JWT = 'secreto-de-prueba-suficientemente-largo-para-hs256';
 
@@ -127,4 +128,68 @@ export function repoSyncFalso(pendientes: EventoSaliente[] = []): RepoSyncFalso 
     },
   };
   return f;
+}
+
+export function productoCloud(parcial: Partial<ProductoCloud> & { id: string }): ProductoCloud {
+  return {
+    ownerId: 'dueno-1',
+    barcode: null,
+    name: 'Producto',
+    brand: null,
+    format: null,
+    unit: 'UN',
+    categoryId: null,
+    priceClp: 1000,
+    costClp: null,
+    taxType: 'AFECTO',
+    extraTaxCode: null,
+    stockMinMilli: null,
+    active: true,
+    source: 'LOCAL',
+    seedRef: null,
+    scaleCode: null,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+    version: 1,
+    deletedAt: null,
+    ...parcial,
+  };
+}
+
+export interface RepoProductosFalso extends RepoProductos {
+  filas: ProductoCloud[];
+  /** Eventos encolados en `guardarCambio` (entidad, id, op, payload). */
+  encolados: { entity: string; entityId: string; op: string; payload: unknown }[];
+}
+
+/** Repositorio de productos del dueño en memoria para tests. */
+export function repoProductosFalso(iniciales: ProductoCloud[] = []): RepoProductosFalso {
+  const filas = [...iniciales];
+  const encolados: RepoProductosFalso['encolados'] = [];
+  return {
+    filas,
+    encolados,
+    porId(ownerId, id) {
+      return Promise.resolve(filas.find((f) => f.id === id && f.ownerId === ownerId) ?? null);
+    },
+    listar(ownerId, buscar, limite) {
+      const coinciden = filas.filter(
+        (f) =>
+          f.ownerId === ownerId &&
+          (!buscar || f.name.includes(buscar) || (f.brand?.includes(buscar) ?? false)),
+      );
+      return Promise.resolve(coinciden.slice(0, limite));
+    },
+    guardarCambio(ownerId, p) {
+      const idx = filas.findIndex((f) => f.id === p.id && f.ownerId === ownerId);
+      if (idx >= 0) filas[idx] = p;
+      encolados.push({
+        entity: 'products',
+        entityId: p.id,
+        op: 'UPDATE',
+        payload: { id: p.id, priceClp: p.priceClp, version: p.version },
+      });
+      return Promise.resolve();
+    },
+  };
 }
