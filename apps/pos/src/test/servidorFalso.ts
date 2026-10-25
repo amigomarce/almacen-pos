@@ -52,6 +52,12 @@ export interface EstadoFalso {
   ajustes: { id: string; cuerpo: Record<string, unknown> }[];
   botonesGuardados: unknown[];
   recepciones: Record<string, unknown>[];
+  /** Datos del local (GET/PATCH /settings). */
+  local: Record<string, unknown>;
+  configGuardada: Record<string, unknown>[];
+  impresoraCfg: Record<string, unknown>;
+  anulaciones: Record<string, unknown>[];
+  cierres: Record<string, unknown>[];
   dteProvider: 'MOCK' | 'PUENTE_MANUAL';
   redondeo: boolean;
   /** `true` = hay impresora (imprime); `false` = sin impresora configurada. */
@@ -105,6 +111,26 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
     ajustes: [],
     botonesGuardados: [],
     recepciones: [],
+    local: {
+      razonSocial: 'Almacén de Prueba',
+      rut: null,
+      giro: null,
+      direccion: null,
+      comuna: 'Santiago',
+      prefijosBalanzaPrecio: [],
+    },
+    configGuardada: [],
+    impresoraCfg: {
+      transporte: 'DESACTIVADA',
+      destino: null,
+      anchoMm: 80,
+      columnas: null,
+      paginaCodigos: 'CP858',
+      cortar: true,
+      abrirCajon: true,
+    },
+    anulaciones: [],
+    cierres: [],
     dteProvider: 'MOCK',
     redondeo: true,
     impresora: true,
@@ -159,6 +185,49 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
     taxType: 'AFECTO',
     scaleCode: null,
     source: 'LOCAL',
+  });
+
+  const resumen = () => {
+    const ventas = [...estado.ventas.values()] as {
+      medioPago: 'EFECTIVO' | 'DEBITO' | 'CREDITO' | 'TRANSFERENCIA';
+      totalCobradoClp: number;
+      totalClp: number;
+      redondeoClp: number;
+      estado: string;
+    }[];
+    const validas = ventas.filter((v) => v.estado === 'OK');
+    const porMedio = Object.fromEntries(
+      (['EFECTIVO', 'DEBITO', 'CREDITO', 'TRANSFERENCIA'] as const).map((m) => {
+        const del = validas.filter((v) => v.medioPago === m);
+        return [
+          m,
+          { cantidad: del.length, cobradoClp: del.reduce((a, v) => a + v.totalCobradoClp, 0) },
+        ];
+      }),
+    ) as Record<string, { cantidad: number; cobradoClp: number }>;
+    const anuladas = ventas.filter((v) => v.estado === 'ANULADA');
+    const inicial = estado.sesionCaja?.efectivoInicialClp ?? 0;
+    return {
+      porMedio,
+      cantidadVentas: validas.length,
+      totalVentasClp: validas.reduce((a, v) => a + v.totalClp, 0),
+      redondeoClp: validas.reduce((a, v) => a + v.redondeoClp, 0),
+      totalCobradoClp: validas.reduce((a, v) => a + v.totalCobradoClp, 0),
+      anuladas: {
+        cantidad: anuladas.length,
+        totalClp: anuladas.reduce((a, v) => a + v.totalClp, 0),
+      },
+      efectivoInicialClp: inicial,
+      efectivoEsperadoClp: inicial + (porMedio['EFECTIVO']?.cobradoClp ?? 0),
+    };
+  };
+  const configuracion = () => ({
+    ...estado.local,
+    dteProvider: estado.dteProvider,
+    modoPrueba: estado.dteProvider === 'MOCK',
+    modeloEmision: estado.local['modeloEmision'] ?? 'SOLO_NO_ELECTRONICOS',
+    cashRoundingEnabled: estado.redondeo,
+    modalidadesDisponibles: ['PUENTE_MANUAL', 'MOCK'],
   });
 
   const fetchFn = vi.fn<typeof fetch>((entrada, init) => {
@@ -225,7 +294,102 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
         return json(204, undefined);
       case 'GET /cash/current':
         if (!usuario) return sinSesion();
-        return json(200, { caja: { id: 'c1', name: 'Caja 1' }, sesion: estado.sesionCaja });
+        return json(200, {
+          caja: { id: 'c1', name: 'Caja 1' },
+          sesion: estado.sesionCaja,
+          resumen: estado.sesionCaja ? resumen() : null,
+        });
+      case 'POST /cash/close': {
+        if (!usuario) return sinSesion();
+        if (!estado.sesionCaja)
+          return json(409, { error: 'CAJA_CERRADA', mensaje: 'La caja no está abierta' });
+        estado.cierres.push(cuerpo);
+        const r = resumen();
+        const contado = Number(cuerpo['efectivoContadoClp']);
+        const sesion = {
+          ...estado.sesionCaja,
+          cerradaPor: { id: usuario.id, name: usuario.name },
+          cerradaEn: '2026-10-25T23:00:00.000Z',
+          efectivoContadoClp: contado,
+          efectivoEsperadoClp: r.efectivoEsperadoClp,
+          diferenciaClp: contado - r.efectivoEsperadoClp,
+        };
+        estado.sesionCaja = null;
+        return json(200, { caja: { id: 'c1', name: 'Caja 1' }, sesion, resumen: r });
+      }
+      case 'GET /sales/last': {
+        if (!usuario) return sinSesion();
+        const ventas = [...estado.ventas.values()];
+        const ultima = ventas.at(-1);
+        if (!ultima)
+          return json(404, { error: 'SIN_VENTAS', mensaje: 'No hay ventas en este turno' });
+        return json(200, {
+          ...ultima,
+          creadaEn: '2026-10-25T12:00:00.000Z',
+          cajero: { name: 'Cajero' },
+        });
+      }
+      case 'GET /about':
+        return json(200, {
+          app: 'Almacén POS',
+          version: '0.1.0',
+          license: 'ODbL-1.0',
+          license_url: 'https://opendatacommons.org/licenses/odbl/1-0/',
+          attribution:
+            'Datos de productos de Open Food Facts (https://openfoodfacts.org) y proyectos asociados.',
+          sources: [
+            {
+              id: 'off',
+              nombre: 'Open Food Facts',
+              url: 'https://static.openfoodfacts.org/data/x.csv.gz',
+              export_del: '2026-10-25',
+            },
+          ],
+          built_at: '2026-10-25T11:35:19.120Z',
+          product_count: 11027,
+        });
+      case 'PATCH /settings':
+        if (!usuario) return sinSesion();
+        estado.configGuardada.push(cuerpo);
+        if (cuerpo['rut'] === '1-1')
+          return json(400, { error: 'RUT_INVALIDO', mensaje: 'El RUT no es válido' });
+        estado.local = { ...estado.local, ...cuerpo };
+        if (cuerpo['dteProvider'])
+          estado.dteProvider = cuerpo['dteProvider'] as 'MOCK' | 'PUENTE_MANUAL';
+        if (typeof cuerpo['cashRoundingEnabled'] === 'boolean')
+          estado.redondeo = cuerpo['cashRoundingEnabled'];
+        return json(200, configuracion());
+      case 'GET /printer':
+        if (!usuario) return sinSesion();
+        return json(200, {
+          caja: { id: 'c1', name: 'Caja 1' },
+          ...estado.impresoraCfg,
+          columnasEfectivas: 48,
+        });
+      case 'PUT /printer':
+        if (!usuario) return sinSesion();
+        if (cuerpo['transporte'] === 'RED' && !cuerpo['destino']) {
+          return json(400, {
+            error: 'CONFIG_IMPRESORA_INVALIDA',
+            mensaje: 'Falta la dirección IP de la impresora',
+          });
+        }
+        estado.impresoraCfg = cuerpo;
+        return json(200, {
+          caja: { id: 'c1', name: 'Caja 1' },
+          ...cuerpo,
+          columnasEfectivas: cuerpo['anchoMm'] === 58 ? 32 : 48,
+        });
+      case 'GET /printer/system-queues':
+        return json(200, { colas: ['EPSON_TM_T20', 'XP-58'] });
+      case 'POST /printer/test':
+        return json(200, {
+          impreso: estado.impresoraCfg['transporte'] !== 'DESACTIVADA',
+          vistaPrevia: 'P R U E B A   D E   I M P R E S I Ó N',
+          motivo: estado.impresoraCfg['transporte'] !== 'DESACTIVADA' ? null : 'SIN_IMPRESORA',
+        });
+      case 'POST /printer/drawer':
+        return json(200, { abierto: estado.impresoraCfg['transporte'] !== 'DESACTIVADA' });
       case 'POST /cash/open': {
         if (!usuario) return sinSesion();
         if (estado.sesionCaja)
@@ -265,13 +429,7 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
       }
       case 'GET /settings':
         if (!usuario) return sinSesion();
-        return json(200, {
-          razonSocial: 'Almacén de Prueba',
-          dteProvider: estado.dteProvider,
-          modoPrueba: estado.dteProvider === 'MOCK',
-          modeloEmision: 'SOLO_NO_ELECTRONICOS',
-          cashRoundingEnabled: estado.redondeo,
-        });
+        return json(200, configuracion());
       case 'POST /sales': {
         if (!usuario) return sinSesion();
         estado.pedidos.push(cuerpo);
@@ -380,6 +538,36 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
           return json(200, {
             impreso: estado.impresora,
             vistaPrevia: 'COMPROBANTE INTERNO - NO VÁLIDO COMO BOLETA',
+            motivo: estado.impresora ? null : 'SIN_IMPRESORA',
+          });
+        }
+        const anular = /^POST \/sales\/(.+)\/void$/.exec(clave);
+        if (anular) {
+          if (!usuario) return sinSesion();
+          estado.anulaciones.push(cuerpo);
+          if (usuario.role !== 'DUENO' && cuerpo['pinDueno'] !== '1234') {
+            return json(401, {
+              error: 'PIN_INCORRECTO',
+              mensaje: 'Clave del dueño incorrecta',
+              intentosRestantes: 4,
+            });
+          }
+          const v = estado.ventas.get(anular[1] ?? '');
+          if (!v) return json(404, { error: 'NO_ENCONTRADO', mensaje: 'Venta no encontrada' });
+          v['estado'] = 'ANULADA';
+          return json(200, {
+            venta: v,
+            recordatorio:
+              v['medioPago'] === 'DEBITO'
+                ? `Anula también el pago en la máquina de tarjetas`
+                : null,
+          });
+        }
+        const imprimirCierre = /^POST \/cash\/sessions\/(.+)\/print$/.exec(clave);
+        if (imprimirCierre) {
+          return json(200, {
+            impreso: estado.impresora,
+            vistaPrevia: 'CIERRE DE CAJA',
             motivo: estado.impresora ? null : 'SIN_IMPRESORA',
           });
         }

@@ -9,18 +9,23 @@ import {
 import { AvisoModoPrueba } from './componentes/AvisoModoPrueba.js';
 import { PantallaApertura } from './pantallas/PantallaApertura.js';
 import { PantallaPin } from './pantallas/PantallaPin.js';
+import { ModalAcercaDe } from './componentes/ModalAcercaDe.js';
+import { PantallaCaja } from './pantallas/PantallaCaja.js';
+import { PantallaConfiguracion } from './pantallas/PantallaConfiguracion.js';
 import { PantallaProductos } from './pantallas/PantallaProductos.js';
 import { PantallaRecepcion } from './pantallas/PantallaRecepcion.js';
 import { PantallaVenta } from './pantallas/PantallaVenta.js';
 import { guardarToken, leerToken } from './sesion.js';
 import { useEstadoServidor, type Conexion } from './useEstadoServidor.js';
 
-type Vista = 'VENTA' | 'PRODUCTOS' | 'RECEPCION';
+type Vista = 'VENTA' | 'PRODUCTOS' | 'RECEPCION' | 'CAJA' | 'CONFIGURACION';
 
-const VISTAS: { vista: Vista; etiqueta: string }[] = [
+const VISTAS: { vista: Vista; etiqueta: string; soloDueno?: boolean }[] = [
   { vista: 'VENTA', etiqueta: 'Venta' },
   { vista: 'PRODUCTOS', etiqueta: 'Productos' },
   { vista: 'RECEPCION', etiqueta: 'Recepción' },
+  { vista: 'CAJA', etiqueta: 'Caja' },
+  { vista: 'CONFIGURACION', etiqueta: 'Configuración', soloDueno: true },
 ];
 
 type Fase =
@@ -32,6 +37,7 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
   const conexion = useEstadoServidor(api);
   // Con un token guardado se intenta retomar la sesión; sin token, directo al PIN.
   const [vista, setVista] = useState<Vista>('VENTA');
+  const [acercaDe, setAcercaDe] = useState(false);
   const [fase, setFase] = useState<Fase>(() =>
     leerToken() ? { tipo: 'CARGANDO' } : { tipo: 'PIN' },
   );
@@ -97,7 +103,7 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
         <h1>Almacén POS</h1>
         {fase.tipo === 'CAJA' && (
           <nav className="pestanas" role="tablist" aria-label="Secciones">
-            {VISTAS.map((v) => (
+            {VISTAS.filter((v) => !v.soloDueno || fase.usuario.role === 'DUENO').map((v) => (
               <button
                 key={v.vista}
                 type="button"
@@ -125,7 +131,24 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
           </div>
         )}
         <EstadoConexion conexion={conexion} />
+        <button
+          type="button"
+          className="boton boton-chico boton-texto"
+          onClick={() => {
+            setAcercaDe(true);
+          }}
+        >
+          Acerca de
+        </button>
       </header>
+      {acercaDe && (
+        <ModalAcercaDe
+          api={api}
+          alCerrar={() => {
+            setAcercaDe(false);
+          }}
+        />
+      )}
       <div className="contenido">
         {fase.tipo === 'CARGANDO' && <p className="pantalla-centrada">Cargando…</p>}
         {fase.tipo === 'PIN' && <PantallaPin api={api} alEntrar={alEntrar} />}
@@ -137,6 +160,10 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
             reintentar={() => void cargarCaja(fase.usuario)}
             alAbrir={(caja) => {
               setFase({ ...fase, caja });
+            }}
+            alCerrarCaja={(caja) => {
+              setFase({ ...fase, caja });
+              setVista('VENTA');
             }}
           />
         )}
@@ -151,12 +178,14 @@ function Caja({
   api,
   reintentar,
   alAbrir,
+  alCerrarCaja,
 }: {
   fase: Extract<Fase, { tipo: 'CAJA' }>;
   vista: Vista;
   api: ClienteApi;
   reintentar: () => void;
   alAbrir: (caja: EstadoCaja) => void;
+  alCerrarCaja: (caja: EstadoCaja) => void;
 }) {
   if (fase.error) {
     return (
@@ -184,6 +213,10 @@ function Caja({
       )}
       {vista === 'PRODUCTOS' && <PantallaProductos api={api} esDueno={esDueno} />}
       {vista === 'RECEPCION' && <PantallaRecepcion api={api} />}
+      {vista === 'CAJA' && (
+        <PantallaCaja api={api} esDueno={esDueno} alCambiarCaja={alCerrarCaja} />
+      )}
+      {vista === 'CONFIGURACION' && esDueno && <PantallaConfiguracion api={api} />}
     </>
   );
 }

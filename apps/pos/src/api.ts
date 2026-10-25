@@ -55,6 +55,54 @@ export interface SesionCaja {
 export interface EstadoCaja {
   caja: Caja;
   sesion: SesionCaja | null;
+  /** Resumen del turno (solo con la caja abierta, o al cerrar). */
+  resumen?: ResumenCaja | null;
+}
+
+export interface ResumenCaja {
+  porMedio: Record<MedioPago, { cantidad: number; cobradoClp: number }>;
+  cantidadVentas: number;
+  totalVentasClp: number;
+  redondeoClp: number;
+  totalCobradoClp: number;
+  anuladas: { cantidad: number; totalClp: number };
+  efectivoInicialClp: number;
+  efectivoEsperadoClp: number;
+}
+
+export interface CierreCaja {
+  caja: Caja;
+  sesion: SesionCaja & {
+    cerradaPor: { id: string; name: string } | null;
+    cerradaEn: string | null;
+    efectivoContadoClp: number | null;
+    efectivoEsperadoClp: number | null;
+    diferenciaClp: number | null;
+  };
+  resumen: ResumenCaja;
+}
+
+export interface AcercaDe {
+  app: string;
+  version: string;
+  license: string;
+  license_url: string;
+  attribution: string;
+  sources: { id?: string; nombre?: string; url?: string; export_del?: string }[];
+  built_at: string | null;
+  product_count: number | null;
+}
+
+export type TransporteImpresora = 'DESACTIVADA' | 'RED' | 'SISTEMA' | 'ARCHIVO';
+
+export interface ConfigImpresora {
+  transporte: TransporteImpresora;
+  destino: string | null;
+  anchoMm: 58 | 80;
+  columnas: number | null;
+  paginaCodigos: 'CP858' | 'CP850' | 'WPC1252';
+  cortar: boolean;
+  abrirCajon: boolean;
 }
 
 export interface ProductoLocal {
@@ -188,12 +236,32 @@ export interface BotonRapido {
 
 export type MedioPago = 'EFECTIVO' | 'DEBITO' | 'CREDITO' | 'TRANSFERENCIA';
 
+export type ModalidadBoleta = 'MOCK' | 'PUENTE_MANUAL' | 'SII_DIRECTO' | 'PROVEEDOR_EXTERNO';
+
 export interface ConfiguracionLocal {
   razonSocial: string | null;
-  dteProvider: 'MOCK' | 'PUENTE_MANUAL' | 'SII_DIRECTO' | 'PROVEEDOR_EXTERNO';
+  rut?: string | null;
+  giro?: string | null;
+  direccion?: string | null;
+  comuna?: string | null;
+  dteProvider: ModalidadBoleta;
   modoPrueba: boolean;
   modeloEmision: 'SOLO_NO_ELECTRONICOS' | 'TODO_MEDIO_PAGO';
   cashRoundingEnabled: boolean;
+  prefijosBalanzaPrecio?: string[];
+  modalidadesDisponibles?: ModalidadBoleta[];
+}
+
+export interface CambiosConfiguracion {
+  razonSocial?: string | null;
+  rut?: string | null;
+  giro?: string | null;
+  direccion?: string | null;
+  comuna?: string | null;
+  dteProvider?: ModalidadBoleta;
+  modeloEmision?: 'SOLO_NO_ELECTRONICOS' | 'TODO_MEDIO_PAGO';
+  cashRoundingEnabled?: boolean;
+  prefijosBalanzaPrecio?: string[];
 }
 
 export interface PedidoVenta {
@@ -308,6 +376,65 @@ export class ClienteApi {
 
   estadoCaja(): Promise<EstadoCaja> {
     return this.pedir<EstadoCaja>('/cash/current');
+  }
+
+  cerrarCaja(efectivoContadoClp: number): Promise<CierreCaja> {
+    return this.pedir<CierreCaja>('/cash/close', {
+      metodo: 'POST',
+      cuerpo: { efectivoContadoClp },
+    });
+  }
+
+  imprimirCierre(sesionId: string): Promise<ResultadoImpresion> {
+    return this.pedir<ResultadoImpresion>(`/cash/sessions/${encodeURIComponent(sesionId)}/print`, {
+      metodo: 'POST',
+    });
+  }
+
+  ultimaVenta(): Promise<VentaRegistrada & { creadaEn: string; cajero: { name: string } }> {
+    return this.pedir('/sales/last');
+  }
+
+  anularVenta(
+    id: string,
+    motivo: string,
+    pinDueno?: string,
+  ): Promise<{ venta: VentaRegistrada; recordatorio: string | null }> {
+    return this.pedir(`/sales/${encodeURIComponent(id)}/void`, {
+      metodo: 'POST',
+      cuerpo: { motivo, ...(pinDueno ? { pinDueno } : {}) },
+    });
+  }
+
+  acercaDe(): Promise<AcercaDe> {
+    return this.pedir<AcercaDe>('/about');
+  }
+
+  guardarConfiguracion(cambios: CambiosConfiguracion): Promise<ConfiguracionLocal> {
+    return this.pedir<ConfiguracionLocal>('/settings', { metodo: 'PATCH', cuerpo: cambios });
+  }
+
+  impresora(): Promise<ConfigImpresora & { columnasEfectivas: number }> {
+    return this.pedir('/printer');
+  }
+
+  guardarImpresora(c: ConfigImpresora): Promise<ConfigImpresora & { columnasEfectivas: number }> {
+    return this.pedir('/printer', { metodo: 'PUT', cuerpo: c });
+  }
+
+  colasSistema(): Promise<{ colas: string[] }> {
+    return this.pedir('/printer/system-queues');
+  }
+
+  imprimirPrueba(abrirCajon = false): Promise<ResultadoImpresion> {
+    return this.pedir<ResultadoImpresion>('/printer/test', {
+      metodo: 'POST',
+      cuerpo: { abrirCajon },
+    });
+  }
+
+  abrirCajon(): Promise<{ abierto: boolean }> {
+    return this.pedir('/printer/drawer', { metodo: 'POST' });
   }
 
   abrirCaja(efectivoInicialClp: number): Promise<EstadoCaja> {
