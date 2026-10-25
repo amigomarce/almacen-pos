@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { sql } from 'drizzle-orm';
 import type { ConfigBalanza } from '@almacen/core';
+import { LICENCIA, TEXTO_ATRIBUCION, URL_LICENCIA } from '@almacen/data';
 import pkg from '../package.json' with { type: 'json' };
 import type { Db } from './db/client.js';
 import { buscarProducto, type DependenciasLookup } from './productos/lookup.js';
@@ -38,6 +39,31 @@ export function crearApp({
       db: estadoDb,
       semilla: semilla !== null,
       hora: new Date().toISOString(),
+    };
+  });
+
+  /**
+   * Para la pantalla "Acerca de" (ADR-004, ODbL §4.3): atribución de los datos de productos.
+   * Sale de `seed_meta`; sin semilla se usa el mismo texto, porque la consulta en línea
+   * también trae datos de Open Food Facts.
+   */
+  app.get('/about', () => {
+    const meta = semilla?.meta ?? {};
+    let sources: unknown;
+    try {
+      sources = JSON.parse(meta['sources'] ?? '[]');
+    } catch {
+      sources = [];
+    }
+    return {
+      app: 'Almacén POS',
+      version: pkg.version,
+      license: meta['license'] ?? LICENCIA,
+      license_url: meta['license_url'] ?? URL_LICENCIA,
+      attribution: meta['attribution'] ?? TEXTO_ATRIBUCION,
+      sources,
+      built_at: meta['built_at'] ?? null,
+      product_count: meta['product_count'] ? Number(meta['product_count']) : null,
     };
   });
 

@@ -22,6 +22,10 @@ a la siguiente sin aprobación.
   impreso por ESC/POS (con `MockProvider`), apertura/cierre de caja, usuarios con PIN.
 - Gestión de productos y recepción de mercadería en la caja.
 - Prueba con impresora real (Epson/Xprinter) 80 mm y 58 mm.
+- Pantalla **"Acerca de"** con la versión y la atribución ODbL de los datos de productos
+  (obligatoria, ADR-004). El texto sale de `GET /about` del servidor local (`attribution`,
+  `license`, `license_url`, `sources`, `built_at`, leídos de `seed_meta`). Se muestra tal cual,
+  con los enlaces a Open Food Facts y a la licencia.
 
 ## Fase 4 — Nube + app móvil del dueño
 - `apps/cloud` + sincronización (outbox, movimientos de stock).
