@@ -13,3 +13,4 @@ secrets/
 *.pem
 CAF*.xml
 data/raw/
+coverage/
