@@ -88,10 +88,29 @@ export const storeSettings = sqliteTable(
   ],
 );
 
+export const TRANSPORTES_IMPRESORA = ['DESACTIVADA', 'RED', 'SISTEMA', 'ARCHIVO'] as const;
+export type TransporteImpresora = (typeof TRANSPORTES_IMPRESORA)[number];
+
+/**
+ * Cada caja tiene su impresora. Las columnas de impresora no llevan CHECK para que la migración
+ * sea un ADD COLUMN (recrear `registers` es riesgoso: la referencian ventas y sesiones).
+ * Se validan en `impresion/config.ts`.
+ */
 export const registers = sqliteTable('registers', {
   id: id(),
   name: text('name').notNull(),
   active: booleano('active', true),
+  printerTransport: text('printer_transport', { enum: TRANSPORTES_IMPRESORA })
+    .notNull()
+    .default('DESACTIVADA'),
+  /** RED: "192.168.1.50:9100"; SISTEMA: nombre de la cola; ARCHIVO: carpeta o dispositivo. */
+  printerTarget: text('printer_target'),
+  printerWidthMm: integer('printer_width_mm').notNull().default(80),
+  /** `null` = según el ancho (58 → 32, 80 → 48). */
+  printerColumns: integer('printer_columns'),
+  printerCodepage: text('printer_codepage').notNull().default('CP858'),
+  printerCut: booleano('printer_cut', true),
+  printerDrawer: booleano('printer_drawer', true),
 });
 
 export const users = sqliteTable(

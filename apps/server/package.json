@@ -21,6 +21,7 @@
     "@almacen/core": "workspace:*",
     "@almacen/data": "workspace:*",
     "@almacen/dte": "workspace:*",
+    "@almacen/printer": "workspace:*",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.4",
     "fastify": "^5.12.7",

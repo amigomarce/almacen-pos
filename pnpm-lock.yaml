@@ -248,6 +248,9 @@ importers:
       '@almacen/dte':
         specifier: workspace:*
         version: link:../../packages/dte
+      '@almacen/printer':
+        specifier: workspace:*
+        version: link:../../packages/printer
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3

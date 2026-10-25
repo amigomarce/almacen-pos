@@ -11,6 +11,9 @@ import { registrarConfiguracion } from './configuracion/rutas.js';
 import { leerConfiguracion } from './configuracion/servicio.js';
 import type { Db } from './db/client.js';
 import { ErrorHttp } from './errores.js';
+import { registrarImpresion } from './impresion/rutas.js';
+import { ServicioImpresion } from './impresion/servicio.js';
+import type { Ejecutar } from './impresion/transportes.js';
 import { registrarVentas } from './ventas/rutas.js';
 import { buscarProducto, type DependenciasLookup } from './productos/lookup.js';
 import type { Semilla } from './productos/semilla.js';
@@ -27,6 +30,9 @@ export interface OpcionesApp {
   intentos?: LimitadorIntentos;
   /** `false` en producción: no se puede elegir la modalidad MOCK. */
   permitirModoPrueba?: boolean;
+  /** Inyectable para tests (transporte falso). */
+  impresion?: ServicioImpresion;
+  ejecutar?: Ejecutar;
   logger?: boolean;
 }
 
@@ -38,6 +44,8 @@ export function crearApp({
   sesiones = new Sesiones(),
   intentos = new LimitadorIntentos(),
   permitirModoPrueba = true,
+  impresion = new ServicioImpresion(),
+  ejecutar,
   logger = false,
 }: OpcionesApp): FastifyInstance {
   const app = Fastify({
@@ -74,6 +82,7 @@ export function crearApp({
   registrarCaja(app, { db, sesiones });
   registrarConfiguracion(app, { db, sesiones, permitirModoPrueba });
   registrarVentas(app, { db, sesiones, intentos });
+  registrarImpresion(app, { db, sesiones, impresion, ...(ejecutar ? { ejecutar } : {}) });
 
   app.get('/health', () => {
     let estadoDb: 'ok' | 'error' = 'ok';
