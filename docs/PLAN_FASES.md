@@ -38,6 +38,33 @@ a la siguiente sin aprobación.
   ventas del día. Notificación de cierre de caja.
 - Opcional: fiado / cuenta corriente de vecinos.
 
+### Estado al 2026-10-25 — nube y sincronización completas; app móvil pendiente
+
+**Hecho (Etapas 16–18, lado servidor):**
+- `apps/cloud` (Fastify + Drizzle + PostgreSQL/Supabase, ADR-007): migraciones y modelo de
+  nube (`installations`, `products`, `categories`, `stock_movements`, `sales`, `sale_items`,
+  `outbox`, `cash_closes`), todo con `owner_id` (multi-local).
+- **Sincronización** (`packages/sync` + `apps/server/sincronizacion`): outbox local encolado
+  dentro de cada transacción; push/pull cada 10 s con reintentos; el dueño gana los conflictos
+  por `version`; el stock viaja como movimientos (nunca se sobrescribe el saldo).
+- **API del dueño** (JWT de Supabase): productos (listar/ver/editar precio), cambio masivo
+  por categoría/marca (+%), recepción (stock + costo promedio) y reportes (ventas del día,
+  stock bajo, último cierre de caja).
+- **Vinculación de la caja** por QR: token de dispositivo (se guarda solo su SHA-256).
+
+**Flujos completos extremo a extremo:** precio del móvil → caja; recepción del móvil → caja;
+ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
+
+**Pendiente en esta fase:**
+- `apps/mobile` (Expo): login con Supabase Auth, escáner con cámara y las pantallas Inicio,
+  Productos, Cambio masivo y Recepción contra los endpoints ya existentes.
+- Provisionar Supabase para la prueba real: `CLOUD_DATABASE_URL` y `SUPABASE_JWT_SECRET`
+  (nube), `CLOUD_URL` (caja).
+- Fiado / cuenta corriente (opcional) no se hizo.
+
+**TODOs menores:** `GET /report/sales/today` usa "últimas 24 h" (falta hora de Chile); el
+`outbox` local no se poda; el saldo de stock de la nube se agrega en memoria.
+
 ## Fase 5 — Boleta electrónica real
 - Implementar `SiiDirectoProvider` (Estrategia A, ADR-001). Primero en **ambiente de
   certificación** (`apicert`/`pangal`); nunca producción en desarrollo.
