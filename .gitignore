@@ -14,3 +14,4 @@ secrets/
 CAF*.xml
 data/raw/
 coverage/
+data/out/
