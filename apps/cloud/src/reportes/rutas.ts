@@ -34,4 +34,11 @@ export function registrarReportes(
     if (!ownerId) return;
     return repo.stockBajo(ownerId);
   });
+
+  // Aviso de cierre de caja en el móvil (sin push): el último cierre que subió la caja.
+  app.get('/report/cash-closes', { onRequest: conDueno }, async (req, reply) => {
+    const ownerId = duenoDe(req, reply);
+    if (!ownerId) return;
+    return { cierre: await repo.ultimoCierre(ownerId) };
+  });
 }

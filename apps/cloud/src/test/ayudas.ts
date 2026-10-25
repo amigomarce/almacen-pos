@@ -4,7 +4,14 @@ import type {
   NuevaInstalacion,
   RepoInstalaciones,
 } from '../instalaciones/servicio.js';
-import type { categories, products, saleItems, sales, stockMovements } from '../db/schema.js';
+import type {
+  categories,
+  cashCloses,
+  products,
+  saleItems,
+  sales,
+  stockMovements,
+} from '../db/schema.js';
 import type { EventoSaliente, RepoSyncNube } from '../sincronizacion/servicio.js';
 import type { FiltroPrecios, ProductoCloud, RepoProductos } from '../productos/servicio.js';
 import type { RepoRecepciones } from '../recepciones/servicio.js';
@@ -71,6 +78,7 @@ export interface RepoSyncFalso extends RepoSyncNube {
   ventasActualizadas: (typeof sales.$inferInsert)[];
   lineas: (typeof saleItems.$inferInsert)[];
   movimientos: (typeof stockMovements.$inferInsert)[];
+  cierres: (typeof cashCloses.$inferInsert)[];
   pendientes: EventoSaliente[];
   sincronizados: string[];
 }
@@ -86,6 +94,7 @@ export function repoSyncFalso(pendientes: EventoSaliente[] = []): RepoSyncFalso 
     ventasActualizadas: [],
     lineas: [],
     movimientos: [],
+    cierres: [],
     pendientes: [...pendientes],
     sincronizados: [],
     upsertProducto(p) {
@@ -118,6 +127,10 @@ export function repoSyncFalso(pendientes: EventoSaliente[] = []): RepoSyncFalso 
     },
     insertarMovimiento(m) {
       f.movimientos.push(m);
+      return Promise.resolve();
+    },
+    upsertCierre(c) {
+      f.cierres.push(c);
       return Promise.resolve();
     },
     eventosPendientes() {

@@ -1,12 +1,20 @@
 import type {
   CategoriaWire,
+  CierreCajaWire,
   LineaVentaWire,
   MovimientoStockWire,
   ProductoWire,
   VentaWire,
 } from '@almacen/sync';
 import type { TipoImpuesto, Unidad } from '@almacen/core';
-import type { categories, products, saleItems, sales, stockMovements } from '../db/schema.js';
+import type {
+  cashCloses,
+  categories,
+  products,
+  saleItems,
+  sales,
+  stockMovements,
+} from '../db/schema.js';
 
 /**
  * Convierte el wire format (JSON, fechas ISO) a las filas de la nube. Agrega `owner_id` y
@@ -77,4 +85,9 @@ export function movimientoDeWire(
 export function movimientoAWire(m: typeof stockMovements.$inferSelect): MovimientoStockWire {
   const { ownerId: _owner, at, ...resto } = m;
   return { ...resto, type: m.type as MovimientoStockWire['type'], at: at.toISOString() };
+}
+
+export function cierreDeWire(w: CierreCajaWire, ownerId: string): typeof cashCloses.$inferInsert {
+  const { ...resto } = w;
+  return { ...resto, ownerId, closedAt: new Date(w.closedAt) };
 }

@@ -136,6 +136,29 @@ describe('ingestarEventos', () => {
     expect(repo.ventasActualizadas[0]).toMatchObject({ id: 's1', status: 'ANULADA' });
   });
 
+  it('ingesta un cierre de caja', async () => {
+    const repo = repoSyncFalso();
+    await ingestarEventos(repo, 'dueno-1', [
+      {
+        entity: 'cash_closes',
+        op: 'INSERT',
+        entityId: 'c1',
+        payload: {
+          id: 'c1',
+          registerId: 'r1',
+          registerName: 'Caja 1',
+          closedAt: ISO,
+          countedCashClp: 10000,
+          expectedCashClp: 9800,
+          differenceClp: 200,
+          totalVentasClp: 50000,
+          cantidadVentas: 12,
+        },
+      },
+    ]);
+    expect(repo.cierres).toHaveLength(1);
+    expect(repo.cierres[0]).toMatchObject({ id: 'c1', registerId: 'r1', differenceClp: 200 });
+  });
   it('UPDATE de producto actualiza (upsert)', async () => {
     const repo = repoSyncFalso();
     await ingestarEventos(repo, 'dueno-1', [

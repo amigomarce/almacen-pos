@@ -1,7 +1,9 @@
 import { cuadrarCaja, diferenciaCaja, type CuadraturaCaja, type MedioPago } from '@almacen/core';
+import type { CierreCajaWire } from '@almacen/sync';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { cashSessions, registers, sales, users } from '../db/schema.js';
+import { encolar } from '../sincronizacion/outbox.js';
 
 export interface Caja {
   id: string;
@@ -144,17 +146,40 @@ export function cerrarCaja(
     const resumen = resumir(db, f);
     // Valida el monto contado (entero, no negativo).
     diferenciaCaja(resumen.efectivoEsperadoClp, datos.efectivoContadoClp);
+    const cerradaEn = new Date();
     const cerrada = db
       .update(cashSessions)
       .set({
         closedBy: datos.usuarioId,
-        closedAt: new Date(),
+        closedAt: cerradaEn,
         countedCash: datos.efectivoContadoClp,
         expectedCash: resumen.efectivoEsperadoClp,
       })
       .where(eq(cashSessions.id, f.id))
       .returning()
       .get();
+    const registro = db
+      .select({ name: registers.name })
+      .from(registers)
+      .where(eq(registers.id, datos.registerId))
+      .get();
+    // Aviso de cierre para el dueño en el móvil (sin push): sube con el outbox.
+    encolar(db, {
+      entity: 'cash_closes',
+      entityId: cerrada.id,
+      op: 'INSERT',
+      payload: {
+        id: cerrada.id,
+        registerId: datos.registerId,
+        registerName: registro?.name ?? null,
+        closedAt: cerradaEn.toISOString(),
+        countedCashClp: datos.efectivoContadoClp,
+        expectedCashClp: resumen.efectivoEsperadoClp,
+        differenceClp: datos.efectivoContadoClp - resumen.efectivoEsperadoClp,
+        totalVentasClp: resumen.totalVentasClp,
+        cantidadVentas: resumen.cantidadVentas,
+      } satisfies CierreCajaWire,
+    });
     return { ok: true, datos: { sesion: aSesion(db, cerrada), resumen } };
   });
 }

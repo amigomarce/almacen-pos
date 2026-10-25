@@ -54,4 +54,18 @@ export interface RepoReportes {
   resumenVentas(ownerId: string, desde: Date): Promise<ResumenVentas>;
   /** Productos con stock bajo su mínimo, ordenados por el más crítico primero. */
   stockBajo(ownerId: string): Promise<ProductoStockBajo[]>;
+  /** Último cierre de caja subido por la caja (para el aviso en el móvil). */
+  ultimoCierre(ownerId: string): Promise<CierrePublico | null>;
+}
+
+export interface CierrePublico {
+  id: string;
+  registerId: string;
+  registerName: string | null;
+  closedAt: string;
+  countedCashClp: number;
+  expectedCashClp: number;
+  differenceClp: number;
+  totalVentasClp: number;
+  cantidadVentas: number;
 }

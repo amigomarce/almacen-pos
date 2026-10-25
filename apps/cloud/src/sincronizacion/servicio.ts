@@ -1,5 +1,6 @@
 import type {
   CategoriaWire,
+  CierreCajaWire,
   EntidadSync,
   EventoSync,
   LineaVentaWire,
@@ -10,12 +11,20 @@ import type {
 } from '@almacen/sync';
 import {
   categoriaDeWire,
+  cierreDeWire,
   lineaDeWire,
   movimientoDeWire,
   productoDeWire,
   ventaDeWire,
 } from './mapping.js';
-import type { categories, products, saleItems, sales, stockMovements } from '../db/schema.js';
+import type {
+  cashCloses,
+  categories,
+  products,
+  saleItems,
+  sales,
+  stockMovements,
+} from '../db/schema.js';
 
 /** Evento de la cola de la nube hacia la caja (lo que devuelve `GET /sync/pull`). */
 export interface EventoSaliente {
@@ -37,6 +46,7 @@ export interface RepoSyncNube {
   actualizarVenta(v: typeof sales.$inferInsert): Promise<void>;
   insertarLinea(l: typeof saleItems.$inferInsert): Promise<void>;
   insertarMovimiento(m: typeof stockMovements.$inferInsert): Promise<void>;
+  upsertCierre(c: typeof cashCloses.$inferInsert): Promise<void>;
   eventosPendientes(ownerId: string): Promise<EventoSaliente[]>;
   marcarSincronizados(ownerId: string, ids: readonly string[]): Promise<void>;
 }
@@ -67,6 +77,8 @@ export async function ingestarEventos(
       await repo.insertarLinea(lineaDeWire(e.payload as LineaVentaWire));
     } else if (e.entity === 'stock_movements' && e.op === 'INSERT') {
       await repo.insertarMovimiento(movimientoDeWire(e.payload as MovimientoStockWire, ownerId));
+    } else if (e.entity === 'cash_closes' && e.op === 'INSERT') {
+      await repo.upsertCierre(cierreDeWire(e.payload as CierreCajaWire, ownerId));
     }
     // Cualquier otro (UPDATE/DELETE de append-only) se ignora: esas entidades solo se insertan.
   }

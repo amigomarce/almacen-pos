@@ -8,7 +8,8 @@ import type { MedioPago, TipoImpuesto, Unidad } from '@almacen/core';
  * - El stock NO viaja en `ProductoWire`: se deriva de `MovimientoStockWire` (ARQUITECTURA §2).
  */
 
-export type EntidadSync = 'products' | 'categories' | 'sales' | 'sale_items' | 'stock_movements';
+export type EntidadSync =
+  'products' | 'categories' | 'sales' | 'sale_items' | 'stock_movements' | 'cash_closes';
 export type OperacionSync = 'INSERT' | 'UPDATE' | 'DELETE';
 
 export const ENTIDADES_SYNC: readonly EntidadSync[] = [
@@ -17,6 +18,7 @@ export const ENTIDADES_SYNC: readonly EntidadSync[] = [
   'sales',
   'sale_items',
   'stock_movements',
+  'cash_closes',
 ];
 
 export interface ProductoWire {
@@ -89,6 +91,19 @@ export interface MovimientoStockWire {
   refId: string | null;
   userId: string | null;
   at: string;
+}
+
+/** Cierre de caja que la caja sube para que el dueño lo vea en el móvil. */
+export interface CierreCajaWire {
+  id: string;
+  registerId: string;
+  registerName: string | null;
+  closedAt: string;
+  countedCashClp: number;
+  expectedCashClp: number;
+  differenceClp: number;
+  totalVentasClp: number;
+  cantidadVentas: number;
 }
 
 /** Un evento de la cola `outbox` (local → nube o nube → local). */

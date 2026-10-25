@@ -233,3 +233,22 @@ export const outbox = pgTable(
     index('outbox_pendientes_idx').on(t.ownerId, t.syncedAt),
   ],
 );
+
+/** Cierres de caja que la caja sube, para mostrar el aviso al dueño en el móvil. */
+export const cashCloses = pgTable(
+  'cash_closes',
+  {
+    /** Mismo id que la sesión de caja del local (UUIDv7). */
+    id: text('id').primaryKey(),
+    ownerId: text('owner_id').notNull(),
+    registerId: text('register_id').notNull(),
+    registerName: text('register_name'),
+    closedAt: timestamp('closed_at', { withTimezone: true }).notNull(),
+    countedCashClp: integer('counted_cash_clp').notNull(),
+    expectedCashClp: integer('expected_cash_clp').notNull(),
+    differenceClp: integer('difference_clp').notNull(),
+    totalVentasClp: integer('total_ventas_clp').notNull(),
+    cantidadVentas: integer('cantidad_ventas').notNull(),
+  },
+  (t) => [index('cash_closes_owner_idx').on(t.ownerId, t.closedAt)],
+);

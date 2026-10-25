@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import * as t from '../db/schema.js';
+import { abrirCaja, cerrarCaja } from '../caja/servicio.js';
 import { cargarTaxonomiaPorDefecto, crearProducto } from '../productos/alta.js';
 import { editarProducto } from '../productos/gestion.js';
 import { anularVenta, registrarVenta } from '../ventas/servicio.js';
@@ -85,5 +86,22 @@ describe('encolado de eventos en el outbox local', () => {
       (e) => (e.payload as { type: string }).type === 'ANULACION',
     );
     expect(anulacion).toHaveLength(1);
+  });
+
+  it('cerrar caja encola un evento cash_closes para el móvil', () => {
+    const reg = c.db.select().from(t.registers).get();
+    if (!reg) throw new Error('seed de test incompleta');
+    abrirCaja(c.db, { registerId: reg.id, usuarioId: c.cajeroId, efectivoInicialClp: 10000 });
+    cerrarCaja(c.db, { registerId: reg.id, usuarioId: c.cajeroId, efectivoContadoClp: 10000 });
+
+    const cierres = porEntidad('cash_closes', 'INSERT');
+    expect(cierres).toHaveLength(1);
+    expect(cierres[0]?.payload).toMatchObject({
+      registerId: reg.id,
+      registerName: 'Caja 1',
+      countedCashClp: 10000,
+      expectedCashClp: 10000,
+      differenceClp: 0,
+    });
   });
 });

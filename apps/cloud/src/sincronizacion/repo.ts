@@ -1,6 +1,14 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { categories, outbox, products, saleItems, sales, stockMovements } from '../db/schema.js';
+import {
+  cashCloses,
+  categories,
+  outbox,
+  products,
+  saleItems,
+  sales,
+  stockMovements,
+} from '../db/schema.js';
 import type { EventoSaliente, RepoSyncNube } from './servicio.js';
 
 /** Repositorio real de sincronización sobre PostgreSQL (Drizzle). */
@@ -32,6 +40,10 @@ export function crearRepoSyncNube(db: Db): RepoSyncNube {
     },
     async insertarMovimiento(m) {
       await db.insert(stockMovements).values(m).onConflictDoNothing();
+    },
+    async upsertCierre(c) {
+      const { id: _id, ...set } = c;
+      await db.insert(cashCloses).values(c).onConflictDoUpdate({ target: cashCloses.id, set });
     },
     async eventosPendientes(ownerId) {
       const filas = await db
