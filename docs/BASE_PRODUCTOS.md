@@ -65,16 +65,30 @@ duplicados. Descartes en OFF: 158 de balanza, 77 con dígito malo, 3 con formato
 
 ## 2. Esquema de la base semilla
 
+Implementado en `data/src/sqlite.ts` (`schema_version` 1):
+
 ```
-seed_products(barcode PK, name, brand, quantity_text, unit, net_qty, category_slug,
-              image_url, source, source_id, quality_score, updated_at)
-seed_categories(slug, name_es, parent_slug)
+seed_products(barcode PK, name, brand, product_name, quantity_text, net_unit[G|ML|UN],
+              net_qty INT, category_slug, category_via[ETIQUETA|PALABRA|FUENTE|NINGUNA|CURADO],
+              image_url, source, sources, origin[TAG_CHILE|PREFIJO_780|CURADO],
+              quality_score INT, updated_at)
+seed_categories(slug PK, name_es, parent_slug)
+seed_templates(id, name, category_slug, unit[UN|KG], note)   -- productos sin código
+seed_meta(key PK, value)   -- license, license_url, attribution, sources, built_at, ...
 ```
 
+- `barcode` en forma canónica: UPC-A pasa a EAN-13 con un `0` adelante
+  (`normalizarCodigoBarras` de `@almacen/core`).
 - Nombre normalizado estilo góndola: `Marca + Producto + Formato` → "Colún Leche Entera 1 L".
-- `quality_score` 0–100 (tiene marca, nombre, formato, categoría, imagen).
+  `product_name` es solo "Leche Entera".
+- `net_qty` es un entero en la unidad base (g, ml o unidades). Si el formato de OFF no se
+  entiende ("200", "16 oz", "4 porciones"), queda `NULL`: no se inventa.
+- `quality_score` 0–100: nombre 30, marca 20, formato 20, categoría 20 (10 si fue adivinada
+  por palabra o por fuente), imagen 10. Los productos con origen `PREFIJO_780` valen la mitad
+  (pueden ser de exportación). Los de la lista curada valen 100.
 - Validar dígito verificador EAN-13/EAN-8/UPC-A; descartar inválidos.
 - Ignorar códigos internos (prefijos 20–29) en la semilla.
+- Se descartan los códigos sin nombre en ninguna fuente (no sirven para la caja).
 
 ## 3. Taxonomía de categorías de almacén (en español)
 
@@ -87,6 +101,19 @@ Bebé, Mascotas, Cigarros, Librería y bazar, Otros.
 Mapear `categories_tags` de OFF a esta taxonomía con una tabla de equivalencias en
 `data/mapeo_categorias.csv` (editable a mano).
 
+Implementado así (todos los CSV son editables y el build los valida):
+- `data/categorias.csv`: la taxonomía en 2 niveles. A las subcategorías de arriba se suman
+  Sopas, Repostería, Leches, Yogures, Mantequillas, Huevos, Quesos, Cecinas, Frutos secos,
+  Helados, Snacks salados, Chocolates y dulces, y Barras.
+- `data/mapeo_categorias.csv`: `off_tag,categoria_slug,prioridad`. Muchas etiquetas de OFF
+  vienen en español con el prefijo `en:` y escritas de varias formas ("en:Lácteos",
+  "en:lacteos"); la clave ignora idioma, mayúsculas, tildes y separadores.
+- `data/mapeo_palabras.csv`: respaldo cuando no hay etiquetas útiles. Se toma la primera
+  palabra conocida del nombre ("Leche descremada" → Leches). Acierta ~8 de cada 10 en una
+  muestra; falla en casos como "Lay's Jamón Serrano" (papas fritas) → Cecinas.
+- `data/marcas.csv`: forma oficial de marcas que la mayoría escribe mal ("Colun" → "Colún").
+  Las demás se unifican solas a la variante más usada que no esté en MAYÚSCULAS.
+
 ## 4. Pipeline (`pnpm data:build`)
 
 1. Descargar export OFF (CSV) → filtrar Chile → normalizar.
@@ -95,6 +122,14 @@ Mapear `categories_tags` de OFF a esta taxonomía con una tabla de equivalencias
 4. Mapear categorías, calcular `quality_score`.
 5. Generar `seed.sqlite` (para el instalador de la caja) y un JSON por lotes para la nube.
 6. Reporte: total, % con marca, % con categoría, top categorías.
+
+Estado (2026-10-25): pasos 1–4 y 6 hechos en `data/src/` (`build-cli.ts`). Salida en
+`data/out/` (fuera de git): `seed.sqlite` (~2,9 MB) y `ATRIBUCION.md`. El reporte se
+commitea en [`data/reporte.md`](../data/reporte.md). Resultado actual: **11.027 productos**
+(6.173 con `en:chile` y 4.854 solo con prefijo 780), 85,6 % con marca, 51,7 % con formato,
+66,6 % con categoría y 29 plantillas sin código. El JSON por lotes para la nube queda para la
+Fase 4. Se agregó la regla: productos con prefijo GS1 Chile `780` sin etiqueta `en:chile`
+entran con `quality_score` a la mitad (aprobado por el usuario, 2026-10-25).
 
 La caja trae `seed.sqlite` incluido y consulta **localmente** (offline). Si no encuentra el
 código, consulta la API de OFF en línea (si hay internet) y, si tampoco, crea producto nuevo.
