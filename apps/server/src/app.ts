@@ -22,7 +22,9 @@ import {
   type Taxonomia,
 } from './productos/alta.js';
 import { registrarBotones } from './productos/botones.js';
-import { buscarProductos } from './productos/busqueda.js';
+import { buscarProductos, FILTROS_PRODUCTOS } from './productos/busqueda.js';
+import { registrarGestionProductos } from './productos/gestion.js';
+import { registrarRecepciones } from './recepciones/rutas.js';
 import { buscarProducto, type DependenciasLookup } from './productos/lookup.js';
 import { requiereSesion } from './auth/rutas.js';
 import type { Semilla } from './productos/semilla.js';
@@ -95,6 +97,8 @@ export function crearApp({
   registrarConfiguracion(app, { db, sesiones, permitirModoPrueba });
   registrarVentas(app, { db, sesiones, intentos });
   registrarBotones(app, { db, sesiones });
+  registrarGestionProductos(app, { db, sesiones });
+  registrarRecepciones(app, { db, sesiones });
   registrarImpresion(app, { db, sesiones, impresion, ...(ejecutar ? { ejecutar } : {}) });
 
   app.get('/health', () => {
@@ -148,10 +152,18 @@ export function crearApp({
   });
 
   /** Búsqueda por nombre, marca o código (F2 en la caja). */
-  app.get<{ Querystring: { buscar?: string; limite?: string } }>(
+  app.get<{ Querystring: { buscar?: string; limite?: string; filtro?: string } }>(
     '/products',
     { onRequest: requiereSesion(sesiones) },
-    (req) => buscarProductos(db, req.query.buscar ?? '', Number(req.query.limite ?? 20) || 20),
+    (req) => {
+      const filtro = FILTROS_PRODUCTOS.find((f) => f === req.query.filtro);
+      return buscarProductos(
+        db,
+        req.query.buscar ?? '',
+        Number(req.query.limite ?? 20) || 20,
+        filtro,
+      );
+    },
   );
 
   /** Alta rápida desde la caja (código desconocido): datos sugeridos + precio y stock. */
