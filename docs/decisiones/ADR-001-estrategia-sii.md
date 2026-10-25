@@ -67,7 +67,7 @@ emisor gratuito** (términos de uso del SII prohíben mecanismos automáticos; y
 Estrategia **mixta y por etapas: D ahora → A como objetivo → B como plan de contingencia.**
 
 1. **Fases 1–4 (desarrollo y piloto): Estrategia D.** `PuenteManualProvider`: la caja
-   registra la venta e imprime el "COMPROBANTE INTERNO – NO VÁLIDO COMO BOLETA"; el cajero
+   registra la venta e imprime el "COMPROBANTE DE VENTA – NO VÁLIDO COMO BOLETA"; el cajero
    emite la boleta en la **app e-Boleta del SII** por el total mostrado (gratis, sin
    certificado, funciona con internet intermitente) y la entrega **virtual** (adjunto/foto/QR)
    o impresa. Con tarjeta, el **voucher** es la boleta. Campo opcional "folio SII" para cuadrar.
@@ -104,10 +104,12 @@ Estrategia **mixta y por etapas: D ahora → A como objetivo → B como plan de 
   la boleta sin él si falla la imagen). Ajustar `docs/ARQUITECTURA.md` §6 en Fase 5.
 - Modelo de datos: agregar `modelo_emision` a la configuración del local; en `tax_documents`
   agregar `entrega` (IMPRESA|VIRTUAL) y `folio_externo` (para D). Sin tabla de RVD.
-- **Elección de modalidad en la instalación:** el asistente de primera configuración (Fase 6)
-  pregunta si las boletas se emitirán **con la app del SII** (D, siempre disponible) o **desde
-  esta caja** (A, solo con certificación hecha y certificado/CAF cargados). Queda en
-  `store_settings.dte_provider` y es modificable después; la app nunca hardcodea el provider.
+- **Elección de modalidad en el primer arranque:** si el local no tiene configuración, la caja
+  pregunta antes de la primera venta *"¿Cómo emitirá las boletas?"* con **"Con la app del SII"**
+  (`PUENTE_MANUAL`) **preseleccionada** y **"Desde esta caja"** (`SII_DIRECTO`) habilitada solo
+  con certificación hecha y certificado/CAF cargados. Es obligatoria; si ya hay configuración no
+  se repite. Queda en `store_settings.dte_provider`, es modificable después y la app nunca
+  hardcodea el provider.
 - `docs/CONTEXTO_NEGOCIO.md` (dolor 4) cita la Res. 12/2025 derogada: actualizar a Res. 53/2025.
 - Riesgo a vigilar: la spec del SII dice que la autenticación por semilla/token "va a
   cambiar". Encapsular la autenticación para poder reemplazarla.

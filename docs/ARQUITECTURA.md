@@ -105,7 +105,7 @@ interface DocumentoTributarioProvider {
 ```
 
 Implementaciones previstas (la elegida se define en ADR-001):
-- `MockProvider` — desarrollo; imprime "COMPROBANTE INTERNO – NO VÁLIDO COMO BOLETA".
+- `MockProvider` — desarrollo; imprime "COMPROBANTE DE VENTA – NO VÁLIDO COMO BOLETA".
 - `PuenteManualProvider` — Estrategia D (transitoria): no timbra; el cajero emite en el
   emisor gratuito del SII y opcionalmente se registra el folio externo.
 - `SiiDirectoProvider` — XML + firma + CAF + API REST de boleta del SII (software propio certificado).

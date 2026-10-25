@@ -16,7 +16,7 @@ Un sistema de punto de venta (POS) para un **almacén / minimarket de barrio en 
    (EAN-13/EAN-8), nombre, marca, formato y categoría, para que el dueño NO tenga que
    inventariar producto por producto: escanea, el sistema lo reconoce, solo pone precio y stock.
 4. **Emisión de boleta electrónica válida ante el SII** (tipo DTE 39 afecta / 41 exenta), o
-   **ticket de salida + e-Boleta del SII** mientras la instalación no esté certificada (§2).
+   **comprobante de venta + e-Boleta del SII** mientras la instalación no esté certificada (§2).
 
 Contexto detallado del negocio: `docs/CONTEXTO_NEGOCIO.md`.
 Arquitectura y stack: `docs/ARQUITECTURA.md`.
@@ -28,17 +28,20 @@ Plan por fases: `docs/PLAN_FASES.md`.
 
 La Fase 0 está **completada y aprobada** (`docs/decisiones/ADR-001-estrategia-sii.md`). La
 decisión es **D ahora → A como objetivo**: mientras la instalación no esté certificada ante el
-SII, la caja emite un **ticket de salida** (comprobante interno rotulado "NO VÁLIDO COMO
-BOLETA") y el dueño emite la boleta en la **app e-Boleta del SII**; después de la certificación
-puede emitir la boleta **desde esta aplicación** (`SiiDirectoProvider`).
+SII, la caja emite un **comprobante de venta** rotulado "NO VÁLIDO COMO BOLETA" y el dueño emite
+la boleta en la **app e-Boleta del SII**; después de la certificación puede emitir la boleta
+**desde esta aplicación** (`SiiDirectoProvider`).
 
 Reglas que no se negocian:
 
-- **La modalidad se pregunta en la primera configuración** de la instalación (asistente de la
-  Fase 6): *"¿Cómo emitirá las boletas?"* → **con la app del SII** (`PUENTE_MANUAL`, siempre
-  disponible) o **desde esta caja** (`SII_DIRECTO`). Queda en
-  `store_settings.dte_provider` y el dueño puede cambiarla después en Configuración.
-- **`SII_DIRECTO` solo se ofrece si hay certificado y CAF cargados** y la certificación ya se
+- **La modalidad se pregunta en el primer arranque de la caja**, en una pantalla bloqueante
+  antes de la primera venta (no en el instalador: así también cubre instalaciones que se abren
+  sin él). La pregunta es *"¿Cómo emitirá las boletas?"* con dos opciones:
+  **"Con la app del SII"** (`PUENTE_MANUAL`, preseleccionada) o **"Desde esta caja"**
+  (`SII_DIRECTO`). Es **obligatoria**: no se puede vender hasta confirmar.
+- Si ya existe configuración del local, **no se vuelve a preguntar**; el dueño puede cambiarla
+  cuando quiera en Configuración. Queda en `store_settings.dte_provider`.
+- **`SII_DIRECTO` solo se habilita si hay certificado y CAF cargados** y la certificación ya se
   hizo. No se puede elegir una modalidad que todavía no sabe emitir.
 - **Un solo sistema de boletas por RUT** (ADR-001): en modalidad D esta app **no emite DTE**;
   al pasar a A el dueño deja de usar e-Boleta. El paso D → A exige el **Formulario N° 2117**
