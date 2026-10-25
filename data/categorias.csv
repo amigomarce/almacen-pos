@@ -1,0 +1,53 @@
+slug,nombre,padre
+abarrotes,Abarrotes,
+arroz,Arroz,abarrotes
+fideos,Fideos y pastas,abarrotes
+legumbres,Legumbres,abarrotes
+aceites,Aceites,abarrotes
+harinas,Harinas y premezclas,abarrotes
+azucar-endulzantes,Azúcar y endulzantes,abarrotes
+sal,Sal,abarrotes
+conservas,Conservas,abarrotes
+salsas,Salsas,abarrotes
+condimentos,Condimentos y especias,abarrotes
+sopas,Sopas y cremas,abarrotes
+reposteria,Repostería y postres,abarrotes
+desayuno,Desayuno,
+cafe,Café,desayuno
+te,Té e infusiones,desayuno
+cereales,Cereales y avenas,desayuno
+mermeladas,Mermeladas y untables dulces,desayuno
+galletas,Galletas,desayuno
+lacteos-huevos,Lácteos y huevos,
+leches,Leches,lacteos-huevos
+yogures,Yogures y postres lácteos,lacteos-huevos
+mantequillas,Mantequillas y margarinas,lacteos-huevos
+huevos,Huevos,lacteos-huevos
+fiambreria-quesos,Fiambrería y quesos,
+quesos,Quesos,fiambreria-quesos
+cecinas,Cecinas y embutidos,fiambreria-quesos
+panaderia,Panadería,
+frutas-verduras,Frutas y verduras,
+frutos-secos,Frutos secos,frutas-verduras
+congelados,Congelados,
+helados,Helados,congelados
+bebidas,Bebidas,
+gaseosas,Bebidas gaseosas,bebidas
+jugos,Jugos y néctares,bebidas
+aguas,Aguas,bebidas
+energeticas,Energéticas e isotónicas,bebidas
+alcoholes,Alcoholes,
+cerveza,Cervezas,alcoholes
+vino,Vinos,alcoholes
+destilados,Destilados,alcoholes
+snacks-confites,Snacks y confites,
+snacks-salados,Snacks salados,snacks-confites
+chocolates-dulces,Chocolates y dulces,snacks-confites
+barras,Barras de cereal y proteína,snacks-confites
+aseo-personal,Aseo personal,
+limpieza-hogar,Limpieza del hogar,
+bebe,Bebé,
+mascotas,Mascotas,
+cigarros,Cigarros,
+libreria-bazar,Librería y bazar,
+otros,Otros,
