@@ -8,6 +8,7 @@ import {
   type Cotizacion,
   type MedioPago,
   type ProductoLocal,
+  type ProductoSugerido,
   type VentaRegistrada,
 } from '../api.js';
 import { useTeclado } from '../useTeclado.js';
@@ -30,6 +31,7 @@ import {
 } from '../venta/carrito.js';
 import { DetectorEscaneo } from '../venta/detector.js';
 import { leerEntrada } from '../venta/entrada.js';
+import { ModalAltaProducto } from '../venta/ModalAltaProducto.js';
 import { ModalBuscar } from '../venta/ModalBuscar.js';
 import { ModalCantidad } from '../venta/ModalCantidad.js';
 import { ModalCobro } from '../venta/ModalCobro.js';
@@ -46,6 +48,8 @@ type Ventana =
   /** F4 sobre una línea por peso. */
   | { tipo: 'EDITAR_PESO' }
   | { tipo: 'MONTO_LIBRE'; nombre: string }
+  /** Código desconocido: alta rápida (precio y stock). */
+  | { tipo: 'ALTA'; codigo: string | null; sugerido: ProductoSugerido | null; unidades: number }
   /** El id de la venta se genera al abrir el cobro: reintentar no duplica la venta. */
   | { tipo: 'COBRO'; id: string }
   | { tipo: 'LISTA'; venta: VentaRegistrada; impresion: EstadoImpresion }
@@ -216,13 +220,20 @@ export function PantallaVenta({ api }: Props) {
           agregado = elegirProducto(p, multiplicador ?? 1);
           return;
         }
-        if (r.origen === 'NO_ENCONTRADO') {
-          setMensaje({ tipo: 'error', texto: `El código ${codigo} no está registrado.` });
+        if (r.origen === 'NO_ENCONTRADO' && r.balanza) {
+          setMensaje({
+            tipo: 'error',
+            texto: `La etiqueta de balanza (producto ${r.balanza.codigoProducto}) no está asociada a ningún producto.`,
+          });
           return;
         }
-        setMensaje({
-          tipo: 'aviso',
-          texto: `"${r.producto.name}" todavía no está en tus productos.`,
+        // Código desconocido: se da de alta ahí mismo (con los datos de la semilla si los hay).
+        setMensaje(null);
+        setVentana({
+          tipo: 'ALTA',
+          codigo,
+          sugerido: r.origen === 'NO_ENCONTRADO' ? null : r.producto,
+          unidades: multiplicador ?? 1,
         });
       } catch (e) {
         setMensaje({
@@ -661,6 +672,19 @@ export function PantallaVenta({ api }: Props) {
             setVentana({ ...ventana, venta });
           }}
           alTerminar={cerrarVentana}
+        />
+      )}
+      {ventana?.tipo === 'ALTA' && (
+        <ModalAltaProducto
+          api={api}
+          codigo={ventana.codigo}
+          sugerido={ventana.sugerido}
+          alCerrar={cerrarVentana}
+          alCrear={(p) => {
+            const unidades = ventana.unidades;
+            cerrarVentana();
+            elegirProducto(p, unidades);
+          }}
         />
       )}
       {ventana?.tipo === 'MONTO_LIBRE' && (

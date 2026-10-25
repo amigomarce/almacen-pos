@@ -333,10 +333,11 @@ describe('cobro', () => {
     await u.type(campo, '7801{Enter}');
     await u.keyboard('{F12}');
     expect(await screen.findByRole('dialog', { name: 'Cobrar' })).toBeInTheDocument();
-    // Un código que no existe cancela la espera.
+    // Un código que no está en el local cancela la espera.
     await u.keyboard('{Escape}');
     await u.type(campo, '999999{Enter}');
     await u.keyboard('{F12}');
-    expect(await screen.findByText('El código 999999 no está registrado.')).toBeInTheDocument();
+    // Abre el alta del producto; el cobro en espera se cancela.
+    expect(await screen.findByRole('dialog', { name: 'Producto desconocido' })).toBeInTheDocument();
   });
 });

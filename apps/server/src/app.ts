@@ -15,6 +15,12 @@ import { registrarImpresion } from './impresion/rutas.js';
 import { ServicioImpresion } from './impresion/servicio.js';
 import type { Ejecutar } from './impresion/transportes.js';
 import { registrarVentas } from './ventas/rutas.js';
+import {
+  cargarTaxonomiaPorDefecto,
+  crearProducto,
+  type DatosAlta,
+  type Taxonomia,
+} from './productos/alta.js';
 import { registrarBotones } from './productos/botones.js';
 import { buscarProductos } from './productos/busqueda.js';
 import { buscarProducto, type DependenciasLookup } from './productos/lookup.js';
@@ -36,6 +42,8 @@ export interface OpcionesApp {
   /** Inyectable para tests (transporte falso). */
   impresion?: ServicioImpresion;
   ejecutar?: Ejecutar;
+  /** Categorías de la semilla (`data/categorias.csv`). */
+  taxonomia?: Taxonomia;
   logger?: boolean;
 }
 
@@ -49,6 +57,7 @@ export function crearApp({
   permitirModoPrueba = true,
   impresion = new ServicioImpresion(),
   ejecutar,
+  taxonomia = cargarTaxonomiaPorDefecto(),
   logger = false,
 }: OpcionesApp): FastifyInstance {
   const app = Fastify({
@@ -143,6 +152,41 @@ export function crearApp({
     '/products',
     { onRequest: requiereSesion(sesiones) },
     (req) => buscarProductos(db, req.query.buscar ?? '', Number(req.query.limite ?? 20) || 20),
+  );
+
+  /** Alta rápida desde la caja (código desconocido): datos sugeridos + precio y stock. */
+  app.post<{ Body: DatosAlta }>(
+    '/products',
+    {
+      onRequest: requiereSesion(sesiones),
+      schema: {
+        body: {
+          type: 'object',
+          required: ['name', 'unit', 'priceClp'],
+          additionalProperties: false,
+          properties: {
+            barcode: { type: ['string', 'null'], maxLength: 20 },
+            name: { type: 'string', minLength: 1, maxLength: 80, pattern: '\\S' },
+            brand: { type: ['string', 'null'], maxLength: 60 },
+            format: { type: ['string', 'null'], maxLength: 40 },
+            unit: { type: 'string', enum: ['UN', 'KG'] },
+            priceClp: { type: 'integer', minimum: 1, maximum: 100_000_000 },
+            stockInicialMilli: { type: 'integer', minimum: 0, maximum: 1_000_000_000 },
+            categorySlug: { type: ['string', 'null'], maxLength: 60 },
+            seedRef: { type: ['string', 'null'], maxLength: 20 },
+            taxType: { type: 'string', enum: ['AFECTO', 'EXENTO'] },
+          },
+        },
+      },
+    },
+    (req, reply) => {
+      const p = crearProducto(db, req.body, req.sesion?.usuario.id ?? '', taxonomia);
+      req.log.info(
+        { producto: p.name, precio: p.priceClp, usuario: req.sesion?.usuario.name },
+        'Producto creado',
+      );
+      return reply.code(201).send(p);
+    },
   );
 
   app.get<{ Params: { barcode: string } }>('/products/lookup/:barcode', async (req, reply) => {

@@ -68,6 +68,28 @@ export interface ProductoLocal {
   stockQtyMilli: number;
 }
 
+/** Datos de la base de productos (semilla u Open Food Facts): solo falta precio y stock. */
+export interface ProductoSugerido {
+  barcode: string;
+  name: string;
+  brand: string | null;
+  format: string | null;
+  categorySlug?: string | null;
+  seedRef?: string | null;
+}
+
+export interface DatosAlta {
+  barcode: string | null;
+  name: string;
+  brand?: string | null;
+  format?: string | null;
+  unit: 'UN' | 'KG';
+  priceClp: number;
+  stockInicialMilli?: number;
+  categorySlug?: string | null;
+  seedRef?: string | null;
+}
+
 export type DatosBalanza =
   | { codigoProducto: string; tipo: 'PESO'; pesoGramos: number }
   | { codigoProducto: string; tipo: 'PRECIO'; precioClp: number };
@@ -76,7 +98,7 @@ export type ResultadoLookup =
   | { origen: 'LOCAL'; producto: ProductoLocal; balanza?: DatosBalanza }
   | {
       origen: 'SEMILLA' | 'OFF';
-      producto: { barcode: string; name: string; brand: string | null; format: string | null };
+      producto: ProductoSugerido;
     }
   | { origen: 'NO_ENCONTRADO'; producto: null; balanza?: DatosBalanza };
 
@@ -270,6 +292,10 @@ export class ClienteApi {
       metodo: 'PATCH',
       cuerpo: { folio },
     });
+  }
+
+  crearProducto(datos: DatosAlta): Promise<ProductoLocal> {
+    return this.pedir<ProductoLocal>('/products', { metodo: 'POST', cuerpo: datos });
   }
 
   botonesRapidos(): Promise<BotonRapido[]> {

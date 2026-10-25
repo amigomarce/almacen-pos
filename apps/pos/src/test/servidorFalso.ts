@@ -43,6 +43,8 @@ export interface EstadoFalso {
   fallos: Map<string, number>;
   sesionCaja: SesionCaja | null;
   productos: ProductoLocal[];
+  /** Cuerpos recibidos en POST /products. */
+  creados: Record<string, unknown>[];
   dteProvider: 'MOCK' | 'PUENTE_MANUAL';
   redondeo: boolean;
   /** `true` = hay impresora (imprime); `false` = sin impresora configurada. */
@@ -89,7 +91,8 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
     tokens: new Map(),
     fallos: new Map(),
     sesionCaja: null,
-    productos: PRODUCTOS_FALSOS,
+    productos: [...PRODUCTOS_FALSOS],
+    creados: [],
     dteProvider: 'MOCK',
     redondeo: true,
     impresora: true,
@@ -210,6 +213,27 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
       case 'POST /sales/quote': {
         if (!usuario) return sinSesion();
         return json(200, cotizar((cuerpo['lineas'] ?? []) as LineaFalsa[]));
+      }
+      case 'POST /products': {
+        if (!usuario) return sinSesion();
+        estado.creados.push(cuerpo);
+        const barcode = (cuerpo['barcode'] as string | null) ?? null;
+        if (barcode && estado.productos.some((p) => p.barcode === barcode)) {
+          return json(409, {
+            error: 'CODIGO_EXISTE',
+            mensaje: 'Ese código ya está registrado en otro producto',
+          });
+        }
+        const nuevo = producto(
+          `n${estado.productos.length + 1}`,
+          String(cuerpo['name']).trim(),
+          cuerpo['unit'] as 'UN' | 'KG',
+          Number(cuerpo['priceClp']),
+          Number(cuerpo['stockInicialMilli'] ?? 0),
+          barcode,
+        );
+        estado.productos.push(nuevo);
+        return json(201, nuevo);
       }
       case 'GET /settings':
         if (!usuario) return sinSesion();
@@ -349,10 +373,17 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
               producto: estado.productos[0],
               balanza: { codigoProducto: '09999', tipo: 'PESO', pesoGramos: 250 },
             });
-          if (codigo === '7809')
+          if (codigo === '7809' && !estado.productos.some((x) => x.barcode === '7809'))
             return json(200, {
               origen: 'SEMILLA',
-              producto: { barcode: '7809', name: 'Té verde', brand: null, format: null },
+              producto: {
+                barcode: '7809',
+                name: 'Té verde',
+                brand: 'Marca T',
+                format: '20 bolsitas',
+                categorySlug: 'te',
+                seedRef: '7809',
+              },
             });
           if (codigo === '0000')
             return json(400, {

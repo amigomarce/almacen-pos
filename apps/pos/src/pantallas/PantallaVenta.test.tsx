@@ -50,17 +50,11 @@ describe('pantalla de venta', () => {
     expect(lineas()).toEqual(['Queso laminado0,250 kg x $11.990/kg$2.998']);
   });
 
-  it('avisa etiquetas con precio, balanza mal configurada, códigos desconocidos y de la base de productos', async () => {
+  it('avisa balanza mal configurada, códigos inválidos y cantidades fuera de rango', async () => {
     const { escanear, lineas } = montar();
     await escanear('2509999002500');
     expect(
       await screen.findByText('Bebida cola 1,5 L está configurado por unidad, no por peso.'),
-    ).toBeInTheDocument();
-    await escanear('1234567');
-    expect(await screen.findByText('El código 1234567 no está registrado.')).toBeInTheDocument();
-    await escanear('7809');
-    expect(
-      await screen.findByText('"Té verde" todavía no está en tus productos.'),
     ).toBeInTheDocument();
     await escanear('0000');
     expect(await screen.findByText('El código de barras no es válido')).toBeInTheDocument();
