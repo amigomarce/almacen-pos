@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StatusBar, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import type { Session } from '@supabase/supabase-js';
 import { alCambiarSesion, sesionActual } from './src/auth';
 import { api } from './src/cliente';
@@ -29,18 +30,20 @@ export default function App() {
     api.usarToken(sesion?.access_token ?? null);
   }, [sesion]);
 
-  if (cargando) {
-    return (
-      <View style={estilos.centro}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
   return (
-    <View style={[estilos.pantalla, { paddingTop: (StatusBar.currentHeight ?? 0) + 8 }]}>
-      <StatusBar barStyle="dark-content" />
-      {sesion ? <Principal /> : <Login />}
-    </View>
+    <SafeAreaProvider>
+      <SafeAreaView style={estilos.pantalla} edges={['top', 'bottom']}>
+        <StatusBar barStyle="dark-content" />
+        {cargando ? (
+          <View style={estilos.centro}>
+            <ActivityIndicator size="large" />
+          </View>
+        ) : sesion ? (
+          <Principal />
+        ) : (
+          <Login />
+        )}
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
