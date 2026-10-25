@@ -96,7 +96,7 @@ pnpm lint && pnpm typecheck
 pnpm data:build      # reconstruye la base semilla de productos
 pnpm dev:server      # servidor local (Fastify + SQLite) en 127.0.0.1:3001
 pnpm db:seed         # datos de prueba en apps/server/var/almacen.sqlite (PINs: dueño 1234, cajero 0000)
-pnpm coverage        # tests con umbrales de cobertura (core ≥ 95 %, dte ≥ 90 %)
+pnpm coverage        # tests con umbrales de cobertura (core ≥ 95 %, dte y printer ≥ 90 %)
 pnpm --filter @almacen/server db:generate   # nueva migración tras cambiar schema.ts
 ```
 Requiere Node 22 (`.nvmrc`).

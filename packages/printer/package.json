@@ -1,0 +1,17 @@
+{
+  "name": "@almacen/printer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tickets ESC/POS (58 y 80 mm): plantillas, codificación y vista previa en texto.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@almacen/core": "workspace:*",
+    "@almacen/dte": "workspace:*"
+  }
+}

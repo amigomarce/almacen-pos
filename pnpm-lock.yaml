@@ -301,6 +301,15 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/printer:
+    dependencies:
+      '@almacen/core':
+        specifier: workspace:*
+        version: link:../core
+      '@almacen/dte':
+        specifier: workspace:*
+        version: link:../dte
+
 packages:
 
   '@adobe/css-tools@4.5.0':

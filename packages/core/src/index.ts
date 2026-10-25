@@ -8,3 +8,4 @@ export * from './iva.js';
 export * from './pago.js';
 export * from './venta.js';
 export * from './caja.js';
+export * from './cantidad.js';

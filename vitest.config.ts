@@ -18,6 +18,7 @@ export default defineConfig({
       thresholds: {
         'packages/core/src/**': { lines: 95, branches: 95, functions: 95, statements: 95 },
         'packages/dte/src/**': { lines: 90, branches: 90, functions: 90, statements: 90 },
+        'packages/printer/src/**': { lines: 90, branches: 90, functions: 90, statements: 90 },
       },
     },
   },
