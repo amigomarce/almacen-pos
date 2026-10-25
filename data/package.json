@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "ETL de la base semilla de productos chilenos (Open Food Facts y proyectos hermanos, ODbL).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "build": "tsx src/build-cli.ts",
     "medir": "tsx src/medir-cli.ts",

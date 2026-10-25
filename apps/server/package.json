@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@almacen/core": "workspace:*",
+    "@almacen/data": "workspace:*",
     "@almacen/dte": "workspace:*",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.4",
