@@ -114,6 +114,51 @@ export interface BotonRapido {
   producto: ProductoLocal | null;
 }
 
+export type MedioPago = 'EFECTIVO' | 'DEBITO' | 'CREDITO' | 'TRANSFERENCIA';
+
+export interface ConfiguracionLocal {
+  razonSocial: string | null;
+  dteProvider: 'MOCK' | 'PUENTE_MANUAL' | 'SII_DIRECTO' | 'PROVEEDOR_EXTERNO';
+  modoPrueba: boolean;
+  modeloEmision: 'SOLO_NO_ELECTRONICOS' | 'TODO_MEDIO_PAGO';
+  cashRoundingEnabled: boolean;
+}
+
+export interface PedidoVenta {
+  id: string;
+  lineas: readonly LineaPedido[];
+  medioPago: MedioPago;
+  pagadoClp?: number;
+  totalEsperadoClp?: number;
+}
+
+export interface VentaRegistrada {
+  id: string;
+  numero: number;
+  estado: 'OK' | 'ANULADA';
+  medioPago: MedioPago;
+  totalClp: number;
+  redondeoClp: number;
+  totalCobradoClp: number;
+  pagadoClp: number;
+  vueltoClp: number;
+  documento: {
+    provider: string;
+    folioExterno: string | null;
+    validoComoBoleta: boolean;
+    leyendas: readonly string[];
+    /** Qué debe hacer el cajero (ej. emitir en e-Boleta). */
+    accionCajero: string | null;
+  } | null;
+  motivoSinDocumento: 'VOUCHER_ES_BOLETA' | 'TOTAL_CERO' | null;
+}
+
+export interface ResultadoImpresion {
+  impreso: boolean;
+  vistaPrevia: string;
+  motivo: 'SIN_IMPRESORA' | null;
+}
+
 type Fetch = typeof fetch;
 
 function esObjeto(v: unknown): v is Record<string, unknown> {
@@ -203,6 +248,28 @@ export class ClienteApi {
 
   buscarProductos(texto: string): Promise<ProductoLocal[]> {
     return this.pedir<ProductoLocal[]>(`/products?buscar=${encodeURIComponent(texto)}`);
+  }
+
+  configuracion(): Promise<ConfiguracionLocal> {
+    return this.pedir<ConfiguracionLocal>('/settings');
+  }
+
+  registrarVenta(pedido: PedidoVenta): Promise<VentaRegistrada> {
+    return this.pedir<VentaRegistrada>('/sales', { metodo: 'POST', cuerpo: pedido });
+  }
+
+  imprimirVenta(id: string, reimpresion = false): Promise<ResultadoImpresion> {
+    return this.pedir<ResultadoImpresion>(`/sales/${encodeURIComponent(id)}/print`, {
+      metodo: 'POST',
+      cuerpo: { reimpresion },
+    });
+  }
+
+  registrarFolioSii(id: string, folio: string): Promise<VentaRegistrada> {
+    return this.pedir<VentaRegistrada>(`/sales/${encodeURIComponent(id)}/folio-sii`, {
+      metodo: 'PATCH',
+      cuerpo: { folio },
+    });
   }
 
   botonesRapidos(): Promise<BotonRapido[]> {

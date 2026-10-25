@@ -43,6 +43,14 @@ export interface EstadoFalso {
   fallos: Map<string, number>;
   sesionCaja: SesionCaja | null;
   productos: ProductoLocal[];
+  dteProvider: 'MOCK' | 'PUENTE_MANUAL';
+  redondeo: boolean;
+  /** `true` = hay impresora (imprime); `false` = sin impresora configurada. */
+  impresora: boolean;
+  /** Ventas recibidas (por id) y cuerpos de cada POST /sales, en orden. */
+  ventas: Map<string, Record<string, unknown>>;
+  pedidos: Record<string, unknown>[];
+  impresiones: { id: string; reimpresion: boolean }[];
   /** Respuestas forzadas por "MÉTODO /ruta" (sin /api). */
   forzar: Record<string, { status: number; body: unknown }>;
 }
@@ -54,6 +62,21 @@ const json = (status: number, body: unknown) =>
       headers: { 'content-type': 'application/json' },
     }),
   );
+
+type LineaFalsa = {
+  productoId: string | null;
+  cantidadMilli: number;
+  nombre?: string;
+  unidad?: 'UN' | 'KG';
+  precioUnitarioClp?: number;
+  montoFijoClp?: number;
+};
+
+/** Ley 20.956: 1–5 baja, 6–9 sube. */
+const redondear = (total: number) => {
+  const u = total % 10;
+  return u === 0 ? 0 : u <= 5 ? -u : 10 - u;
+};
 
 /** Imita lo justo de apps/server para probar las pantallas sin red. */
 export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
@@ -67,10 +90,45 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
     fallos: new Map(),
     sesionCaja: null,
     productos: PRODUCTOS_FALSOS,
+    dteProvider: 'MOCK',
+    redondeo: true,
+    impresora: true,
+    ventas: new Map(),
+    pedidos: [],
+    impresiones: [],
     forzar: {},
     ...inicial,
   };
   let n = 0;
+
+  const cotizar = (lineas: LineaFalsa[]) => {
+    const calculadas = lineas.map((l) => {
+      const p = estado.productos.find((x) => x.id === l.productoId);
+      const precio = p?.priceClp ?? l.precioUnitarioClp ?? 0;
+      const cantidad =
+        l.montoFijoClp !== undefined
+          ? Math.max(1, Math.round((l.montoFijoClp * 1000) / precio))
+          : l.cantidadMilli;
+      const subtotal = l.montoFijoClp ?? Math.round((cantidad * precio) / 1000);
+      // Promoción falsa: galletas 2 × $1.500.
+      const packs = p?.id === 'p4' ? Math.floor(cantidad / 2000) : 0;
+      const descuento = packs * (2 * 890 - 1500);
+      return {
+        productoId: l.productoId,
+        nombre: p?.name ?? l.nombre ?? '?',
+        unidad: p?.unit ?? l.unidad ?? 'UN',
+        cantidadMilli: cantidad,
+        precioUnitarioClp: precio,
+        descuentoClp: descuento,
+        totalLineaClp: subtotal - descuento,
+      };
+    });
+    return {
+      totalClp: calculadas.reduce((a, l) => a + l.totalLineaClp, 0),
+      descuentoTotalClp: calculadas.reduce((a, l) => a + l.descuentoClp, 0),
+      lineas: calculadas,
+    };
+  };
 
   const fetchFn = vi.fn<typeof fetch>((entrada, init) => {
     const url =
@@ -151,41 +209,67 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
       }
       case 'POST /sales/quote': {
         if (!usuario) return sinSesion();
-        type L = {
-          productoId: string | null;
-          cantidadMilli: number;
-          nombre?: string;
-          unidad?: 'UN' | 'KG';
-          precioUnitarioClp?: number;
-          montoFijoClp?: number;
-        };
-        const lineas = (cuerpo['lineas'] ?? []) as L[];
-        const calculadas = lineas.map((l) => {
-          const p = estado.productos.find((x) => x.id === l.productoId);
-          const precio = p?.priceClp ?? l.precioUnitarioClp ?? 0;
-          const cantidad =
-            l.montoFijoClp !== undefined
-              ? Math.max(1, Math.round((l.montoFijoClp * 1000) / precio))
-              : l.cantidadMilli;
-          const subtotal = l.montoFijoClp ?? Math.round((cantidad * precio) / 1000);
-          // Promoción falsa: galletas 2 × $1.500.
-          const packs = p?.id === 'p4' ? Math.floor(cantidad / 2000) : 0;
-          const descuento = packs * (2 * 890 - 1500);
-          return {
-            productoId: l.productoId,
-            nombre: p?.name ?? l.nombre ?? '?',
-            unidad: p?.unit ?? l.unidad ?? 'UN',
-            cantidadMilli: cantidad,
-            precioUnitarioClp: precio,
-            descuentoClp: descuento,
-            totalLineaClp: subtotal - descuento,
-          };
-        });
+        return json(200, cotizar((cuerpo['lineas'] ?? []) as LineaFalsa[]));
+      }
+      case 'GET /settings':
+        if (!usuario) return sinSesion();
         return json(200, {
-          totalClp: calculadas.reduce((a, l) => a + l.totalLineaClp, 0),
-          descuentoTotalClp: calculadas.reduce((a, l) => a + l.descuentoClp, 0),
-          lineas: calculadas,
+          razonSocial: 'Almacén de Prueba',
+          dteProvider: estado.dteProvider,
+          modoPrueba: estado.dteProvider === 'MOCK',
+          modeloEmision: 'SOLO_NO_ELECTRONICOS',
+          cashRoundingEnabled: estado.redondeo,
         });
+      case 'POST /sales': {
+        if (!usuario) return sinSesion();
+        estado.pedidos.push(cuerpo);
+        const id = String(cuerpo['id']);
+        const previa = estado.ventas.get(id);
+        if (previa) return json(200, previa);
+        const q = cotizar((cuerpo['lineas'] ?? []) as LineaFalsa[]);
+        if (cuerpo['totalEsperadoClp'] !== undefined && cuerpo['totalEsperadoClp'] !== q.totalClp) {
+          return json(409, {
+            error: 'TOTAL_CAMBIO',
+            mensaje: 'Los precios cambiaron',
+            totalClp: q.totalClp,
+          });
+        }
+        const medio = String(cuerpo['medioPago']);
+        const r = medio === 'EFECTIVO' && estado.redondeo ? redondear(q.totalClp) : 0;
+        const aPagar = q.totalClp + r;
+        const pagado = medio === 'EFECTIVO' ? Number(cuerpo['pagadoClp'] ?? aPagar) : aPagar;
+        if (pagado < aPagar)
+          return json(400, {
+            error: 'PAGO_INSUFICIENTE',
+            mensaje: 'El monto pagado es menor al total',
+          });
+        const conDocumento = medio === 'EFECTIVO' || medio === 'TRANSFERENCIA';
+        const venta = {
+          id,
+          numero: estado.ventas.size + 1,
+          estado: 'OK',
+          medioPago: medio,
+          totalClp: q.totalClp,
+          redondeoClp: r,
+          totalCobradoClp: aPagar,
+          pagadoClp: pagado,
+          vueltoClp: pagado - aPagar,
+          documento: conDocumento
+            ? {
+                provider: estado.dteProvider,
+                folioExterno: null,
+                validoComoBoleta: false,
+                leyendas: ['COMPROBANTE INTERNO – NO VÁLIDO COMO BOLETA'],
+                accionCajero:
+                  estado.dteProvider === 'PUENTE_MANUAL'
+                    ? `Emite la boleta en la app e-Boleta del SII por $${aPagar.toLocaleString('es-CL')}`
+                    : null,
+              }
+            : null,
+          motivoSinDocumento: conDocumento ? null : 'VOUCHER_ES_BOLETA',
+        };
+        estado.ventas.set(id, venta);
+        return json(201, venta);
       }
       case 'GET /quick-buttons': {
         if (!usuario) return sinSesion();
@@ -202,6 +286,38 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
         ]);
       }
       default: {
+        const imprimir = /^POST \/sales\/(.+)\/print$/.exec(clave);
+        if (imprimir) {
+          if (!usuario) return sinSesion();
+          estado.impresiones.push({
+            id: imprimir[1] ?? '',
+            reimpresion: cuerpo['reimpresion'] === true,
+          });
+          return json(200, {
+            impreso: estado.impresora,
+            vistaPrevia: 'COMPROBANTE INTERNO - NO VÁLIDO COMO BOLETA',
+            motivo: estado.impresora ? null : 'SIN_IMPRESORA',
+          });
+        }
+        const folio = /^PATCH \/sales\/(.+)\/folio-sii$/.exec(clave);
+        if (folio) {
+          if (!usuario) return sinSesion();
+          const v = estado.ventas.get(folio[1] ?? '') as
+            { documento: Record<string, unknown> } | undefined;
+          if (!v) return json(404, { error: 'NO_ENCONTRADO', mensaje: 'Venta no encontrada' });
+          if (!/^\d+$/.test(String(cuerpo['folio'])) || Number(cuerpo['folio']) === 0) {
+            return json(400, {
+              error: 'FOLIO_INVALIDO',
+              mensaje: 'El folio debe ser un número mayor a 0',
+            });
+          }
+          v.documento = {
+            ...v.documento,
+            folioExterno: String(Number(cuerpo['folio'])),
+            accionCajero: null,
+          };
+          return json(200, v);
+        }
         const busqueda = /^GET \/products\?buscar=(.*)$/.exec(clave);
         if (busqueda) {
           if (!usuario) return sinSesion();

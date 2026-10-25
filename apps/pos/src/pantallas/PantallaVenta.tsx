@@ -4,8 +4,11 @@ import {
   ErrorApi,
   type BotonRapido,
   type ClienteApi,
+  type ConfiguracionLocal,
   type Cotizacion,
+  type MedioPago,
   type ProductoLocal,
+  type VentaRegistrada,
 } from '../api.js';
 import { useTeclado } from '../useTeclado.js';
 import {
@@ -29,6 +32,8 @@ import { DetectorEscaneo } from '../venta/detector.js';
 import { leerEntrada } from '../venta/entrada.js';
 import { ModalBuscar } from '../venta/ModalBuscar.js';
 import { ModalCantidad } from '../venta/ModalCantidad.js';
+import { ModalCobro } from '../venta/ModalCobro.js';
+import { ModalVentaLista, type EstadoImpresion } from '../venta/ModalVentaLista.js';
 import { ModalMontoLibre } from '../venta/ModalMontoLibre.js';
 import { ModalPesoMonto, type ResultadoPesoMonto } from '../venta/ModalPesoMonto.js';
 
@@ -41,6 +46,9 @@ type Ventana =
   /** F4 sobre una línea por peso. */
   | { tipo: 'EDITAR_PESO' }
   | { tipo: 'MONTO_LIBRE'; nombre: string }
+  /** El id de la venta se genera al abrir el cobro: reintentar no duplica la venta. */
+  | { tipo: 'COBRO'; id: string }
+  | { tipo: 'LISTA'; venta: VentaRegistrada; impresion: EstadoImpresion }
   | null;
 
 /** Esc dos veces dentro de este tiempo cancela la venta (sin ventana de confirmación). */
@@ -61,6 +69,13 @@ export function PantallaVenta({ api }: Props) {
   const [ventana, setVentana] = useState<Ventana>(null);
   const [confirmarCancelar, setConfirmarCancelar] = useState(false);
   const [botones, setBotones] = useState<BotonRapido[]>([]);
+  const [config, setConfig] = useState<ConfiguracionLocal | null>(null);
+  const [cobrando, setCobrando] = useState(false);
+  /** F12 antes de que llegue el total del servidor: el cobro se abre apenas llegue. */
+  const cobroPendiente = useRef(false);
+  /** Códigos escaneados cuya búsqueda sigue en curso. */
+  const busquedas = useRef(0);
+  const [errorCobro, setErrorCobro] = useState<string | null>(null);
   const campo = useRef<HTMLInputElement>(null);
   const detector = useRef(new DetectorEscaneo());
 
@@ -89,6 +104,20 @@ export function PantallaVenta({ api }: Props) {
     };
   }, [api]);
 
+  // Configuración del local: redondeo de efectivo y modalidad de boleta.
+  useEffect(() => {
+    let vigente = true;
+    api
+      .configuracion()
+      .then((c) => {
+        if (vigente) setConfig(c);
+      })
+      .catch(() => undefined);
+    return () => {
+      vigente = false;
+    };
+  }, [api]);
+
   // Cotiza en el servidor cada vez que cambia el carrito: precios vigentes y promociones.
   useEffect(() => {
     if (carrito.lineas.length === 0) return;
@@ -96,10 +125,19 @@ export function PantallaVenta({ api }: Props) {
     api
       .cotizar(aPedido(carrito.lineas))
       .then((datos) => {
-        if (vigente) setCotizacion({ carrito, datos });
+        if (!vigente) return;
+        setCotizacion({ carrito, datos });
+        if (cobroPendiente.current && busquedas.current === 0) {
+          cobroPendiente.current = false;
+          setMensaje(null);
+          setErrorCobro(null);
+          setVentana({ tipo: 'COBRO', id: crypto.randomUUID() });
+        }
       })
       .catch((e: unknown) => {
-        if (vigente && e instanceof ErrorApi && e.estado !== 0)
+        if (!vigente) return;
+        cobroPendiente.current = false;
+        if (e instanceof ErrorApi && e.estado !== 0)
           setMensaje({ tipo: 'error', texto: e.message });
       });
     return () => {
@@ -136,16 +174,23 @@ export function PantallaVenta({ api }: Props) {
   }, []);
 
   /** Por unidad se agrega directo; por peso se pregunta kg o monto. */
+  /** Devuelve `true` si lo agregó de inmediato (por unidad). */
   const elegirProducto = useCallback(
-    (p: ProductoLocal, unidades = 1) => {
-      if (p.unit === 'KG') setVentana({ tipo: 'PESO_MONTO', producto: p });
-      else agregar(p, { tipo: 'PESO', cantidadMilli: unidades * MILI });
+    (p: ProductoLocal, unidades = 1): boolean => {
+      if (p.unit === 'KG') {
+        setVentana({ tipo: 'PESO_MONTO', producto: p });
+        return false;
+      }
+      agregar(p, { tipo: 'PESO', cantidadMilli: unidades * MILI });
+      return true;
     },
     [agregar],
   );
 
   const procesarCodigo = useCallback(
     async (codigo: string, multiplicador: number | null) => {
+      busquedas.current += 1;
+      let agregado = false;
       try {
         const r = await api.buscarCodigo(codigo);
         if (r.origen === 'LOCAL') {
@@ -165,9 +210,10 @@ export function PantallaVenta({ api }: Props) {
                 ? { tipo: 'PESO', cantidadMilli: r.balanza.pesoGramos }
                 : { tipo: 'MONTO', montoClp: r.balanza.precioClp },
             );
+            agregado = true;
             return;
           }
-          elegirProducto(p, multiplicador ?? 1);
+          agregado = elegirProducto(p, multiplicador ?? 1);
           return;
         }
         if (r.origen === 'NO_ENCONTRADO') {
@@ -183,6 +229,10 @@ export function PantallaVenta({ api }: Props) {
           tipo: 'error',
           texto: e instanceof ErrorApi ? e.message : 'No se pudo buscar el código',
         });
+      } finally {
+        busquedas.current -= 1;
+        // Si F12 esperaba este producto y no se agregó, se cancela la espera.
+        if (!agregado) cobroPendiente.current = false;
       }
     },
     [api, agregar, elegirProducto],
@@ -239,19 +289,92 @@ export function PantallaVenta({ api }: Props) {
     setVentana(seleccionada.unidad === 'KG' ? { tipo: 'EDITAR_PESO' } : { tipo: 'CANTIDAD' });
   };
 
+  /** F12: abre el cobro con el total ya calculado por el servidor. */
+  const abrirCobro = () => {
+    if (carrito.lineas.length === 0 && busquedas.current === 0) return;
+    if (!actualizada || busquedas.current > 0) {
+      cobroPendiente.current = true;
+      setMensaje({ tipo: 'aviso', texto: 'Calculando el total…' });
+      return;
+    }
+    setErrorCobro(null);
+    setVentana({ tipo: 'COBRO', id: crypto.randomUUID() });
+  };
+
+  const imprimir = useCallback(
+    async (venta: VentaRegistrada, reimpresion = false) => {
+      const actualizar = (impresion: EstadoImpresion) => {
+        setVentana((v) =>
+          v?.tipo === 'LISTA' && v.venta.id === venta.id ? { ...v, impresion } : v,
+        );
+      };
+      actualizar({ tipo: 'IMPRIMIENDO' });
+      try {
+        actualizar({ tipo: 'LISTO', resultado: await api.imprimirVenta(venta.id, reimpresion) });
+      } catch (e) {
+        actualizar({
+          tipo: 'ERROR',
+          mensaje: e instanceof ErrorApi ? e.message : 'No se pudo imprimir',
+          vistaPrevia:
+            e instanceof ErrorApi && typeof e.datos['vistaPrevia'] === 'string'
+              ? e.datos['vistaPrevia']
+              : null,
+        });
+      }
+    },
+    [api],
+  );
+
+  const cobrar = async (id: string, medioPago: MedioPago, pagadoClp: number) => {
+    if (!actualizada || cobrando) return;
+    setCobrando(true);
+    setErrorCobro(null);
+    try {
+      const venta = await api.registrarVenta({
+        id,
+        lineas: aPedido(carrito.lineas),
+        medioPago,
+        ...(medioPago === 'EFECTIVO' ? { pagadoClp } : {}),
+        totalEsperadoClp: actualizada.totalClp,
+      });
+      // Venta guardada: se limpia la pantalla y se muestra el vuelto mientras imprime.
+      setCarrito(CARRITO_VACIO);
+      setCotizacion(null);
+      setMensaje(null);
+      setVentana({ tipo: 'LISTA', venta, impresion: { tipo: 'IMPRIMIENDO' } });
+      void imprimir(venta);
+    } catch (e) {
+      if (e instanceof ErrorApi && e.codigo === 'TOTAL_CAMBIO') {
+        // Precios cambiados (ej. desde el celular): se recotiza y el cajero vuelve a cobrar.
+        cerrarVentana();
+        setCarrito((c) => ({ ...c }));
+        setMensaje({ tipo: 'error', texto: `${e.message}. Revisa y cobra de nuevo.` });
+      } else if (e instanceof ErrorApi && e.estado === 0) {
+        setErrorCobro(`${e.message}. La venta no se guardó: reintenta.`);
+      } else {
+        setErrorCobro(e instanceof ErrorApi ? e.message : 'No se pudo guardar la venta');
+      }
+    } finally {
+      setCobrando(false);
+    }
+  };
+
   const alBotonRapido = (b: BotonRapido) => {
     if (b.producto) elegirProducto(b.producto);
     else setVentana({ tipo: 'MONTO_LIBRE', nombre: b.label });
   };
 
   useTeclado((e) => {
-    // Con una ventana abierta, un escaneo igual se reconoce: cierra la ventana y lo agrega.
+    // Con la búsqueda o el vuelto en pantalla, un escaneo igual se reconoce: cierra y agrega.
     if (ventana) {
       if (e.key === 'Escape') {
         e.preventDefault();
         cerrarVentana();
         return;
       }
+      // Solo donde un escaneo significa "siguiente producto". En ventanas donde se escriben
+      // números (cobro, cantidad, monto) el detector confundiría un monto con un código.
+      if (ventana.tipo !== 'BUSCAR' && ventana.tipo !== 'LISTA') return;
       const codigo = detector.current.tecla(e.key, e.timeStamp);
       if (codigo) {
         e.preventDefault();
@@ -271,6 +394,10 @@ export function PantallaVenta({ api }: Props) {
       case 'F4':
         e.preventDefault();
         abrirCantidad();
+        return;
+      case 'F12':
+        e.preventDefault();
+        abrirCobro();
         return;
       case 'Escape':
         e.preventDefault();
@@ -404,8 +531,8 @@ export function PantallaVenta({ api }: Props) {
         <button
           type="button"
           className="boton boton-cobrar"
-          disabled
-          title="El cobro llega en el siguiente paso"
+          disabled={carrito.lineas.length === 0}
+          onClick={abrirCobro}
         >
           Cobrar (F12)
         </button>
@@ -512,6 +639,28 @@ export function PantallaVenta({ api }: Props) {
             );
             cerrarVentana();
           }}
+        />
+      )}
+      {ventana?.tipo === 'COBRO' && actualizada && (
+        <ModalCobro
+          totalClp={actualizada.totalClp}
+          redondeoHabilitado={config?.cashRoundingEnabled ?? true}
+          enviando={cobrando}
+          error={errorCobro}
+          alCerrar={cerrarVentana}
+          alCobrar={(medio, pagado) => void cobrar(ventana.id, medio, pagado)}
+        />
+      )}
+      {ventana?.tipo === 'LISTA' && (
+        <ModalVentaLista
+          api={api}
+          venta={ventana.venta}
+          impresion={ventana.impresion}
+          alReimprimir={() => void imprimir(ventana.venta, true)}
+          alActualizar={(venta) => {
+            setVentana({ ...ventana, venta });
+          }}
+          alTerminar={cerrarVentana}
         />
       )}
       {ventana?.tipo === 'MONTO_LIBRE' && (

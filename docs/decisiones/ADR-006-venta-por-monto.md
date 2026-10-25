@@ -1,7 +1,7 @@
 # ADR-006: Venta por monto y etiquetas de balanza con precio
 
 - Fecha: 2026-10-25
-- Estado: Propuesto (implementado en la Fase 3, paso 10; espera revisión del usuario)
+- Estado: **Aprobado** (2026-10-25, por el usuario)
 
 ## Contexto
 

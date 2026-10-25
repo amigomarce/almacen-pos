@@ -529,3 +529,101 @@ body {
   font-size: 1.8rem;
   font-weight: 800;
 }
+
+/* --- Cobro --- */
+.cobro-total {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.medios-pago,
+.billetes,
+.fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.tecla-atajo {
+  margin-left: 0.3rem;
+  padding: 0 0.3rem;
+  border: 1px solid currentcolor;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.paga-con {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.25rem 1.25rem;
+  align-items: baseline;
+}
+
+.monto-medio {
+  font-size: 2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.monto-medio.negativo {
+  color: var(--error);
+  font-size: 1.4rem;
+}
+
+.instruccion-pago {
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.vuelto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.monto-gigante {
+  font-size: 4.5rem;
+  font-weight: 900;
+  line-height: 1.05;
+  color: var(--ok);
+  font-variant-numeric: tabular-nums;
+}
+
+.puente-sii {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #c58a00;
+  border-radius: 12px;
+  background: #fff7e0;
+}
+
+.accion-cajero {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #6b4500;
+}
+
+.fila .campo {
+  flex: 1;
+}
+
+.estado-impresion {
+  color: var(--texto-suave);
+}
+
+.ticket {
+  max-height: 40vh;
+  overflow: auto;
+  padding: 0.75rem;
+  border: 1px dashed var(--borde);
+  background: #fff;
+  color: #111;
+  font-size: 0.85rem;
+  line-height: 1.25;
+}
