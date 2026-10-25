@@ -17,6 +17,7 @@ import {
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { productBarcodes, products } from '../db/schema.js';
+import type { RespuestaOff } from './off.js';
 import type { Semilla } from './semilla.js';
 
 /** Datos listos para crear el producto en la caja: solo falta precio y stock. */
@@ -56,6 +57,8 @@ export type ErrorLookup = { error: 'CODIGO_INVALIDO' | 'BALANZA_INVALIDA'; mensa
 export interface DependenciasLookup {
   db: Db;
   semilla: Semilla | null;
+  /** Consulta en línea (Open Food Facts); `null` = solo local y semilla. */
+  off?: { buscar(barcode: string): Promise<RespuestaOff> } | null;
   configBalanza?: ConfigBalanza;
 }
 
@@ -108,10 +111,10 @@ function mensajeInvalido(texto: string): string {
   return 'El código de barras no es válido: debe tener 8, 12 o 13 dígitos (EAN-8, UPC-A o EAN-13).';
 }
 
-export function buscarProducto(
+export async function buscarProducto(
   deps: DependenciasLookup,
   texto: string,
-): ResultadoLookup | ErrorLookup {
+): Promise<ResultadoLookup | ErrorLookup> {
   const codigo = normalizarCodigoBarras(texto);
   if (codigo === null) return { error: 'CODIGO_INVALIDO', mensaje: mensajeInvalido(texto) };
 
@@ -156,6 +159,11 @@ export function buscarProducto(
         seedRef: fila.barcode,
       },
     };
+  }
+
+  if (deps.off) {
+    const r = await deps.off.buscar(codigo);
+    if (r.ok) return { origen: 'OFF', producto: r.producto };
   }
 
   return { origen: 'NO_ENCONTRADO', producto: null };

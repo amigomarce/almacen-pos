@@ -3,13 +3,15 @@ import { sql } from 'drizzle-orm';
 import type { ConfigBalanza } from '@almacen/core';
 import pkg from '../package.json' with { type: 'json' };
 import type { Db } from './db/client.js';
-import { buscarProducto } from './productos/lookup.js';
+import { buscarProducto, type DependenciasLookup } from './productos/lookup.js';
 import type { Semilla } from './productos/semilla.js';
 
 export interface OpcionesApp {
   db: Db;
   /** Base semilla de productos; `null` o ausente = la caja funciona sin sugerencias. */
   semilla?: Semilla | null;
+  /** Consulta en línea a Open Food Facts; `null` o ausente = sin internet. */
+  off?: DependenciasLookup['off'];
   configBalanza?: ConfigBalanza;
   logger?: boolean;
 }
@@ -17,6 +19,7 @@ export interface OpcionesApp {
 export function crearApp({
   db,
   semilla = null,
+  off = null,
   configBalanza,
   logger = false,
 }: OpcionesApp): FastifyInstance {
@@ -38,9 +41,9 @@ export function crearApp({
     };
   });
 
-  app.get<{ Params: { barcode: string } }>('/products/lookup/:barcode', (req, reply) => {
-    const r = buscarProducto(
-      { db, semilla, ...(configBalanza ? { configBalanza } : {}) },
+  app.get<{ Params: { barcode: string } }>('/products/lookup/:barcode', async (req, reply) => {
+    const r = await buscarProducto(
+      { db, semilla, off, ...(configBalanza ? { configBalanza } : {}) },
       req.params.barcode,
     );
     if ('error' in r) return reply.code(400).send(r);

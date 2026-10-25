@@ -1,5 +1,5 @@
 import { calcularDigitoGtin } from '@almacen/core';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { crearApp } from '../app.js';
 import { abrirDb } from '../db/client.js';
 import { migrar } from '../db/migrar.js';
@@ -140,6 +140,47 @@ describe('GET /products/lookup/:barcode', () => {
     const cuerpo = res.json<{ error: string; mensaje: string }>();
     expect(cuerpo.error).toBe('CODIGO_INVALIDO');
     expect(cuerpo.mensaje).toMatch(mensaje);
+  });
+
+  describe('consulta en línea (Open Food Facts)', () => {
+    const DE_OFF = {
+      barcode: ean('780123456789'),
+      name: 'Marca Producto 1 L',
+      brand: 'Marca',
+      format: '1 L',
+      unit: 'UN' as const,
+      categorySlug: 'otros',
+      imageUrl: null,
+      seedRef: null,
+    };
+    const off = {
+      buscar: vi.fn((b: string) =>
+        Promise.resolve(
+          b === DE_OFF.barcode
+            ? { ok: true as const, producto: DE_OFF }
+            : { ok: false as const, motivo: 'FALLO' as const },
+        ),
+      ),
+    };
+    const conOff = crearApp({ db, semilla, off });
+    const pedir = (codigo: string) =>
+      conOff.inject({ method: 'GET', url: `/products/lookup/${codigo}` });
+
+    it('se usa solo si no está en el local ni en la semilla', async () => {
+      expect((await pedir(DE_OFF.barcode)).json()).toEqual({ origen: 'OFF', producto: DE_OFF });
+      await pedir(LOCAL);
+      await pedir('036000291452');
+      await pedir(BALANZA);
+      await pedir(ean('209999900500'));
+      expect(off.buscar.mock.calls).toEqual([[DE_OFF.barcode]]);
+    });
+
+    it('si OFF falla responde NO_ENCONTRADO', async () => {
+      expect((await pedir(ean('780999999999'))).json()).toEqual({
+        origen: 'NO_ENCONTRADO',
+        producto: null,
+      });
+    });
   });
 
   it('sin semilla sigue respondiendo', async () => {

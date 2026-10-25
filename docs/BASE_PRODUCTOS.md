@@ -134,6 +134,16 @@ entran con `quality_score` a la mitad (aprobado por el usuario, 2026-10-25).
 La caja trae `seed.sqlite` incluido y consulta **localmente** (offline). Si no encuentra el
 código, consulta la API de OFF en línea (si hay internet) y, si tampoco, crea producto nuevo.
 
+Implementado en `apps/server` como `GET /products/lookup/:barcode` (2026-10-25). Orden:
+balanza (prefijos 20–29, solo el local) → productos del local → `seed.sqlite` (solo lectura,
+ruta en `ALMACEN_SEMILLA`) → Open Food Facts en línea → `NO_ENCONTRADO`.
+La consulta a OFF (`apps/server/src/productos/off.ts`) usa la API v2 con User-Agent
+`AlmacenPOS/<versión> (<ALMACEN_CONTACTO>)`. Sin esa variable, o con `ALMACEN_OFF=0`, queda
+apagada. Tiene timeout de 2,5 s, un límite de 10 req/min (OFF permite 15 por IP para leer
+productos) y caché en memoria (encontrados 24 h, no encontrados 1 h, fallos 1 min). Normaliza con
+el mismo código de `data/` (`@almacen/data`: `normalizarProducto`, `MapeoCategorias`, marcas
+canónicas), así que un producto de OFF se ve igual que uno de la semilla.
+
 ## 5. Atribución
 
 Incluir en "Acerca de" de la app: datos de productos de Open Food Facts y proyectos
