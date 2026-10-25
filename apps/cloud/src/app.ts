@@ -11,6 +11,9 @@ import type { RepoInstalaciones } from './instalaciones/servicio.js';
 import { crearRepoProductos } from './productos/repo.js';
 import { registrarProductos } from './productos/rutas.js';
 import type { RepoProductos } from './productos/servicio.js';
+import { crearRepoReportes } from './reportes/repo.js';
+import { registrarReportes } from './reportes/rutas.js';
+import type { RepoReportes } from './reportes/servicio.js';
 import { crearRepoSyncNube } from './sincronizacion/repo.js';
 import { registrarSincronizacion } from './sincronizacion/rutas.js';
 import type { RepoSyncNube } from './sincronizacion/servicio.js';
@@ -20,6 +23,7 @@ export interface OpcionesApp {
   /** Inyectables para tests; por defecto el repo real y un verificador que siempre falla. */
   repoInstalaciones?: RepoInstalaciones;
   repoProductos?: RepoProductos;
+  repoReportes?: RepoReportes;
   repoSync?: RepoSyncNube;
   verificarJwt?: VerificadorJwt;
   logger?: boolean;
@@ -29,6 +33,7 @@ export function crearApp({
   db,
   repoInstalaciones = crearRepoInstalaciones(db),
   repoProductos = crearRepoProductos(db),
+  repoReportes = crearRepoReportes(db),
   repoSync = crearRepoSyncNube(db),
   verificarJwt = () => Promise.resolve(null),
   logger = false,
@@ -77,6 +82,7 @@ export function crearApp({
   registrarInstalaciones(app, { repo: repoInstalaciones, verificarJwt });
   registrarSincronizacion(app, { repoInstalaciones, repoSync });
   registrarProductos(app, { repo: repoProductos, verificarJwt });
+  registrarReportes(app, { repo: repoReportes, verificarJwt });
 
   return app;
 }
