@@ -294,6 +294,9 @@ importers:
       '@almacen/printer':
         specifier: workspace:*
         version: link:../../packages/printer
+      '@almacen/sync':
+        specifier: workspace:*
+        version: link:../../packages/sync
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3

@@ -1,4 +1,13 @@
-import type { EntidadSync, EventoSync, OperacionSync } from '@almacen/sync';
+import type {
+  CategoriaWire,
+  EntidadSync,
+  EventoSync,
+  LineaVentaWire,
+  MovimientoStockWire,
+  OperacionSync,
+  ProductoWire,
+  VentaWire,
+} from '@almacen/sync';
 import {
   categoriaDeWire,
   lineaDeWire,
@@ -14,7 +23,7 @@ export interface EventoSaliente {
   entity: EntidadSync;
   entityId: string;
   op: OperacionSync;
-  payload: Record<string, unknown>;
+  payload: unknown;
 }
 
 /** Acceso a las tablas de la nube, desacoplado del driver (tests usan un repo en memoria). */
@@ -24,6 +33,8 @@ export interface RepoSyncNube {
   borrarProducto(id: string): Promise<void>;
   borrarCategoria(id: string): Promise<void>;
   insertarVenta(v: typeof sales.$inferInsert): Promise<void>;
+  /** Refleja una venta anulada (upsert: si llegó desordenado, inserta el estado final). */
+  actualizarVenta(v: typeof sales.$inferInsert): Promise<void>;
   insertarLinea(l: typeof saleItems.$inferInsert): Promise<void>;
   insertarMovimiento(m: typeof stockMovements.$inferInsert): Promise<void>;
   eventosPendientes(ownerId: string): Promise<EventoSaliente[]>;
@@ -44,16 +55,18 @@ export async function ingestarEventos(
   for (const e of eventos) {
     if (e.entity === 'products') {
       if (e.op === 'DELETE') await repo.borrarProducto(e.entityId);
-      else await repo.upsertProducto(productoDeWire(e.payload as never, ownerId));
+      else await repo.upsertProducto(productoDeWire(e.payload as ProductoWire, ownerId));
     } else if (e.entity === 'categories') {
       if (e.op === 'DELETE') await repo.borrarCategoria(e.entityId);
-      else await repo.upsertCategoria(categoriaDeWire(e.payload as never, ownerId));
+      else await repo.upsertCategoria(categoriaDeWire(e.payload as CategoriaWire, ownerId));
     } else if (e.entity === 'sales' && e.op === 'INSERT') {
-      await repo.insertarVenta(ventaDeWire(e.payload as never, ownerId));
+      await repo.insertarVenta(ventaDeWire(e.payload as VentaWire, ownerId));
+    } else if (e.entity === 'sales' && e.op === 'UPDATE') {
+      await repo.actualizarVenta(ventaDeWire(e.payload as VentaWire, ownerId));
     } else if (e.entity === 'sale_items' && e.op === 'INSERT') {
-      await repo.insertarLinea(lineaDeWire(e.payload as never));
+      await repo.insertarLinea(lineaDeWire(e.payload as LineaVentaWire));
     } else if (e.entity === 'stock_movements' && e.op === 'INSERT') {
-      await repo.insertarMovimiento(movimientoDeWire(e.payload as never, ownerId));
+      await repo.insertarMovimiento(movimientoDeWire(e.payload as MovimientoStockWire, ownerId));
     }
     // Cualquier otro (UPDATE/DELETE de append-only) se ignora: esas entidades solo se insertan.
   }

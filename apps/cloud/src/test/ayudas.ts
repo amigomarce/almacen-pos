@@ -66,6 +66,7 @@ export interface RepoSyncFalso extends RepoSyncNube {
   borradosProducto: string[];
   borradosCategoria: string[];
   ventas: (typeof sales.$inferInsert)[];
+  ventasActualizadas: (typeof sales.$inferInsert)[];
   lineas: (typeof saleItems.$inferInsert)[];
   movimientos: (typeof stockMovements.$inferInsert)[];
   pendientes: EventoSaliente[];
@@ -80,6 +81,7 @@ export function repoSyncFalso(pendientes: EventoSaliente[] = []): RepoSyncFalso 
     borradosProducto: [],
     borradosCategoria: [],
     ventas: [],
+    ventasActualizadas: [],
     lineas: [],
     movimientos: [],
     pendientes: [...pendientes],
@@ -102,6 +104,10 @@ export function repoSyncFalso(pendientes: EventoSaliente[] = []): RepoSyncFalso 
     },
     insertarVenta(v) {
       f.ventas.push(v);
+      return Promise.resolve();
+    },
+    actualizarVenta(v) {
+      f.ventasActualizadas.push(v);
       return Promise.resolve();
     },
     insertarLinea(l) {

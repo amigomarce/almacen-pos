@@ -13,6 +13,8 @@ import {
   stockMovements,
 } from '../db/schema.js';
 import { ErrorHttp } from '../errores.js';
+import { movimientoAWire, productoAWire } from '../sincronizacion/mapping.js';
+import { encolar } from '../sincronizacion/outbox.js';
 
 export interface ProductoDetalle {
   id: string;
@@ -240,6 +242,15 @@ export function editarProducto(
         })
         .run();
     }
+    const actualizado = db.select().from(products).where(eq(products.id, id)).get();
+    /* v8 ignore next -- existe: se acaba de actualizar */
+    if (!actualizado) throw new Error('Producto editado no encontrado');
+    encolar(db, {
+      entity: 'products',
+      entityId: id,
+      op: 'UPDATE',
+      payload: productoAWire(actualizado),
+    });
     const detalle = detalleProducto(db, id);
     /* v8 ignore next -- existe: se acaba de editar */
     if (!detalle) throw new Error('Producto editado no encontrado');
@@ -274,14 +285,22 @@ export function ajustarStock(
     const delta =
       ajuste.tipo === 'CONTEO' ? ajuste.stockContadoMilli - p.stockQtyMilli : -ajuste.cantidadMilli;
     if (delta !== 0) {
-      db.insert(stockMovements)
+      const m = db
+        .insert(stockMovements)
         .values({
           productId: id,
           qtyMilli: delta,
           type: ajuste.tipo === 'CONTEO' ? 'AJUSTE' : 'MERMA',
           userId: usuarioId,
         })
-        .run();
+        .returning()
+        .get();
+      encolar(db, {
+        entity: 'stock_movements',
+        entityId: m.id,
+        op: 'INSERT',
+        payload: movimientoAWire(m),
+      });
       db.update(products)
         .set({ stockQtyMilli: p.stockQtyMilli + delta, updatedAt: new Date() })
         .where(eq(products.id, id))

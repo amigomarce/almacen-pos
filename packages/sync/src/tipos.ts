@@ -96,5 +96,6 @@ export interface EventoSync {
   entity: EntidadSync;
   entityId: string;
   op: OperacionSync;
-  payload: Record<string, unknown>;
+  /** La entidad serializada (su forma depende de `entity`). */
+  payload: unknown;
 }

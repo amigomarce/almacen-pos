@@ -100,16 +100,40 @@ describe('ingestarEventos', () => {
     expect(repo.borradosCategoria).toEqual(['c1']);
   });
 
-  it('ignora UPDATE/DELETE de entidades append-only', async () => {
+  it('ignora UPDATE/DELETE de líneas y movimientos (append-only)', async () => {
     const repo = repoSyncFalso();
     await ingestarEventos(repo, 'dueno-1', [
-      { entity: 'sales', op: 'UPDATE', entityId: 's1', payload: {} },
       { entity: 'sale_items', op: 'DELETE', entityId: 'si1', payload: {} },
       { entity: 'stock_movements', op: 'UPDATE', entityId: 'm1', payload: {} },
     ]);
-    expect(repo.ventas).toHaveLength(0);
     expect(repo.lineas).toHaveLength(0);
     expect(repo.movimientos).toHaveLength(0);
+  });
+
+  it('UPDATE de venta refleja la anulación', async () => {
+    const repo = repoSyncFalso();
+    await ingestarEventos(repo, 'dueno-1', [
+      {
+        entity: 'sales',
+        op: 'UPDATE',
+        entityId: 's1',
+        payload: {
+          id: 's1',
+          number: 1,
+          registerId: 'r1',
+          registerName: 'Caja 1',
+          cashierName: 'Dueño',
+          status: 'ANULADA',
+          totalClp: 1990,
+          roundingClp: 0,
+          paymentMethod: 'EFECTIVO',
+          voidedAt: ISO,
+          createdAt: ISO,
+        },
+      },
+    ]);
+    expect(repo.ventasActualizadas).toHaveLength(1);
+    expect(repo.ventasActualizadas[0]).toMatchObject({ id: 's1', status: 'ANULADA' });
   });
 
   it('UPDATE de producto actualiza (upsert)', async () => {

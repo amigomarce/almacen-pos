@@ -23,6 +23,10 @@ export function crearRepoSyncNube(db: Db): RepoSyncNube {
     async insertarVenta(v) {
       await db.insert(sales).values(v).onConflictDoNothing();
     },
+    async actualizarVenta(v) {
+      const { id: _id, ...set } = v;
+      await db.insert(sales).values(v).onConflictDoUpdate({ target: sales.id, set });
+    },
     async insertarLinea(l) {
       await db.insert(saleItems).values(l).onConflictDoNothing();
     },
@@ -46,7 +50,7 @@ export function crearRepoSyncNube(db: Db): RepoSyncNube {
         entity: f.entity,
         entityId: f.entityId,
         op: f.op,
-        payload: f.payload as Record<string, unknown>,
+        payload: f.payload,
       })) as EventoSaliente[];
     },
     async marcarSincronizados(ownerId, ids) {

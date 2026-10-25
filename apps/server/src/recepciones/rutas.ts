@@ -7,6 +7,8 @@ import type { Sesiones } from '../auth/sesiones.js';
 import type { Db } from '../db/client.js';
 import { products, stockMovements } from '../db/schema.js';
 import { ErrorHttp } from '../errores.js';
+import { movimientoAWire } from '../sincronizacion/mapping.js';
+import { encolar } from '../sincronizacion/outbox.js';
 
 export interface LineaRecepcion {
   productoId: string;
@@ -65,7 +67,8 @@ export function registrarRecepcion(
         l.costoUnitarioClp === undefined
           ? p.costClp
           : costoPromedio(p.stockQtyMilli, p.costClp, l.cantidadMilli, l.costoUnitarioClp);
-      db.insert(stockMovements)
+      const m = db
+        .insert(stockMovements)
         .values({
           productId: p.id,
           qtyMilli: l.cantidadMilli,
@@ -74,7 +77,14 @@ export function registrarRecepcion(
           userId: usuarioId,
           at: ahora,
         })
-        .run();
+        .returning()
+        .get();
+      encolar(db, {
+        entity: 'stock_movements',
+        entityId: m.id,
+        op: 'INSERT',
+        payload: movimientoAWire(m),
+      });
       db.update(products)
         .set({
           stockQtyMilli: p.stockQtyMilli + l.cantidadMilli,

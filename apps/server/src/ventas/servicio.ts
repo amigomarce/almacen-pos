@@ -26,6 +26,7 @@ import {
   cashSessions,
   products,
   promotions,
+  registers,
   saleItems,
   sales,
   stockMovements,
@@ -34,6 +35,8 @@ import {
 } from '../db/schema.js';
 import { leerConfiguracion } from '../configuracion/servicio.js';
 import { ErrorHttp } from '../errores.js';
+import { lineaAWire, movimientoAWire, ventaAWire } from '../sincronizacion/mapping.js';
+import { encolar } from '../sincronizacion/outbox.js';
 
 // ---------- Tipos de entrada y salida ----------
 
@@ -115,6 +118,13 @@ export interface VentaDetalle {
 function nombreUsuario(db: Db, id: string): { id: string; name: string } {
   const u = db.select({ id: users.id, name: users.name }).from(users).where(eq(users.id, id)).get();
   return u ?? { id, name: '?' };
+}
+
+function nombreRegistro(db: Db, id: string): string | null {
+  return (
+    db.select({ name: registers.name }).from(registers).where(eq(registers.id, id)).get()?.name ??
+    null
+  );
 }
 
 function ventaParaDte(
@@ -427,7 +437,8 @@ export async function registrarVenta(
       .get();
 
     for (const l of calculo.lineas) {
-      db.insert(saleItems)
+      const item = db
+        .insert(saleItems)
         .values({
           saleId: venta.id,
           productId: l.productoId,
@@ -439,10 +450,18 @@ export async function registrarVenta(
           discountClp: l.descuentoManualClp + l.descuentoPromoClp,
           lineTotalClp: l.totalLineaClp,
         })
-        .run();
+        .returning()
+        .get();
+      encolar(db, {
+        entity: 'sale_items',
+        entityId: item.id,
+        op: 'INSERT',
+        payload: lineaAWire(item),
+      });
       if (l.productoId) {
         // Stock negativo permitido: en el almacén se vende aunque el sistema diga 0.
-        db.insert(stockMovements)
+        const m = db
+          .insert(stockMovements)
           .values({
             productId: l.productoId,
             qtyMilli: -l.cantidadMilli,
@@ -451,13 +470,29 @@ export async function registrarVenta(
             userId: cajeroId,
             at: ahora,
           })
-          .run();
+          .returning()
+          .get();
+        encolar(db, {
+          entity: 'stock_movements',
+          entityId: m.id,
+          op: 'INSERT',
+          payload: movimientoAWire(m),
+        });
         db.update(products)
           .set({ stockQtyMilli: sql`${products.stockQtyMilli} - ${l.cantidadMilli}` })
           .where(eq(products.id, l.productoId))
           .run();
       }
     }
+    encolar(db, {
+      entity: 'sales',
+      entityId: venta.id,
+      op: 'INSERT',
+      payload: ventaAWire(venta, {
+        registerName: nombreRegistro(db, registerId),
+        cashierName: nombreUsuario(db, cajeroId).name,
+      }),
+    });
     return { venta, calculo };
   });
 
@@ -561,10 +596,23 @@ export async function anularVenta(
       })
       .where(eq(sales.id, v.id))
       .run();
+    const anulada = db.select().from(sales).where(eq(sales.id, v.id)).get();
+    /* v8 ignore next -- existe: se acaba de anular */
+    if (!anulada) throw new Error('Venta anulada no encontrada');
+    encolar(db, {
+      entity: 'sales',
+      entityId: v.id,
+      op: 'UPDATE',
+      payload: ventaAWire(anulada, {
+        registerName: nombreRegistro(db, v.registerId),
+        cashierName: nombreUsuario(db, v.cashierId).name,
+      }),
+    });
     const items = db.select().from(saleItems).where(eq(saleItems.saleId, v.id)).all();
     for (const i of items) {
       if (!i.productId) continue;
-      db.insert(stockMovements)
+      const m = db
+        .insert(stockMovements)
         .values({
           productId: i.productId,
           qtyMilli: i.qtyMilli,
@@ -573,7 +621,14 @@ export async function anularVenta(
           userId: datos.usuarioId,
           at: ahora,
         })
-        .run();
+        .returning()
+        .get();
+      encolar(db, {
+        entity: 'stock_movements',
+        entityId: m.id,
+        op: 'INSERT',
+        payload: movimientoAWire(m),
+      });
       db.update(products)
         .set({ stockQtyMilli: sql`${products.stockQtyMilli} + ${i.qtyMilli}` })
         .where(eq(products.id, i.productId))

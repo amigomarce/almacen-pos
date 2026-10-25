@@ -12,6 +12,8 @@ import {
   stockMovements,
 } from '../db/schema.js';
 import { ErrorHttp } from '../errores.js';
+import { categoriaAWire, movimientoAWire, productoAWire } from '../sincronizacion/mapping.js';
+import { encolar } from '../sincronizacion/outbox.js';
 
 export type Taxonomia = Map<string, Categoria>;
 
@@ -73,7 +75,18 @@ export function resolverCategoria(db: Db, slug: string, taxonomia: Taxonomia): s
     )
     .get();
   if (existente) return existente.id;
-  return db.insert(categories).values({ name: cat.nombre, parentId: padreId }).returning().get().id;
+  const creada = db
+    .insert(categories)
+    .values({ name: cat.nombre, parentId: padreId })
+    .returning()
+    .get();
+  encolar(db, {
+    entity: 'categories',
+    entityId: creada.id,
+    op: 'INSERT',
+    payload: categoriaAWire(creada),
+  });
+  return creada.id;
 }
 
 /**
@@ -159,7 +172,8 @@ export function crearProducto(
       })
       .run();
     if (stock > 0) {
-      db.insert(stockMovements)
+      const m = db
+        .insert(stockMovements)
         .values({
           productId: p.id,
           qtyMilli: stock,
@@ -167,8 +181,16 @@ export function crearProducto(
           refId: p.id,
           userId: usuarioId,
         })
-        .run();
+        .returning()
+        .get();
+      encolar(db, {
+        entity: 'stock_movements',
+        entityId: m.id,
+        op: 'INSERT',
+        payload: movimientoAWire(m),
+      });
     }
+    encolar(db, { entity: 'products', entityId: p.id, op: 'INSERT', payload: productoAWire(p) });
     return {
       id: p.id,
       barcode: p.barcode,
