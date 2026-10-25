@@ -88,7 +88,7 @@ Si propones cambiar el stack, explica por qué en un ADR en `docs/decisiones/` a
 
 ```bash
 pnpm install
-pnpm dev:pos         # caja (Tauri + server local)
+pnpm dev:pos         # caja en http://127.0.0.1:5173 + server local (Tauri más adelante, ADR-005)
 pnpm dev:mobile      # app del dueño (Expo)
 pnpm dev:cloud       # API de sincronización
 pnpm test            # vitest en todos los paquetes

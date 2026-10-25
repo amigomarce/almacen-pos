@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev:pos": "node scripts/pendiente.mjs dev:pos 3",
+    "dev:pos": "pnpm --parallel --filter @almacen/server --filter @almacen/pos dev",
     "dev:mobile": "node scripts/pendiente.mjs dev:mobile 4",
     "dev:cloud": "node scripts/pendiente.mjs dev:cloud 4",
     "dev:server": "pnpm --filter @almacen/server dev",
@@ -27,6 +27,7 @@
     "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.13.0",
     "prettier": "^3.9.10",
     "typescript": "~6.0.3",
