@@ -469,7 +469,7 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
                 provider: estado.dteProvider,
                 folioExterno: null,
                 validoComoBoleta: false,
-                leyendas: ['COMPROBANTE INTERNO – NO VÁLIDO COMO BOLETA'],
+                leyendas: ['COMPROBANTE DE VENTA – NO VÁLIDO COMO BOLETA'],
                 accionCajero:
                   estado.dteProvider === 'PUENTE_MANUAL'
                     ? `Emite la boleta en la app e-Boleta del SII por $${aPagar.toLocaleString('es-CL')}`
@@ -537,7 +537,7 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
           });
           return json(200, {
             impreso: estado.impresora,
-            vistaPrevia: 'COMPROBANTE INTERNO - NO VÁLIDO COMO BOLETA',
+            vistaPrevia: 'COMPROBANTE DE VENTA - NO VÁLIDO COMO BOLETA',
             motivo: estado.impresora ? null : 'SIN_IMPRESORA',
           });
         }

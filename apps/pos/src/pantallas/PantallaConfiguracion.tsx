@@ -12,7 +12,7 @@ const MODALIDADES: Record<ModalidadBoleta, { titulo: string; detalle: string }> 
   PUENTE_MANUAL: {
     titulo: 'Emito la boleta en la app e-Boleta del SII',
     detalle:
-      'La caja imprime un comprobante interno y te recuerda emitir la boleta por el total. Recomendado por ahora.',
+      'La caja imprime un comprobante de venta y te recuerda emitir la boleta por el total. Recomendado por ahora.',
   },
   MOCK: {
     titulo: 'Modo prueba',

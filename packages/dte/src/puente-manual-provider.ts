@@ -1,5 +1,5 @@
 import { ErrorDominio, formatearClp } from '@almacen/core';
-import { LEYENDA_COMPROBANTE_INTERNO } from './mock-provider.js';
+import { LEYENDA_COMPROBANTE_VENTA } from './mock-provider.js';
 import { motivoParaNoEmitir } from './reglas.js';
 import type {
   DocumentoEmitido,
@@ -13,7 +13,7 @@ import type {
 
 /**
  * Estrategia D (ADR-001), transitoria hasta la Fase 5: la caja NO timbra. Imprime el
- * comprobante interno y le indica al cajero que emita la boleta en la app e-Boleta del SII
+ * comprobante de venta y le indica al cajero que emita la boleta en la app e-Boleta del SII
  * por el total exacto. Opcionalmente se registra el folio que entregó e-Boleta.
  */
 export class PuenteManualProvider implements DocumentoTributarioProvider {
@@ -43,7 +43,7 @@ export class PuenteManualProvider implements DocumentoTributarioProvider {
         xml: null,
         estadoSii: 'NO_APLICA',
         validoComoBoleta: false,
-        leyendas: [LEYENDA_COMPROBANTE_INTERNO, 'Su boleta se emite en la app e-Boleta del SII'],
+        leyendas: [LEYENDA_COMPROBANTE_VENTA, 'Su boleta se emite en la app e-Boleta del SII'],
         accionCajero: `Emite la boleta en la app e-Boleta del SII por ${total}`,
       },
     };

@@ -9,7 +9,8 @@ import type {
   VentaParaDte,
 } from './tipos.js';
 
-export const LEYENDA_COMPROBANTE_INTERNO = 'COMPROBANTE INTERNO – NO VÁLIDO COMO BOLETA';
+/** Leyenda legal del documento que NO es boleta (modalidad con la app del SII). */
+export const LEYENDA_COMPROBANTE_VENTA = 'COMPROBANTE DE VENTA – NO VÁLIDO COMO BOLETA';
 
 /** Desarrollo y demos: no timbra ni envía nada (CLAUDE.md §2). */
 export class MockProvider implements DocumentoTributarioProvider {
@@ -39,7 +40,7 @@ export class MockProvider implements DocumentoTributarioProvider {
         estadoSii: 'NO_APLICA',
         validoComoBoleta: false,
         leyendas: [
-          LEYENDA_COMPROBANTE_INTERNO,
+          LEYENDA_COMPROBANTE_VENTA,
           `Comprobante N° ${venta.numeroVenta} · Total ${formatearClp(venta.totales.totalClp)}`,
         ],
         accionCajero: null,

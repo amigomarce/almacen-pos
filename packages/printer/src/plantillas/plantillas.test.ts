@@ -52,7 +52,7 @@ const venta: DatosTicketVenta = {
   exentoClp: 0,
   documento: {
     leyendas: [
-      'COMPROBANTE INTERNO – NO VÁLIDO COMO BOLETA',
+      'COMPROBANTE DE VENTA – NO VÁLIDO COMO BOLETA',
       'Su boleta se emite en la app e-Boleta del SII',
     ],
     folioExterno: '123',
@@ -63,13 +63,13 @@ const venta: DatosTicketVenta = {
 };
 
 describe('ticketVenta', () => {
-  it('58 mm (32 columnas): comprobante interno en efectivo con redondeo, promoción y folio', () => {
+  it('58 mm (32 columnas): comprobante de venta en efectivo con redondeo, promoción y folio', () => {
     expect(aTexto(ticketVenta(venta, 32))).toMatchInlineSnapshot(`
       "       Almacén Doña Rosa
               RUT 76.086.428-5
          Av. Los Aromos 123, Ñuñoa
       --------------------------------
-      COMPROBANTE INTERNO - NO VÁLIDO
+      COMPROBANTE DE VENTA - NO VÁLIDO
                 COMO BOLETA
       --------------------------------
       Venta N° 15
@@ -117,7 +117,7 @@ describe('ticketVenta', () => {
                       RUT 76.086.428-5
                  Av. Los Aromos 123, Ñuñoa
       ------------------------------------------------
-        COMPROBANTE INTERNO - NO VÁLIDO COMO BOLETA
+        COMPROBANTE DE VENTA - NO VÁLIDO COMO BOLETA
       ------------------------------------------------
       Venta N° 15
       25-10-2026 09:44                   Cajero: Sofía

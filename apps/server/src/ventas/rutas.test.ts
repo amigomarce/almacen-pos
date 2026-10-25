@@ -74,7 +74,7 @@ describe('POST /sales', () => {
     expect(res.json()).toEqual({ error: 'CAJA_CERRADA', mensaje: 'Abre la caja antes de vender' });
   });
 
-  it('venta en efectivo: precios de la base, redondeo, vuelto, stock y comprobante interno', async () => {
+  it('venta en efectivo: precios de la base, redondeo, vuelto, stock y comprobante de venta', async () => {
     const res = await vender({
       lineas: [
         // La caja no decide el precio: aunque mande otro, se usa el de la base.
@@ -105,7 +105,7 @@ describe('POST /sales', () => {
         provider: 'MOCK',
         validoComoBoleta: false,
         leyendas: [
-          'COMPROBANTE INTERNO – NO VÁLIDO COMO BOLETA',
+          'COMPROBANTE DE VENTA – NO VÁLIDO COMO BOLETA',
           'Comprobante N° 1 · Total $5.643',
         ],
         accionCajero: null,

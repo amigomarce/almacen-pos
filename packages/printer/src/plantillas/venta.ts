@@ -5,7 +5,7 @@ import {
   type MedioPago,
   type Unidad,
 } from '@almacen/core';
-import { LEYENDA_COMPROBANTE_INTERNO } from '@almacen/dte';
+import { LEYENDA_COMPROBANTE_VENTA } from '@almacen/dte';
 import { Documento } from '../documento.js';
 import { fechaHora, NOMBRE_MEDIO, type DatosLocal } from '../formato.js';
 import { encabezadoLocal } from './encabezado.js';
@@ -46,7 +46,7 @@ export interface DatosTicketVenta {
 }
 
 /**
- * Comprobante interno de la venta. Mientras no exista la boleta electrónica propia (Fase 5),
+ * Comprobante de venta. Mientras no exista la boleta electrónica propia (Fase 5),
  * SIEMPRE dice "NO VÁLIDO COMO BOLETA" (CLAUDE.md §2).
  */
 export function ticketVenta(datos: DatosTicketVenta, columnas: number): Documento {
@@ -63,8 +63,8 @@ export function ticketVenta(datos: DatosTicketVenta, columnas: number): Document
   if (datos.anulada)
     doc.texto('*** ANULADA ***', { alinear: 'CENTRO', negrita: true, grande: true });
   if (datos.reimpresion) doc.texto('REIMPRESIÓN', { alinear: 'CENTRO', negrita: true });
-  const [primera, ...otras] = datos.documento?.leyendas ?? [LEYENDA_COMPROBANTE_INTERNO];
-  doc.texto(primera ?? LEYENDA_COMPROBANTE_INTERNO, { alinear: 'CENTRO', negrita: true });
+  const [primera, ...otras] = datos.documento?.leyendas ?? [LEYENDA_COMPROBANTE_VENTA];
+  doc.texto(primera ?? LEYENDA_COMPROBANTE_VENTA, { alinear: 'CENTRO', negrita: true });
   doc.separador();
 
   doc.texto(`Venta N° ${datos.numero}`, { negrita: true });

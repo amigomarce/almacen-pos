@@ -1,7 +1,7 @@
 import { calcularTotalesDocumento, ErrorDominio, MEDIOS_PAGO, type MedioPago } from '@almacen/core';
 import { describe, expect, it } from 'vitest';
 import {
-  LEYENDA_COMPROBANTE_INTERNO,
+  LEYENDA_COMPROBANTE_VENTA,
   MockProvider,
   PuenteManualProvider,
   requiereBoleta,
@@ -126,7 +126,7 @@ describe.each([
       validoComoBoleta: false,
       entrega: 'IMPRESA',
     });
-    expect(r.documento.leyendas[0]).toBe(LEYENDA_COMPROBANTE_INTERNO);
+    expect(r.documento.leyendas[0]).toBe(LEYENDA_COMPROBANTE_VENTA);
     expect(r.documento.totales.totalClp).toBe(1190);
   });
 
