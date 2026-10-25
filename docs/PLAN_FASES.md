@@ -38,9 +38,9 @@ a la siguiente sin aprobación.
   ventas del día. Notificación de cierre de caja.
 - Opcional: fiado / cuenta corriente de vecinos.
 
-### Estado al 2026-10-25 — nube y sincronización completas; app móvil pendiente
+### Estado al 2026-10-25 — nube, sincronización y app móvil (scaffold)
 
-**Hecho (Etapas 16–18, lado servidor):**
+**Hecho (Etapas 16–18):**
 - `apps/cloud` (Fastify + Drizzle + PostgreSQL/Supabase, ADR-007): migraciones y modelo de
   nube (`installations`, `products`, `categories`, `stock_movements`, `sales`, `sale_items`,
   `outbox`, `cash_closes`), todo con `owner_id` (multi-local).
@@ -51,15 +51,19 @@ a la siguiente sin aprobación.
   por categoría/marca (+%), recepción (stock + costo promedio) y reportes (ventas del día,
   stock bajo, último cierre de caja).
 - **Vinculación de la caja** por QR: token de dispositivo (se guarda solo su SHA-256).
+- `apps/mobile` (Expo 58 + React Native 0.88): login con Supabase Auth, Inicio (ventas del
+  día, stock bajo, último cierre), Productos (buscar y editar precio), Cambio masivo (por
+  marca/categoría) y Recepción (código de barras o cámara). Cliente de la API en TS puro,
+  con tests. `pnpm dev:mobile` arranca Expo.
 
 **Flujos completos extremo a extremo:** precio del móvil → caja; recepción del móvil → caja;
 ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
 
 **Pendiente en esta fase:**
-- `apps/mobile` (Expo): login con Supabase Auth, escáner con cámara y las pantallas Inicio,
-  Productos, Cambio masivo y Recepción contra los endpoints ya existentes.
+- Probar la app en un emulador o teléfono (no se ejecutó en el entorno de desarrollo) y
+  pulir la UI; el escáner con cámara necesita un dispositivo real.
 - Provisionar Supabase para la prueba real: `CLOUD_DATABASE_URL` y `SUPABASE_JWT_SECRET`
-  (nube), `CLOUD_URL` (caja).
+  (nube), `CLOUD_URL` (caja), `EXPO_PUBLIC_*` (móvil).
 - Fiado / cuenta corriente (opcional) no se hizo.
 
 **TODOs menores:** `GET /report/sales/today` usa "últimas 24 h" (falta hora de Chile); el
