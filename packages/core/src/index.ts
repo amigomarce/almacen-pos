@@ -3,3 +3,4 @@ export * from './aritmetica.js';
 export * from './dinero.js';
 export * from './rut.js';
 export * from './codigo-barras.js';
+export * from './balanza.js';
