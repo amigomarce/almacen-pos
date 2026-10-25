@@ -4,3 +4,5 @@ coverage
 pnpm-lock.yaml
 **/drizzle/meta
 *.md
+src-tauri/target
+src-tauri/gen

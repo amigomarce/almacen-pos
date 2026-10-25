@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev:pos": "pnpm --parallel --filter @almacen/server --filter @almacen/pos dev",
+    "dev:pos:app": "pnpm --filter @almacen/pos tauri dev",
     "dev:mobile": "node scripts/pendiente.mjs dev:mobile 4",
     "dev:cloud": "node scripts/pendiente.mjs dev:cloud 4",
     "dev:server": "pnpm --filter @almacen/server dev",

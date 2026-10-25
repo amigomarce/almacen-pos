@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Ícono propio: almacén con toldo a rayas. -->
+  <rect x="32" y="32" width="960" height="960" rx="200" fill="#0b6bcb"/>
+  <rect x="232" y="430" width="560" height="380" rx="24" fill="#ffffff"/>
+  <rect x="452" y="560" width="120" height="250" rx="12" fill="#0b6bcb"/>
+  <rect x="280" y="500" width="120" height="110" rx="10" fill="#cfe3f7"/>
+  <rect x="624" y="500" width="120" height="110" rx="10" fill="#cfe3f7"/>
+  <path d="M192 300 h640 l40 140 h-720 z" fill="#ffffff"/>
+  <path d="M272 300 h96 l-16 140 h-120 z M464 300 h96 l8 140 h-112 z M656 300 h96 l40 140 h-120 z" fill="#e53935"/>
+  <path d="M152 440 a60 60 0 0 0 120 0 a60 60 0 0 0 120 0 a60 60 0 0 0 120 0 a60 60 0 0 0 120 0 a60 60 0 0 0 120 0 a60 60 0 0 0 120 0 z" fill="#ffffff"/>
+</svg>

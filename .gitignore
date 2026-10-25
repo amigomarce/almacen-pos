@@ -19,3 +19,7 @@ data/out/
 
 # Configuración pública de la caja en Tauri (sin secretos)
 !apps/pos/.env.tauri
+
+# Tauri (compilación y esquemas generados)
+apps/pos/src-tauri/target/
+apps/pos/src-tauri/gen/

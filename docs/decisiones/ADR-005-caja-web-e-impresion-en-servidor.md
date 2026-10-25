@@ -46,3 +46,17 @@ va "desde el lado Rust/Node". Al abrir la Fase 3:
   `TODO`: probar en Windows con impresora real (Fase 3, paso de hardware).
 - Si algún día la caja corre en un equipo distinto al del servidor, la impresión sigue
   funcionando porque la impresora es del servidor, no de la ventana.
+
+## Implementación de la envoltura (Fase 3, paso 15)
+
+- `apps/pos/src-tauri/`: Tauri 2 sin código propio (solo abre la ventana `main` maximizada).
+  `pnpm dev:pos:app` levanta servidor + Vite y abre la ventana sobre `http://127.0.0.1:5173`.
+- Versión compilada (`pnpm --filter @almacen/pos tauri build`): la interfaz se empaqueta y llama
+  directo a `http://127.0.0.1:3001` (`.env.tauri`); el servidor acepta CORS solo desde los
+  orígenes de Tauri (`apps/server/src/cors.ts`). La CSP de la ventana solo permite ese destino.
+- Las herramientas de desarrollo de la ventana existen solo en modo debug: en la versión final
+  F12 queda libre para cobrar.
+- Pendiente para la Fase 6: que la app arranque el servidor como proceso hijo (sidecar) y el
+  instalador de Windows (se compila en Windows o en CI). Mientras tanto, la app compilada
+  necesita el servidor corriendo (`pnpm dev:server`).
+
