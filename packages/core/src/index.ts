@@ -6,3 +6,4 @@ export * from './codigo-barras.js';
 export * from './balanza.js';
 export * from './iva.js';
 export * from './pago.js';
+export * from './venta.js';
