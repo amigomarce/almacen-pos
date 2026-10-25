@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+.expo/
+src-tauri/target/
+*.sqlite
+!data/fixtures/*.sqlite
+.env
+.env.*
+secrets/
+*.pfx
+*.p12
+*.pem
+CAF*.xml
+data/raw/
