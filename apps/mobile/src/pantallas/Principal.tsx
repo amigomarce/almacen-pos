@@ -24,7 +24,13 @@ export function Principal() {
     <View style={{ flex: 1 }}>
       <View style={estilos.tabs}>
         {TABS.map((t) => (
-          <Pressable key={t.id} style={estilos.tab} onPress={() => { setTab(t.id); }}>
+          <Pressable
+            key={t.id}
+            style={estilos.tab}
+            onPress={() => {
+              setTab(t.id);
+            }}
+          >
             <Text style={[estilos.tabTexto, tab === t.id ? estilos.tabActiva : null]}>
               {t.etiqueta}
             </Text>

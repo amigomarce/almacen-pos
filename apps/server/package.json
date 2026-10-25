@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "db:generate": "drizzle-kit generate",
     "db:seed": "tsx src/db/seed-cli.ts",
-    "device:info": "tsx src/sincronizacion/identidad-cli.ts"
+    "device:info": "tsx src/sincronizacion/identidad-cli.ts",
+    "sync:backfill": "tsx src/sincronizacion/backfill-cli.ts"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
