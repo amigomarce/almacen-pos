@@ -8,7 +8,8 @@ import { RUTA_ENV, cargarEnvLocal, variable } from './env.js';
 const conEnv = cargarEnvLocal();
 
 const puerto = Number(variable('PORT') ?? 3002);
-const host = variable('HOST') ?? '127.0.0.1';
+// `CLOUD_HOST=0.0.0.0` para que el teléfono (en la misma Wi-Fi) alcance la nube.
+const host = variable('CLOUD_HOST') ?? '127.0.0.1';
 const connectionString = variable('CLOUD_DATABASE_URL');
 
 if (!connectionString) {
