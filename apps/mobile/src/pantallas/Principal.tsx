@@ -6,14 +6,16 @@ import { CambioMasivo } from './CambioMasivo';
 import { Inicio } from './Inicio';
 import { Productos } from './Productos';
 import { Recepcion } from './Recepcion';
+import { VincularCaja } from './VincularCaja';
 
-type Tab = 'inicio' | 'productos' | 'cambio' | 'recepcion';
+type Tab = 'inicio' | 'productos' | 'cambio' | 'recepcion' | 'caja';
 
 const TABS: { id: Tab; etiqueta: string }[] = [
   { id: 'inicio', etiqueta: 'Inicio' },
   { id: 'productos', etiqueta: 'Productos' },
-  { id: 'cambio', etiqueta: 'Cambio' },
-  { id: 'recepcion', etiqueta: 'Recepción' },
+  { id: 'cambio', etiqueta: 'Precios' },
+  { id: 'recepcion', etiqueta: 'Recibir' },
+  { id: 'caja', etiqueta: 'Caja' },
 ];
 
 export function Principal() {
@@ -22,13 +24,7 @@ export function Principal() {
     <View style={{ flex: 1 }}>
       <View style={estilos.tabs}>
         {TABS.map((t) => (
-          <Pressable
-            key={t.id}
-            style={estilos.tab}
-            onPress={() => {
-              setTab(t.id);
-            }}
-          >
+          <Pressable key={t.id} style={estilos.tab} onPress={() => { setTab(t.id); }}>
             <Text style={[estilos.tabTexto, tab === t.id ? estilos.tabActiva : null]}>
               {t.etiqueta}
             </Text>
@@ -43,6 +39,7 @@ export function Principal() {
         {tab === 'productos' ? <Productos /> : null}
         {tab === 'cambio' ? <CambioMasivo /> : null}
         {tab === 'recepcion' ? <Recepcion /> : null}
+        {tab === 'caja' ? <VincularCaja /> : null}
       </View>
     </View>
   );

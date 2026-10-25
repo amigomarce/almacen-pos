@@ -172,6 +172,17 @@ export class ClienteApi {
     return this.pedir('/receptions', { metodo: 'POST', cuerpo: { lineas } });
   }
 
+  vincularCaja(
+    installationId: string,
+    deviceToken: string,
+    name: string,
+  ): Promise<{ id: string; name: string; linkedAt: string | null }> {
+    return this.pedir('/installations/link', {
+      metodo: 'POST',
+      cuerpo: { installationId, deviceToken, name },
+    });
+  }
+
   ventasDelDia(): Promise<ResumenVentas> {
     return this.pedir('/report/sales/today');
   }

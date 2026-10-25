@@ -68,4 +68,14 @@ describe('ClienteApi (app del dueño)', () => {
       body: JSON.stringify({ filtro: { marca: 'Genérica' }, porcentaje: 5 }),
     });
   });
+
+  it('vincula la caja con su token de dispositivo', async () => {
+    const fetchFn = responder(201, { id: 'inst-1', name: 'Caja 1', linkedAt: null });
+    await new ClienteApi('http://nube', fetchFn).vincularCaja('inst-1', 'tok-123', 'Caja 1');
+    expect(fetchFn).toHaveBeenCalledWith('http://nube/installations/link', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ installationId: 'inst-1', deviceToken: 'tok-123', name: 'Caja 1' }),
+    });
+  });
 });
