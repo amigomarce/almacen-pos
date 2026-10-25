@@ -31,26 +31,56 @@
 ## 3. Modelo de datos (núcleo)
 
 ```
-products(id, barcode UNIQUE, alt_barcodes[], name, brand, format, unit[UN|KG],
-         category_id, price_clp INT, cost_clp INT, tax_type[AFECTO|EXENTO],
-         extra_tax_code NULL, stock_qty NUMERIC(12,3), stock_min, active, source[SEED|LOCAL],
-         seed_ref, created_at, updated_at, version)
+store_settings(id=1, rut, razon_social, giro, direccion, comuna,
+               modelo_emision[SOLO_NO_ELECTRONICOS|TODO_MEDIO_PAGO],
+               dte_provider[MOCK|PUENTE_MANUAL|SII_DIRECTO|PROVEEDOR_EXTERNO],
+               cash_rounding_enabled, updated_at, version)
+registers(id, name, active)
+products(id, barcode UNIQUE NULL, name, brand, format, unit[UN|KG],
+         category_id, price_clp INT, cost_clp INT NULL, tax_type[AFECTO|EXENTO],
+         extra_tax_code NULL, stock_qty_milli INT, stock_min_milli INT NULL, active,
+         source[SEED|LOCAL], seed_ref, scale_code NULL,
+         created_at, updated_at, version, deleted_at)
+product_barcodes(barcode PK, product_id)          -- códigos alternativos
 categories(id, name, parent_id)
+promotions(id, product_id, pack_qty, pack_price_clp, active, starts_at, ends_at, ...sync)
 price_history(id, product_id, old_price, new_price, changed_by, device, at)
-stock_movements(id, product_id, qty, type[VENTA|RECEPCION|AJUSTE|MERMA|ANULACION], ref_id, at)
-sales(id, number, cashier_id, register_id, status[OK|ANULADA], total_clp, rounding_clp,
-      payment_method, paid_clp, change_clp, created_at)
-sale_items(id, sale_id, product_id, name_snapshot, qty, unit_price_clp, discount_clp, line_total_clp)
-tax_documents(id, sale_id, dte_type[39|41], folio, xml, ted, track_id, sii_status,
-              sent_at, attempts, last_error)
+stock_movements(id, product_id, qty_milli, type[VENTA|RECEPCION|AJUSTE|MERMA|ANULACION],
+                ref_id, user_id, at)
+sales(id, number, register_id, cash_session_id, cashier_id, status[OK|ANULADA],
+      total_clp, rounding_clp, payment_method[EFECTIVO|DEBITO|CREDITO|TRANSFERENCIA],
+      paid_clp, change_clp, voided_at, voided_by, void_reason, created_at)
+sale_items(id, sale_id, product_id NULL, name_snapshot, unit, qty_milli, unit_price_clp,
+           tax_type, discount_clp, line_total_clp)
+tax_documents(id, sale_id, provider, dte_type[39|41] NULL, folio NULL, folio_externo NULL,
+              entrega[IMPRESA|VIRTUAL], total_clp, neto_clp, iva_clp, exento_clp,
+              xml NULL, ted NULL, track_id NULL,
+              sii_status[NO_APLICA|PENDIENTE|ENVIADO|ACEPTADO|RECHAZADO|REPARO],
+              sent_at, attempts, last_error, created_at)
 caf_ranges(id, dte_type, folio_from, folio_to, next_folio, xml_encrypted, expires_at)
-cash_sessions(id, register_id, opened_by, opened_at, opening_cash, closed_at, counted_cash)
-users(id, name, role, pin_hash)
+cash_sessions(id, register_id, opened_by, opened_at, opening_cash, closed_by, closed_at,
+              counted_cash)
+users(id, name, role[DUENO|CAJERO], pin_hash, active)
 quick_buttons(id, label, product_id, position)
+outbox(id, entity, entity_id, op, payload, created_at, synced_at)
 ```
 
-Reglas: montos `INTEGER` CLP; cantidades `NUMERIC(12,3)` (kg); `name_snapshot` y precio
-congelados en la venta.
+Columnas de sync (`created_at`, `updated_at`, `version`, `deleted_at`) en las tablas que
+edita el dueño desde la nube: `products`, `categories`, `promotions`, `quick_buttons`, `users`.
+
+Reglas:
+- Montos `INTEGER` en pesos CLP. Cantidades `INTEGER` en **milésimas** (`*_milli`): 1 unidad =
+  `1000`, 1,250 kg = `1250` (ver ADR-002). Nunca `REAL`.
+- `name_snapshot`, `unit_price_clp` y `tax_type` quedan congelados en la venta.
+- `products.barcode` es `NULL` en productos sin código (pan, verduras); se venden por
+  botón de venta rápida o por `scale_code` (código de balanza).
+- `tax_documents.total_clp` es el total **sin** redondeo de efectivo (el redondeo vive en
+  `sales.rounding_clp` y no afecta el DTE, ADR-001 §5).
+- `store_settings.modelo_emision` (ADR-001): con `SOLO_NO_ELECTRONICOS` (por defecto), las
+  ventas con tarjeta no generan `tax_documents` porque el voucher es la boleta.
+- `tax_documents.folio_externo`: folio que el cajero emitió en la app e-Boleta del SII
+  (estrategia D, `PuenteManualProvider`); en ese caso `dte_type`, `folio`, `xml` y `ted` van `NULL`.
+- No hay tabla de RVD (eliminado desde ago-2022, ADR-001).
 
 ## 4. Módulos de la caja (apps/pos)
 
