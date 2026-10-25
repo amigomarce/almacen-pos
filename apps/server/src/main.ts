@@ -3,14 +3,17 @@ import pkg from '../package.json' with { type: 'json' };
 import { crearApp } from './app.js';
 import { abrirDb } from './db/client.js';
 import { migrar } from './db/migrar.js';
+import { RUTA_ENV, cargarEnvLocal, variable } from './env.js';
 import { ClienteOff } from './productos/off.js';
 import { Semilla } from './productos/semilla.js';
 
-const puerto = Number(process.env.PORT ?? 3001);
+const conEnv = cargarEnvLocal();
+
+const puerto = Number(variable('PORT') ?? 3001);
 // Solo en la máquina de la caja; no se expone a la red local por ahora.
-const host = process.env.HOST ?? '127.0.0.1';
-const rutaDb = process.env.ALMACEN_DB ?? 'var/almacen.sqlite';
-const rutaSemilla = process.env.ALMACEN_SEMILLA ?? RUTA_SEMILLA;
+const host = variable('HOST') ?? '127.0.0.1';
+const rutaDb = variable('ALMACEN_DB') ?? 'var/almacen.sqlite';
+const rutaSemilla = variable('ALMACEN_SEMILLA') ?? RUTA_SEMILLA;
 
 const db = abrirDb(rutaDb);
 migrar(db);
@@ -18,13 +21,15 @@ const semilla = Semilla.abrir(rutaSemilla);
 
 // Open Food Facts en línea: exige un contacto en el User-Agent. Sin contacto (o con
 // ALMACEN_OFF=0) la caja solo usa el local y la semilla.
-const contacto = process.env.ALMACEN_CONTACTO?.trim();
+const contacto = variable('ALMACEN_CONTACTO');
 const off =
-  contacto && process.env.ALMACEN_OFF !== '0'
+  contacto && variable('ALMACEN_OFF') !== '0'
     ? new ClienteOff({ version: pkg.version, contacto, normalizacion: cargarNormalizacion() })
     : null;
 
 const app = crearApp({ db, semilla, off, logger: true });
+
+if (conEnv) app.log.info(`Variables cargadas de ${RUTA_ENV}`);
 
 if (semilla) {
   app.log.info(
@@ -39,7 +44,11 @@ if (semilla) {
 if (off) {
   app.log.info(`Consulta en línea a Open Food Facts activa (${off.userAgent}).`);
 } else {
-  app.log.warn('Consulta en línea a Open Food Facts desactivada (falta ALMACEN_CONTACTO).');
+  app.log.warn(
+    contacto
+      ? 'Consulta en línea a Open Food Facts desactivada (ALMACEN_OFF=0).'
+      : 'Consulta en línea a Open Food Facts desactivada (falta ALMACEN_CONTACTO).',
+  );
 }
 
 try {

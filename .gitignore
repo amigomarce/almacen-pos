@@ -7,6 +7,7 @@ src-tauri/target/
 !data/fixtures/*.sqlite
 .env
 .env.*
+!.env.example
 secrets/
 *.pfx
 *.p12

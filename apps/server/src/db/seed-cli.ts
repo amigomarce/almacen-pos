@@ -1,8 +1,10 @@
+import { cargarEnvLocal, variable } from '../env.js';
 import { abrirDb } from './client.js';
 import { migrar } from './migrar.js';
 import { sembrar } from './seed.js';
 
-const ruta = process.env.ALMACEN_DB ?? 'var/almacen.sqlite';
+cargarEnvLocal();
+const ruta = variable('ALMACEN_DB') ?? 'var/almacen.sqlite';
 const db = abrirDb(ruta);
 migrar(db);
 console.log(
