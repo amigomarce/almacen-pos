@@ -1,0 +1,16 @@
+{
+  "name": "@almacen/dte",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Documentos tributarios: interfaz DocumentoTributarioProvider e implementaciones.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@almacen/core": "workspace:*"
+  }
+}
