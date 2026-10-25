@@ -14,6 +14,9 @@ import type { RepoProductos } from './productos/servicio.js';
 import { crearRepoReportes } from './reportes/repo.js';
 import { registrarReportes } from './reportes/rutas.js';
 import type { RepoReportes } from './reportes/servicio.js';
+import { crearRepoRecepciones } from './recepciones/repo.js';
+import { registrarRecepciones } from './recepciones/rutas.js';
+import type { RepoRecepciones } from './recepciones/servicio.js';
 import { crearRepoSyncNube } from './sincronizacion/repo.js';
 import { registrarSincronizacion } from './sincronizacion/rutas.js';
 import type { RepoSyncNube } from './sincronizacion/servicio.js';
@@ -24,6 +27,7 @@ export interface OpcionesApp {
   repoInstalaciones?: RepoInstalaciones;
   repoProductos?: RepoProductos;
   repoReportes?: RepoReportes;
+  repoRecepciones?: RepoRecepciones;
   repoSync?: RepoSyncNube;
   verificarJwt?: VerificadorJwt;
   logger?: boolean;
@@ -34,6 +38,7 @@ export function crearApp({
   repoInstalaciones = crearRepoInstalaciones(db),
   repoProductos = crearRepoProductos(db),
   repoReportes = crearRepoReportes(db),
+  repoRecepciones = crearRepoRecepciones(db),
   repoSync = crearRepoSyncNube(db),
   verificarJwt = () => Promise.resolve(null),
   logger = false,
@@ -83,6 +88,7 @@ export function crearApp({
   registrarSincronizacion(app, { repoInstalaciones, repoSync });
   registrarProductos(app, { repo: repoProductos, verificarJwt });
   registrarReportes(app, { repo: repoReportes, verificarJwt });
+  registrarRecepciones(app, { repo: repoRecepciones, verificarJwt });
 
   return app;
 }

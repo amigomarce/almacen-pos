@@ -1,7 +1,7 @@
-import type { CategoriaWire, EventoSync, ProductoWire } from '@almacen/sync';
-import { eq } from 'drizzle-orm';
+import type { CategoriaWire, EventoSync, MovimientoStockWire, ProductoWire } from '@almacen/sync';
+import { eq, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { categories, priceHistory, products } from '../db/schema.js';
+import { categories, priceHistory, products, stockMovements } from '../db/schema.js';
 
 /**
  * Aplica los eventos que bajan de la nube (cambios del dueño). Solo `products` y `categories`
@@ -123,7 +123,38 @@ export function aplicarEventos(db: Db, eventos: readonly EventoSync[]): void {
       } else {
         aplicarCategoria(db, e.payload as CategoriaWire);
       }
+    } else if (e.entity === 'stock_movements' && e.op === 'INSERT') {
+      aplicarMovimiento(db, e.payload as MovimientoStockWire);
     }
     // Las demás entidades solo suben.
   }
+}
+
+/**
+ * Aplica un movimiento de stock que viene de la nube (ej. recepción desde el móvil).
+ * Idempotente (si ya existe, mismo id, no lo repite). No se re-encola (no es un cambio local).
+ * El movimiento de la nube no tiene usuario local: `user_id` va en NULL.
+ */
+function aplicarMovimiento(db: Db, w: MovimientoStockWire): void {
+  const existe = db
+    .select({ id: stockMovements.id })
+    .from(stockMovements)
+    .where(eq(stockMovements.id, w.id))
+    .get();
+  if (existe) return;
+  db.insert(stockMovements)
+    .values({
+      id: w.id,
+      productId: w.productId,
+      qtyMilli: w.qtyMilli,
+      type: w.type,
+      refId: w.refId,
+      userId: null,
+      at: new Date(w.at),
+    })
+    .run();
+  db.update(products)
+    .set({ stockQtyMilli: sql`${products.stockQtyMilli} + ${w.qtyMilli}` })
+    .where(eq(products.id, w.productId))
+    .run();
 }

@@ -7,6 +7,7 @@ import type {
 import type { categories, products, saleItems, sales, stockMovements } from '../db/schema.js';
 import type { EventoSaliente, RepoSyncNube } from '../sincronizacion/servicio.js';
 import type { FiltroPrecios, ProductoCloud, RepoProductos } from '../productos/servicio.js';
+import type { RepoRecepciones } from '../recepciones/servicio.js';
 
 export const SECRETO_JWT = 'secreto-de-prueba-suficientemente-largo-para-hs256';
 
@@ -211,6 +212,34 @@ export function repoProductosFalso(iniciales: ProductoCloud[] = []): RepoProduct
           payload: { id: p.id, priceClp: p.priceClp, version: p.version },
         });
       }
+      return Promise.resolve();
+    },
+  };
+}
+
+export interface RepoRecepcionesFalso extends RepoRecepciones {
+  guardados: {
+    producto?: ProductoCloud;
+    movimiento: Omit<typeof stockMovements.$inferInsert, 'ownerId'>;
+  }[];
+}
+
+/** Repositorio de recepciones en memoria: registra lo que se guardó. */
+export function repoRecepcionesFalso(
+  productos: ProductoCloud[] = [],
+  stock: Record<string, number> = {},
+): RepoRecepcionesFalso {
+  const guardados: RepoRecepcionesFalso['guardados'] = [];
+  return {
+    guardados,
+    porId(ownerId, id) {
+      return Promise.resolve(productos.find((p) => p.id === id && p.ownerId === ownerId) ?? null);
+    },
+    stockDe(_ownerId, productId) {
+      return Promise.resolve(stock[productId] ?? 0);
+    },
+    guardar(_ownerId, datos) {
+      guardados.push(datos);
       return Promise.resolve();
     },
   };

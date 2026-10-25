@@ -98,4 +98,28 @@ describe('aplicarEventos (pull)', () => {
     aplicarEventos(c.db, [{ entity: 'products', entityId: p.id, op: 'DELETE', payload: {} }]);
     expect(aguas()?.deletedAt).not.toBeNull();
   });
+
+  it('aplica un movimiento de la nube (recepción) y es idempotente', () => {
+    const p = aguas();
+    if (!p) throw new Error('sin producto');
+    const evento = {
+      entity: 'stock_movements' as const,
+      entityId: 'mov-nube-1',
+      op: 'INSERT' as const,
+      payload: {
+        id: 'mov-nube-1',
+        productId: p.id,
+        qtyMilli: 2000,
+        type: 'RECEPCION',
+        refId: 'r1',
+        userId: null,
+        at: new Date().toISOString(),
+      },
+    };
+    aplicarEventos(c.db, [evento]);
+    expect(aguas()?.stockQtyMilli).toBe(p.stockQtyMilli + 2000);
+    // Idempotente: aplicar de nuevo no duplica el movimiento ni el stock.
+    aplicarEventos(c.db, [evento]);
+    expect(aguas()?.stockQtyMilli).toBe(p.stockQtyMilli + 2000);
+  });
 });

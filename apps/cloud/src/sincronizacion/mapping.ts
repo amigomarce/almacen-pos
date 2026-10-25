@@ -72,3 +72,9 @@ export function movimientoDeWire(
 ): typeof stockMovements.$inferInsert {
   return { ...w, ownerId, at: new Date(w.at) };
 }
+
+/** Inverso: la fila de la nube al wire (para encolar una recepción del móvil). */
+export function movimientoAWire(m: typeof stockMovements.$inferSelect): MovimientoStockWire {
+  const { ownerId: _owner, at, ...resto } = m;
+  return { ...resto, type: m.type as MovimientoStockWire['type'], at: at.toISOString() };
+}
