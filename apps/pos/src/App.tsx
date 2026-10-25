@@ -1,4 +1,3 @@
-import { formatearClp } from '@almacen/core';
 import { useCallback, useEffect, useState } from 'react';
 import {
   api as apiPorDefecto,
@@ -10,6 +9,7 @@ import {
 import { AvisoModoPrueba } from './componentes/AvisoModoPrueba.js';
 import { PantallaApertura } from './pantallas/PantallaApertura.js';
 import { PantallaPin } from './pantallas/PantallaPin.js';
+import { PantallaVenta } from './pantallas/PantallaVenta.js';
 import { guardarToken, leerToken } from './sesion.js';
 import { useEstadoServidor, type Conexion } from './useEstadoServidor.js';
 
@@ -140,17 +140,7 @@ function Caja({
   if (!fase.caja) return <p className="pantalla-centrada">Cargando…</p>;
   if (!fase.caja.sesion)
     return <PantallaApertura api={api} caja={fase.caja.caja.name} alAbrir={alAbrir} />;
-  // Pantalla de venta: paso 9.
-  return (
-    <section className="pantalla-centrada">
-      <h2>Caja abierta</h2>
-      <p>
-        La abrió {fase.caja.sesion.abiertaPor.name} con{' '}
-        {formatearClp(fase.caja.sesion.efectivoInicialClp)}.
-      </p>
-      <p className="aviso">La pantalla de venta llega en el próximo paso.</p>
-    </section>
-  );
+  return <PantallaVenta api={api} />;
 }
 
 function EstadoConexion({ conexion }: { conexion: Conexion }) {

@@ -57,6 +57,45 @@ export interface EstadoCaja {
   sesion: SesionCaja | null;
 }
 
+export interface ProductoLocal {
+  id: string;
+  barcode: string | null;
+  name: string;
+  brand: string | null;
+  format: string | null;
+  unit: 'UN' | 'KG';
+  priceClp: number;
+  stockQtyMilli: number;
+}
+
+export type DatosBalanza =
+  | { codigoProducto: string; tipo: 'PESO'; pesoGramos: number }
+  | { codigoProducto: string; tipo: 'PRECIO'; precioClp: number };
+
+export type ResultadoLookup =
+  | { origen: 'LOCAL'; producto: ProductoLocal; balanza?: DatosBalanza }
+  | {
+      origen: 'SEMILLA' | 'OFF';
+      producto: { barcode: string; name: string; brand: string | null; format: string | null };
+    }
+  | { origen: 'NO_ENCONTRADO'; producto: null; balanza?: DatosBalanza };
+
+export interface LineaCotizada {
+  productoId: string | null;
+  nombre: string;
+  unidad: 'UN' | 'KG';
+  cantidadMilli: number;
+  precioUnitarioClp: number;
+  descuentoClp: number;
+  totalLineaClp: number;
+}
+
+export interface Cotizacion {
+  totalClp: number;
+  descuentoTotalClp: number;
+  lineas: LineaCotizada[];
+}
+
 type Fetch = typeof fetch;
 
 function esObjeto(v: unknown): v is Record<string, unknown> {
@@ -138,6 +177,20 @@ export class ClienteApi {
 
   abrirCaja(efectivoInicialClp: number): Promise<EstadoCaja> {
     return this.pedir<EstadoCaja>('/cash/open', { metodo: 'POST', cuerpo: { efectivoInicialClp } });
+  }
+
+  buscarCodigo(codigo: string): Promise<ResultadoLookup> {
+    return this.pedir<ResultadoLookup>(`/products/lookup/${encodeURIComponent(codigo)}`);
+  }
+
+  buscarProductos(texto: string): Promise<ProductoLocal[]> {
+    return this.pedir<ProductoLocal[]>(`/products?buscar=${encodeURIComponent(texto)}`);
+  }
+
+  cotizar(
+    lineas: readonly { productoId: string | null; cantidadMilli: number }[],
+  ): Promise<Cotizacion> {
+    return this.pedir<Cotizacion>('/sales/quote', { metodo: 'POST', cuerpo: { lineas } });
   }
 }
 

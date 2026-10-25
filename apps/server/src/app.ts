@@ -15,7 +15,9 @@ import { registrarImpresion } from './impresion/rutas.js';
 import { ServicioImpresion } from './impresion/servicio.js';
 import type { Ejecutar } from './impresion/transportes.js';
 import { registrarVentas } from './ventas/rutas.js';
+import { buscarProductos } from './productos/busqueda.js';
 import { buscarProducto, type DependenciasLookup } from './productos/lookup.js';
+import { requiereSesion } from './auth/rutas.js';
 import type { Semilla } from './productos/semilla.js';
 
 export interface OpcionesApp {
@@ -133,6 +135,13 @@ export function crearApp({
       product_count: meta['product_count'] ? Number(meta['product_count']) : null,
     };
   });
+
+  /** Búsqueda por nombre, marca o código (F2 en la caja). */
+  app.get<{ Querystring: { buscar?: string; limite?: string } }>(
+    '/products',
+    { onRequest: requiereSesion(sesiones) },
+    (req) => buscarProductos(db, req.query.buscar ?? '', Number(req.query.limite ?? 20) || 20),
+  );
 
   app.get<{ Params: { barcode: string } }>('/products/lookup/:barcode', async (req, reply) => {
     const r = await buscarProducto(

@@ -65,24 +65,26 @@ describe('entrar con PIN', () => {
     expect(screen.getByLabelText('Efectivo inicial')).toHaveTextContent('$12.000');
     await u.click(screen.getByRole('button', { name: 'Abrir caja' }));
 
-    expect(await screen.findByRole('heading', { name: 'Caja abierta' })).toBeInTheDocument();
-    expect(screen.getByText('La abrió Cajero con $12.000.')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Escanea o escribe un código')).toBeInTheDocument();
     expect(s.estado.sesionCaja?.efectivoInicialClp).toBe(12000);
   });
 
   it('funciona con el teclado físico', async () => {
     const u = userEvent.setup();
-    render(<App api={servidorFalso().api} />);
+    const s = servidorFalso();
+    render(<App api={s.api} />);
     await u.click(await screen.findByRole('button', { name: /Dueño/ }));
     await u.keyboard('12345{Backspace}{Enter}');
     expect(await screen.findByRole('heading', { name: 'Abrir Caja 1' })).toBeInTheDocument();
     await u.keyboard('5000{Enter}');
-    expect(await screen.findByText('La abrió Dueño con $5.000.')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Escanea o escribe un código')).toBeInTheDocument();
+    expect(s.estado.sesionCaja?.efectivoInicialClp).toBe(5000);
   });
 
   it('no pierde dígitos si las teclas llegan en ráfaga (antes de redibujar)', async () => {
     const u = userEvent.setup();
-    render(<App api={servidorFalso().api} />);
+    const s = servidorFalso();
+    render(<App api={s.api} />);
     await u.click(await screen.findByRole('button', { name: /Cajero/ }));
     // Eventos nativos seguidos, sin esperar a React entre uno y otro.
     for (const key of ['0', '0', '0', '0', 'Enter'])
@@ -90,7 +92,8 @@ describe('entrar con PIN', () => {
     expect(await screen.findByRole('heading', { name: 'Abrir Caja 1' })).toBeInTheDocument();
     for (const key of ['7', '5', '0', '0', 'Enter'])
       window.dispatchEvent(new KeyboardEvent('keydown', { key }));
-    expect(await screen.findByText('La abrió Cajero con $7.500.')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Escanea o escribe un código')).toBeInTheDocument();
+    expect(s.estado.sesionCaja?.efectivoInicialClp).toBe(7500);
   });
 
   it('el botón Entrar espera al menos 4 dígitos', async () => {
@@ -175,7 +178,7 @@ describe('sesión', () => {
     });
     render(<App api={s.api} />);
     await entrarComoCajero(u);
-    expect(await screen.findByText('La abrió Dueño con $20.000.')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Escanea o escribe un código')).toBeInTheDocument();
   });
 
   it('retoma la sesión guardada al recargar; si venció, pide el PIN', async () => {

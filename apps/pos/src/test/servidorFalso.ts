@@ -1,5 +1,32 @@
 import { vi } from 'vitest';
-import { ClienteApi, type Rol, type SesionCaja } from '../api.js';
+import { ClienteApi, type ProductoLocal, type Rol, type SesionCaja } from '../api.js';
+
+const producto = (
+  id: string,
+  name: string,
+  unit: 'UN' | 'KG',
+  priceClp: number,
+  stockQtyMilli: number,
+  barcode: string | null,
+): ProductoLocal => ({
+  id,
+  barcode,
+  name,
+  brand: null,
+  format: null,
+  unit,
+  priceClp,
+  stockQtyMilli,
+});
+
+export const PRODUCTOS_FALSOS: ProductoLocal[] = [
+  producto('p1', 'Bebida cola 1,5 L', 'UN', 1890, 24000, '7801'),
+  producto('p2', 'Tomate', 'KG', 1490, 8500, null),
+  producto('p3', 'Queso laminado', 'KG', 11990, 3250, null),
+  producto('p4', 'Galletas de vino', 'UN', 890, 30000, '78040000'),
+  producto('p5', 'Leche entera 1 L', 'UN', 1190, 1000, '7805'),
+  producto('p6', 'Harina a granel', 'KG', 1200, 20000, '7806'),
+];
 
 interface UsuarioFalso {
   id: string;
@@ -14,6 +41,7 @@ export interface EstadoFalso {
   tokens: Map<string, UsuarioFalso>;
   fallos: Map<string, number>;
   sesionCaja: SesionCaja | null;
+  productos: ProductoLocal[];
   /** Respuestas forzadas por "MÉTODO /ruta" (sin /api). */
   forzar: Record<string, { status: number; body: unknown }>;
 }
@@ -37,6 +65,7 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
     tokens: new Map(),
     fallos: new Map(),
     sesionCaja: null,
+    productos: PRODUCTOS_FALSOS,
     forzar: {},
     ...inicial,
   };
@@ -119,10 +148,93 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
         };
         return json(201, { caja: { id: 'c1', name: 'Caja 1' }, sesion: estado.sesionCaja });
       }
-      default:
+      case 'POST /sales/quote': {
+        if (!usuario) return sinSesion();
+        const lineas = (cuerpo['lineas'] ?? []) as { productoId: string; cantidadMilli: number }[];
+        const calculadas = lineas.map((l) => {
+          const p = estado.productos.find((x) => x.id === l.productoId);
+          const precio = p?.priceClp ?? 0;
+          const subtotal = Math.round((l.cantidadMilli * precio) / 1000);
+          // Promoción falsa: galletas 2 × $1.500.
+          const packs = p?.id === 'p4' ? Math.floor(l.cantidadMilli / 2000) : 0;
+          const descuento = packs * (2 * 890 - 1500);
+          return {
+            productoId: l.productoId,
+            nombre: p?.name ?? '?',
+            unidad: p?.unit ?? 'UN',
+            cantidadMilli: l.cantidadMilli,
+            precioUnitarioClp: precio,
+            descuentoClp: descuento,
+            totalLineaClp: subtotal - descuento,
+          };
+        });
+        return json(200, {
+          totalClp: calculadas.reduce((a, l) => a + l.totalLineaClp, 0),
+          descuentoTotalClp: calculadas.reduce((a, l) => a + l.descuentoClp, 0),
+          lineas: calculadas,
+        });
+      }
+      default: {
+        const busqueda = /^GET \/products\?buscar=(.*)$/.exec(clave);
+        if (busqueda) {
+          if (!usuario) return sinSesion();
+          const q = decodeURIComponent(busqueda[1] ?? '').toLowerCase();
+          return json(
+            200,
+            estado.productos.filter((p) => p.name.toLowerCase().includes(q)),
+          );
+        }
+        const lookup = /^GET \/products\/lookup\/(.+)$/.exec(clave);
+        if (lookup) {
+          const codigo = decodeURIComponent(lookup[1] ?? '');
+          const queso = estado.productos.find((p) => p.id === 'p3');
+          if (codigo === '2501234002500')
+            return json(200, {
+              origen: 'LOCAL',
+              producto: queso,
+              balanza: { codigoProducto: '01234', tipo: 'PESO', pesoGramos: 250 },
+            });
+          if (codigo === '2601234012000')
+            return json(200, {
+              origen: 'LOCAL',
+              producto: queso,
+              balanza: { codigoProducto: '01234', tipo: 'PRECIO', precioClp: 1200 },
+            });
+          if (codigo === '2509999002500')
+            return json(200, {
+              origen: 'LOCAL',
+              producto: estado.productos[0],
+              balanza: { codigoProducto: '09999', tipo: 'PESO', pesoGramos: 250 },
+            });
+          if (codigo === '7809')
+            return json(200, {
+              origen: 'SEMILLA',
+              producto: { barcode: '7809', name: 'Té verde', brand: null, format: null },
+            });
+          if (codigo === '0000')
+            return json(400, {
+              error: 'CODIGO_INVALIDO',
+              mensaje: 'El código de barras no es válido',
+            });
+          const p = estado.productos.find((x) => x.barcode === codigo);
+          return json(
+            200,
+            p ? { origen: 'LOCAL', producto: p } : { origen: 'NO_ENCONTRADO', producto: null },
+          );
+        }
         return json(404, { error: 'NO_ENCONTRADO', mensaje: `Ruta falsa no definida: ${clave}` });
+      }
     }
   });
 
   return { estado, fetchFn, api: new ClienteApi('/api', fetchFn) };
+}
+
+/** Servidor falso con una sesión de cajero ya abierta (para probar pantallas internas). */
+export function servidorConSesion(inicial: Partial<EstadoFalso> = {}) {
+  const s = servidorFalso(inicial);
+  const cajero = s.estado.usuarios.find((u) => u.role === 'CAJERO');
+  if (cajero) s.estado.tokens.set('t-prueba', cajero);
+  s.api.usarToken('t-prueba');
+  return s;
 }

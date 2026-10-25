@@ -9,6 +9,7 @@ import type { Db } from '../db/client.js';
 import { ErrorHttp } from '../errores.js';
 import {
   anularVenta,
+  cotizarVenta,
   obtenerVenta,
   registrarFolioSii,
   registrarVenta,
@@ -81,6 +82,23 @@ export function registrarVentas(
       );
       return reply.code(r.repetida ? 200 : 201).send(r.venta);
     },
+  );
+
+  /** Total del carrito mientras se escanea (mismas reglas que al cobrar). */
+  app.post<{ Body: { lineas: PedidoVenta['lineas'] } }>(
+    '/sales/quote',
+    {
+      onRequest: conSesion,
+      schema: {
+        body: {
+          type: 'object',
+          required: ['lineas'],
+          additionalProperties: false,
+          properties: { lineas: { ...ESQUEMA_VENTA.properties.lineas, minItems: 0 } },
+        },
+      },
+    },
+    (req) => cotizarVenta(db, req.body.lineas),
   );
 
   /** Última venta del turno abierto (para reimprimir o anular). */

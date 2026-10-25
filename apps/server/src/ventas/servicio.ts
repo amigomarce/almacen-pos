@@ -306,6 +306,37 @@ function armarLineas(db: Db, pedido: readonly LineaPedido[]): LineaVentaEntrada[
   });
 }
 
+export interface Cotizacion {
+  totalClp: number;
+  descuentoTotalClp: number;
+  lineas: LineaDetalle[];
+}
+
+/** Calcula el carrito como lo cobrará el servidor (precios y promociones vigentes), sin guardar. */
+export function cotizarVenta(
+  db: Db,
+  lineas: readonly LineaPedido[],
+  ahora = new Date(),
+): Cotizacion {
+  const entradas = armarLineas(db, lineas);
+  const ids = [...new Set(entradas.flatMap((l) => (l.productoId ? [l.productoId] : [])))];
+  const calculo = calcularVenta(entradas, promocionesVigentes(db, ids, ahora));
+  return {
+    totalClp: calculo.totalClp,
+    descuentoTotalClp: calculo.descuentoTotalClp,
+    lineas: calculo.lineas.map((l) => ({
+      productoId: l.productoId,
+      nombre: l.nombre,
+      unidad: l.unidad,
+      cantidadMilli: l.cantidadMilli,
+      precioUnitarioClp: l.precioUnitarioClp,
+      tipoImpuesto: l.tipoImpuesto,
+      descuentoClp: l.descuentoManualClp + l.descuentoPromoClp,
+      totalLineaClp: l.totalLineaClp,
+    })),
+  };
+}
+
 export interface ResultadoRegistro {
   venta: VentaDetalle;
   /** `true` si el id ya existía (reintento): no se creó otra venta. */
