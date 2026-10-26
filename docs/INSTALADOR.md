@@ -1,8 +1,8 @@
 # Instalador de la caja (Tauri + servidor Node)
 
 > **Estado (2026-10-26):** la app de macOS está compilada y probada. El instalador de Windows
-> queda **pendiente hasta contar con una máquina Windows**; el workflow existe pero no se ha
-> ejecutado.
+> **se genera en GitHub Actions** (workflow manual, ~16 min) y su contenido está revisado, pero
+> **falta instalarlo y probarlo en un PC Windows** real.
 
 La app instalada es una sola ventana de escritorio que arranca el servidor local como
 **sidecar** de Node 22. No requiere que el dueño abra una terminal ni instale Node.
@@ -73,9 +73,26 @@ Salida:
 El bundle de Windows usa `tauri.windows.conf.json`: solo NSIS e instalación por usuario (sin
 administrador).
 
-También está el workflow manual `.github/workflows/instalador-windows.yml`: reconstruye la
-semilla desde Open Food Facts (con caché de `data/raw`), compila y publica el `.exe` como
-artefacto. La primera corrida puede tardar por la descarga de los exports.
+### Sin máquina Windows: GitHub Actions
+
+El workflow manual `.github/workflows/instalador-windows.yml` corre en `windows-latest`:
+reconstruye la semilla desde Open Food Facts (con caché de `data/raw`), compila y publica el
+`.exe` como artefacto `instalador-windows` (se guarda 90 días).
+
+```bash
+gh workflow run instalador-windows.yml --ref main
+gh run list --workflow instalador-windows.yml --limit 1
+gh run download <id> -n instalador-windows -D ./instalador
+```
+
+La versión de pnpm sale de `packageManager` en `package.json`; no la repitas en el workflow
+(`pnpm/action-setup` falla con dos versiones).
+
+**Revisión del primer `.exe` (corrida 40298970706, 2026-10-26):** 30 MB comprimido, 127 MB
+instalado. Trae `almacen-pos.exe`, `node.exe` (v22.23.4 oficial), `server/server.mjs`, las 9
+migraciones, los CSV de categorías y marcas, `better-sqlite3` con el binario `win32-x64` y
+`seed.sqlite` con 11.039 productos y su atribución ODbL. Se revisó abriéndolo con 7-Zip
+(`brew install sevenzip`; `7zz x instalador.exe`), sin ejecutarlo.
 
 ### Si compilas desde otro sistema
 
@@ -126,13 +143,16 @@ guardar como PDF es [`manual-1-pagina.html`](manual-1-pagina.html) /
 
 ## Limitaciones actuales
 
-- El `.exe` no se ha generado ni probado: falta una máquina Windows (o ejecutar el workflow
-  cuando haya una). Tampoco está firmado: Windows SmartScreen puede advertir. Falta
-  firma/notarización.
+- El `.exe` se genera en CI pero **no se ha ejecutado en Windows**: falta probar instalación,
+  arranque del sidecar, semilla e impresora USB (`TODO` en `impresion/transportes.ts`).
+- No está firmado: Windows SmartScreen advierte "editor desconocido". En macOS la app no está
+  notarizada. Falta firma/notarización en ambos.
+- `better-sqlite3` viaja con los binarios de todas las plataformas (~16 MB); el sidecar solo
+  usa el de su sistema. Se puede podar para achicar el instalador.
 - No hay autoactualización.
 - El puerto es fijo (`3001`); si otra app lo ocupa, el sidecar no arranca. En pruebas se puede
   cambiar con `ALMACEN_PORT`, pero la interfaz compilada apunta a 3001.
-- La URL de la nube y el contacto de Open Food Facts se fijan al compilar; configurarlos desde
-  la app queda pendiente.
+- El contacto de Open Food Facts se fija al compilar. La URL de la nube ya se cambia desde
+  **Configuración** (ADR-016); `ALMACEN_CLOUD_URL` es solo el valor inicial.
 - Si se pierde el equipo, hay que restaurar el respaldo en otro equipo (ver
   [`RESPALDOS.md`](RESPALDOS.md)).

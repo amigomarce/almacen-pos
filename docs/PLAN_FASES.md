@@ -169,9 +169,17 @@ productos nuevos, boleta electrónica, respaldos y todas las pestañas de la app
   reiniciar.
 - Restauración desde la nube por consola (`respaldo:listar-nube`, `respaldo:restaurar-nube`).
 
-**Pendiente de la Fase 6:** el instalador de Windows queda **en pausa hasta tener una máquina
-Windows** (el workflow manual está escrito pero sin ejecutar); faltan firma/notarización y la
-prueba real con Supabase Storage en producción.
+### Estado al 2026-10-26 — instalador de Windows en CI
+
+**Hecho:** el workflow `instalador-windows.yml` genera el `.exe` en GitHub Actions (sin máquina
+Windows). Se revisó su contenido: app, Node 22 oficial, servidor, migraciones, `better-sqlite3`
+para `win32-x64` y semilla de 11.039 productos con atribución ODbL. La app de macOS se recompiló
+con los cambios de ADR-017 y la poda del outbox. Detalle en [`INSTALADOR.md`](INSTALADOR.md).
+
+**Pendiente de la Fase 6:**
+- Instalar y probar el `.exe` en un PC Windows real (sidecar, semilla, impresora USB).
+- Firma del instalador (Windows) y notarización (macOS).
+- Prueba real del respaldo cifrado con Supabase Storage.
 
 ## Mejoras futuras (backlog)
 
