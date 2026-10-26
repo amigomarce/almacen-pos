@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="es-CL">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Manual rápido del dueño — Almacén de Barrio</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 8mm 9mm;
+      }
+
+      :root {
+        --azul: #0b6bcb;
+        --verde: #1a7f37;
+        --gris: #5b6170;
+        --borde: #d9dce3;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: #16181d;
+        background: #fff;
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        font-size: 9.5pt;
+        line-height: 1.36;
+      }
+
+      .hoja {
+        column-count: 2;
+        column-gap: 7mm;
+      }
+
+      h1 {
+        column-span: all;
+        margin: 0 0 0.5mm;
+        color: var(--azul);
+        font-size: 17pt;
+        line-height: 1.1;
+      }
+
+      .bajada {
+        column-span: all;
+        margin: 0 0 2mm;
+        padding-bottom: 1.5mm;
+        border-bottom: 2px solid var(--azul);
+        color: var(--gris);
+        font-size: 8.5pt;
+      }
+
+      h2 {
+        margin: 2.4mm 0 1mm;
+        padding-bottom: 0.5mm;
+        border-bottom: 1px solid var(--borde);
+        color: var(--azul);
+        font-size: 10.4pt;
+        break-after: avoid;
+      }
+
+      p {
+        margin: 0 0 1mm;
+      }
+
+      ul,
+      ol {
+        margin: 0 0 1mm;
+        padding-left: 4.2mm;
+      }
+
+      li {
+        margin: 0 0 0.55mm;
+      }
+
+      strong {
+        color: #111;
+      }
+
+      .nota {
+        margin: 1mm 0;
+        padding: 1mm 1.5mm;
+        border-left: 2px solid #e8c38b;
+        background: #fff8e6;
+      }
+
+      .soporte {
+        margin-top: 2mm;
+        padding-top: 1.5mm;
+        border-top: 1px solid var(--borde);
+        color: var(--gris);
+      }
+
+      .soporte strong {
+        color: #16181d;
+      }
+
+      .no-print {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+        padding: 8px 14px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--azul);
+        color: #fff;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      section {
+        break-inside: avoid;
+      }
+
+      @media print {
+        .no-print {
+          display: none;
+        }
+
+        body {
+          font-size: 9.3pt;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <button class="no-print" onclick="window.print()">Imprimir / Guardar PDF</button>
+
+    <div class="hoja">
+      <h1>Manual rápido del dueño</h1>
+      <p class="bajada">Caja + app del dueño · versión 0.1 · octubre 2026</p>
+
+      <section>
+        <h2>1. Primer arranque (solo una vez)</h2>
+        <ol>
+          <li>
+            Abre la app de la caja. Si es nueva, crea el <strong>dueño</strong> (nombre y PIN de 4 a
+            8 dígitos), el nombre de la <strong>caja</strong> y, si quieres, un
+            <strong>cajero</strong> con su PIN.
+          </li>
+          <li>
+            Elige cómo emitir: <strong>Con la app del SII</strong> (comprobante y boleta en
+            e-Boleta) o <strong>Desde esta caja</strong> (boleta propia; requiere certificado y
+            CAF).
+          </li>
+          <li>
+            En <strong>Configuración → Primera configuración</strong> completa RUT, razón social,
+            giro, dirección y comuna; configura la impresora y prueba el lector.
+          </li>
+          <li>
+            Para vincular el celular: en la caja abre
+            <strong>Configuración → Primera configuración</strong> y muestra el QR. En la app del
+            dueño entra a <strong>Caja → Escanear QR de la caja</strong>.
+          </li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>2. Vender en la caja</h2>
+        <ol>
+          <li><strong>Abre la caja</strong> con el efectivo inicial del turno.</li>
+          <li>
+            Escanea el código o busca el producto (<strong>F2</strong>). Para pan, verduras o venta
+            por monto usa los botones rápidos o la línea por peso/monto.
+          </li>
+          <li>Ajusta la cantidad con <strong>F4</strong> si hace falta.</li>
+          <li>
+            Pulsa <strong>Cobrar (F12)</strong> y elige
+            <strong>Efectivo, Débito, Crédito o Transferencia</strong>. En efectivo escribe cuánto
+            pagó el cliente para calcular el vuelto.
+          </li>
+          <li>Entrega el comprobante o la boleta que salga por la impresora.</li>
+        </ol>
+        <ul>
+          <li>
+            <strong>Anular:</strong> Caja → última venta → Anular venta. Pide autorización del dueño
+            y motivo. El stock vuelve solo; si la boleta ya se emitió, anúlala también en el SII.
+          </li>
+          <li><strong>Reimprimir:</strong> Caja → última venta → Reimprimir.</li>
+          <li>
+            Atajos: <strong>F2</strong> buscar, <strong>F4</strong> cantidad,
+            <strong>F12</strong> cobrar, <strong>Esc</strong> cancelar.
+          </li>
+          <li>
+            Con tarjeta, según la configuración, el <strong>voucher puede ser la boleta</strong>. Si
+            no, emite la boleta en la app del SII.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>3. Cerrar el turno</h2>
+        <p>
+          <strong>Caja → Cerrar caja</strong>, cuenta el efectivo y confirma. La caja imprime el
+          cierre con la diferencia entre lo contado y lo esperado. Ese cierre aparece en la app del
+          dueño.
+        </p>
+      </section>
+
+      <section>
+        <h2>Productos nuevos</h2>
+        <p>
+          Si el código no está en la base, la caja ofrece crearlo: escribe nombre, precio, si se
+          vende por unidad o por kg y el stock. La próxima vez lo reconoce solo. Para balanza
+          (códigos que empiezan con 20–29) usa la etiqueta del pesaje.
+        </p>
+      </section>
+
+      <p class="nota">
+        <strong>Regla de oro:</strong> la caja es la fuente de verdad. No borres archivos ni la
+        base; si algo no cuadra, crea un respaldo y contacta a soporte.
+      </p>
+
+      <section>
+        <h2>4. App del dueño (celular)</h2>
+        <p>
+          Entra con el <strong>correo y contraseña</strong> que te entregó Arrayan Labs. Necesita
+          internet; la caja sigue vendiendo aunque el celular no tenga señal.
+        </p>
+        <ul>
+          <li>
+            <strong>Inicio:</strong> ventas de hoy, último cierre con su diferencia y productos con
+            stock bajo.
+          </li>
+          <li>
+            <strong>Productos:</strong> busca por nombre, marca o código y
+            <strong>cambia el precio</strong> de venta.
+          </li>
+          <li>
+            <strong>Precios:</strong> sube o baja precios por <strong>marca</strong> o
+            <strong>ID de categoría</strong> (ej. +5 o -10 %).
+          </li>
+          <li>
+            <strong>Recibir:</strong> escanea mercadería con la cámara o el código; suma 1 unidad/kg
+            por escaneo.
+          </li>
+          <li>
+            <strong>Caja:</strong> vincula la caja escaneando su QR; también permite escribir los
+            datos a mano.
+          </li>
+        </ul>
+        <p class="nota">
+          <strong>Precios</strong> aplica el cambio de inmediato y no tiene vista previa: revisa
+          bien la marca, la categoría y el porcentaje antes de confirmar.
+        </p>
+      </section>
+
+      <section>
+        <h2>5. Boleta electrónica</h2>
+        <ul>
+          <li>
+            <strong>Con la app del SII:</strong> la caja imprime “Comprobante de venta — no válido
+            como boleta”. Emite la boleta en la app e-Boleta del SII por el total exacto y, si
+            quieres, registra el folio.
+          </li>
+          <li>
+            <strong>Desde esta caja:</strong> la boleta se timbra e imprime en la caja y se envía al
+            SII en segundo plano. Si no hay internet, queda en cola y se envía al volver la
+            conexión.
+          </li>
+          <li>
+            No borres los XML ni las boletas: deben conservarse <strong>6 años</strong>. La caja los
+            guarda.
+          </li>
+          <li>
+            Si aparece <strong>MODO PRUEBA</strong>, la caja no emite boletas: cambia la modalidad
+            en Configuración.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>6. Respaldos y problemas</h2>
+        <ul>
+          <li>
+            La caja respalda sola <strong>una vez al día</strong> y conserva los últimos 14. En
+            <strong>Configuración → Respaldos</strong> puedes crear uno ahora.
+          </li>
+          <li>
+            En <strong>Configuración → Nube y respaldo cifrado</strong> puedes activar el respaldo
+            automático. Descarga la <strong>clave de respaldo</strong> y guárdala: sin ella no se
+            puede restaurar.
+          </li>
+          <li>
+            <strong>Copia también la carpeta local a un pendrive</strong> una vez por semana. El
+            respaldo incluye la clave del SII: guárdalo en un lugar seguro.
+          </li>
+          <li>
+            <strong>Sin internet:</strong> la caja sigue vendiendo; las boletas SII se encolan.
+          </li>
+          <li>
+            <strong>No imprime:</strong> revisa papel, cable o red y usa
+            <strong>Configuración → Impresora → Imprimir prueba</strong>.
+          </li>
+          <li>
+            <strong>No abre o no conecta:</strong> cierra y vuelve a abrir la app; si sigue,
+            reinicia el equipo.
+          </li>
+          <li>
+            <strong>Olvidaste el PIN del dueño:</strong> restaura un respaldo o contacta a soporte.
+          </li>
+        </ul>
+      </section>
+
+      <p class="soporte">
+        <strong>Soporte:</strong> Arrayan Labs ·
+        <a href="mailto:arrayan.labs@gmail.com">arrayan.labs@gmail.com</a>
+      </p>
+    </div>
+  </body>
+</html>

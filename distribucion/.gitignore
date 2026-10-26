@@ -1,0 +1,8 @@
+# Binarios grandes: se generan localmente o en CI y no se versionan.
+instalables/macOS/*.dmg
+instalables/macOS/*.zip
+instalables/Windows/*.exe
+instalables/Windows/*.msi
+instalables/Android/*.apk
+instalables/Android/*.aab
+instalables/iPhone/*.ipa
