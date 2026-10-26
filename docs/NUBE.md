@@ -26,7 +26,7 @@ Se cargan con `fly secrets` (nunca en `fly.toml` ni en el repo):
 | `CLOUD_DATABASE_URL` | Postgres de Supabase. Hoy usa la conexión **directa IPv6** (`db.<ref>.supabase.co:5432?sslmode=no-verify`); ver [Base de datos](#base-de-datos) |
 | `SUPABASE_URL` | Validar el JWT del dueño contra el JWKS del proyecto |
 | `SUPABASE_JWT_SECRET` | Validación HS256 de respaldo y firma de la `service_role` legacy |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Cargada.** Activa el respaldo cifrado en Storage (ADR-016). Hoy es una `service_role` legacy (JWT) firmada con el JWT secret. Se puede reemplazar por `SUPABASE_SECRET_KEY` (`sb_secret_…`), que tiene prioridad |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Cargada.** Activa el respaldo cifrado en Storage (ADR-016). Es la `service_role` del proyecto (JWT legacy). Se puede reemplazar por `SUPABASE_SECRET_KEY` (`sb_secret_…`), que tiene prioridad |
 | `SUPABASE_STORAGE_BUCKET` | Opcional; por defecto `respaldos` |
 
 ```bash
@@ -70,9 +70,9 @@ fly ssh console --app almacen-pos-nube -C \
 - Bucket privado `respaldos` creado; `SUPABASE_SERVICE_ROLE_KEY` cargada y nube redesplegada.
 - Caja `01a17677-cede-7337-91fe-4867efd1bdfc` vinculada al dueño
   `arrayan.labs@gmail.com` (`10a5536b-93dc-4994-bf73-af7ae9269012`).
-- Primer respaldo cifrado subido y verificado: objeto
-  `…/01a17883-ea85-7589-8404-120539855766.apos`, 7.392 bytes, SHA-256
-  `d778c4f5…2fd126d`; descargado, descifrado y abierto correctamente.
+- Dos respaldos cifrados subidos y verificados (7.392 y 7.390 bytes), con SHA-256
+  `d778c4f5…2fd126d` y `319ce466…72cab12`; ambos descargados, descifrados y abiertos
+  correctamente. El segundo se subió ya con la `service_role` real del proyecto.
 - La caja quedó con `cloud_url = https://almacen-pos-nube.fly.dev`, respaldo automático activo
   y retención 7.
 

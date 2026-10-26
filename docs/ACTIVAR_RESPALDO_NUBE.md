@@ -11,7 +11,7 @@ bucket y la secret key se crean en el panel de Supabase y el secreto se carga en
 > La caja nunca recibe la secret key: sube el paquete cifrado a `apps/cloud` con su token de
 > dispositivo y es la nube la que escribe en Storage.
 
-> **Estado 2026-10-26:** esta instalación ya quedó activa usando una `service_role` legacy
+> **Estado 2026-10-26:** esta instalación ya quedó activa usando la `service_role` del proyecto
 > (`SUPABASE_SERVICE_ROLE_KEY`) porque aún no se creó la secret key nueva. El procedimiento de
 > abajo sirve igual para crearla y rotar; `SUPABASE_SECRET_KEY` tiene prioridad.
 
