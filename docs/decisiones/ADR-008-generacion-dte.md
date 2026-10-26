@@ -79,7 +79,8 @@ el `DigestValue` generado coincide con el SHA1 del C14N calculado por `libxml2`/
 **Invariante para la Etapa 2**: el `EnvioBOLETA` no debe declarar namespaces adicionales en
 ancestros del `<DTE>` (por ejemplo `xmlns:xsi`). Si los declara, C14N los incluye en el
 `<Documento>` y el digest deja de cuadrar. La alternativa, si se necesitan, es pasarlos a la
-firma y canonicalizar con ellos.
+firma y canonicalizar con ellos. La Etapa 2 respeta esta invariante y además emite la firma
+con etiquetas pares (C14N expande las autocerradas). Ver ADR-009.
 
 ## Verificación
 
@@ -104,11 +105,15 @@ firma y canonicalizar con ellos.
 
 ## `TODO(SII)` pendiente de validar en el ambiente de certificación
 
-1. Validar el `EnvioBOLETA` completo contra `EnvioBOLETA_v11.xsd` y su firma de `SetDTE` (Etapa 2).
+1. ~~Validar el `EnvioBOLETA` completo contra `EnvioBOLETA_v11.xsd` y su firma de `SetDTE` (Etapa 2).~~
+   **Hecho en la Etapa 2** (ADR-009): valida con `xmllint --schema`, el digest coincide con
+   C14N de `libxml2` y la firma verifica con `openssl`.
 2. `UnmdItem`: el formato v4.2 lo declara "sin validación"; confirmar si la validación de negocio
    del SII exige un código específico (p. ej. `KGM`).
-3. Serialización final del envío a **ISO-8859-1** con su declaración `encoding` (el fragmento
-   `<DTE>` no la lleva; la lleva el archivo `EnvioBOLETA`).
+3. ~~Serialización final del envío a **ISO-8859-1** con su declaración `encoding` (el fragmento
+   `<DTE>` no la lleva; la lleva el archivo `EnvioBOLETA`).~~
+   **Hecho en la Etapa 2** (ADR-009): el archivo se declara ISO-8859-1 y el cliente lo codifica
+   a bytes Latin-1 antes de enviarlo.
 4. Descifrado del `RSASK` real del CAF (los fixtures usan PEM PKCS#1 sin cifrar) y confirmación de
    que el `<RE>` del CAF real viene sin puntos.
 5. `TmstFirma`/`TSTED` en hora local sin offset: confirmar que el SII lo acepta así.

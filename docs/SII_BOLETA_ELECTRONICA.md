@@ -425,3 +425,11 @@ Normativa pendiente de confirmar (`TODO(SII)`):
 - Contingencia si el equipo de la caja falla por completo con A: ¿qué permite el SII
   (otro equipo con el mismo CAF, boletas en papel, etc.)?
 - Límite numérico del rate limit de la API (no publicado; leerlo de `X-RateLimit-Limit`).
+- Envío de boletas (ADR-009): confirmar que `RutReceptor` es siempre `60803000-K` y que
+  `RutEnvia` debe ser el RUT autenticado (el ejemplo del OpenAPI usa otro).
+- Envío de boletas: confirmar que el archivo `EnvioBOLETA` va en ISO-8859-1 y si el SII
+  tolera UTF-8; confirmar `FchResol`/`NroResol` reales para boletas y si `NroResol=0` vale.
+- Token del SII: confirmar si dura 1 h desde la emisión o desde el último uso, y la
+  semántica de `X-Retry-After` cuando la API responde 405.
+- Lote de boletas: confirmar si el máximo recomendado sigue siendo 50 (el schema admite 500)
+  y qué hacer con el lote ante un `RPT` (envío repetido).

@@ -61,6 +61,7 @@ export function base64urlABase64(v: string): string {
 
 const NS_DSIG = 'http://www.w3.org/2000/09/xmldsig#';
 const C14N = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315';
+const ENVOLVENTE = 'http://www.w3.org/2000/09/xmldsig#enveloped-signature';
 const RSA_SHA1 = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
 const SHA1 = 'http://www.w3.org/2000/09/xmldsig#sha1';
 
@@ -71,6 +72,18 @@ export function signedInfoCanonico(id: string, digest: string): string {
     `<CanonicalizationMethod Algorithm="${C14N}"></CanonicalizationMethod>` +
     `<SignatureMethod Algorithm="${RSA_SHA1}"></SignatureMethod>` +
     `<Reference URI="#${id}"><Transforms><Transform Algorithm="${C14N}"></Transform></Transforms>` +
+    `<DigestMethod Algorithm="${SHA1}"></DigestMethod><DigestValue>${digest}</DigestValue></Reference>` +
+    `</SignedInfo>`
+  );
+}
+
+/** Forma canónica de <SignedInfo> para la firma envolvente del token. */
+export function signedInfoEnvolvente(digest: string): string {
+  return (
+    `<SignedInfo xmlns="${NS_DSIG}">` +
+    `<CanonicalizationMethod Algorithm="${C14N}"></CanonicalizationMethod>` +
+    `<SignatureMethod Algorithm="${RSA_SHA1}"></SignatureMethod>` +
+    `<Reference URI=""><Transforms><Transform Algorithm="${ENVOLVENTE}"></Transform></Transforms>` +
     `<DigestMethod Algorithm="${SHA1}"></DigestMethod><DigestValue>${digest}</DigestValue></Reference>` +
     `</SignedInfo>`
   );

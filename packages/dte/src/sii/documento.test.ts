@@ -226,6 +226,13 @@ describe('generarDte (boleta 39/41)', () => {
     );
   });
 
+  it('rechaza una cantidad no positiva', () => {
+    const caf = parsearCaf(generarCafPrueba({ tipoDte: 39 }).xml);
+    expect(() => generar([{ ...lineaAfecta, cantidadMilli: 0 }], caf)).toThrow(
+      expect.objectContaining({ codigo: 'CANTIDAD_INVALIDA' }),
+    );
+  });
+
   it('rechaza una cantidad fraccionaria en un producto por unidad', () => {
     const caf = parsearCaf(generarCafPrueba({ tipoDte: 39 }).xml);
     expect(() => generar([{ ...lineaAfecta, cantidadMilli: 1500 }], caf)).toThrow(

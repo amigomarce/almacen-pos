@@ -5,8 +5,25 @@ import type { CertificadoFirma } from './tipos.js';
 
 const NS_DSIG = 'http://www.w3.org/2000/09/xmldsig#';
 const C14N = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315';
+const ENVOLVENTE = 'http://www.w3.org/2000/09/xmldsig#enveloped-signature';
 const RSA_SHA1 = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
 const SHA1 = 'http://www.w3.org/2000/09/xmldsig#sha1';
+
+/** Transformada aplicada a la referencia antes de calcular el digest. */
+export type TransformadaFirma = 'c14n' | 'envolvente';
+
+export interface OpcionesFirma {
+  /**
+   * Valor del atributo `URI` de `<Reference>`: `#ID` para firmar un elemento con
+   * `xs:ID`, o `""` para firmar el documento completo (firma envolvente).
+   */
+  referencia: string;
+  /** Forma canónica del documento o subárbol que se firma, en UTF-8. */
+  canonico: string;
+  certificado: CertificadoFirma;
+  /** `c14n` (por defecto) o `envolvente` (el SII la exige para el token). */
+  transformada?: TransformadaFirma;
+}
 
 function base64urlABase64(v: string): string {
   const b64 = v.replaceAll('-', '+').replaceAll('_', '/');
@@ -30,28 +47,36 @@ function datosCertificado(certPem: string): {
   };
 }
 
+function validarReferencia(referencia: string): void {
+  if (referencia !== '' && !/^#[A-Za-z_][A-Za-z0-9._-]*$/.test(referencia)) {
+    throw new ErrorDominio('REFERENCIA_INVALIDA', `Referencia XMLDSig inválida: "${referencia}"`);
+  }
+}
+
 /**
- * Firma XMLDSig del elemento `<Documento>` referenciado por su `ID`.
+ * Firma XMLDSig genérica (RSA-SHA1 + SHA1 + C14N), con la forma que exige el SII:
+ * `KeyInfo` con `RSAKeyValue` y `X509Data/X509Certificate`.
  *
- * - `DigestValue`: SHA1 sobre la forma canónica (C14N) del `<Documento>` en UTF-8.
- * - `SignatureValue`: RSA-SHA1 sobre la forma canónica de `<SignedInfo>` en UTF-8.
+ * - `DigestValue`: SHA1 sobre la forma canónica (C14N) del subárbol referenciado.
+ * - `SignatureValue`: RSA-SHA1 sobre la forma canónica de `<SignedInfo>`.
  *
- * El `<Documento>` no tiene namespace (el DTE interno se firma aislado), así que su C14N
- * coincide con la cadena compacta que se genera. Ver ADR-008.
+ * Para el DTE de boleta la referencia es `#ID` con transformada C14N. Para el token del
+ * SII la referencia es `""` con transformada enveloped-signature. Ver ADR-008 y ADR-009.
  */
-export function firmarDocumento(
-  id: string,
-  documentoCanonico: string,
-  certificado: CertificadoFirma,
-): string {
-  const digest = createHash('sha1').update(Buffer.from(documentoCanonico, 'utf8')).digest('base64');
+export function firmarXml(opciones: OpcionesFirma): string {
+  const { referencia, canonico, certificado } = opciones;
+  validarReferencia(referencia);
+
+  const transformada = opciones.transformada ?? 'c14n';
+  const algoritmoTransform = transformada === 'envolvente' ? ENVOLVENTE : C14N;
+  const digest = createHash('sha1').update(Buffer.from(canonico, 'utf8')).digest('base64');
 
   // Forma canónica de <SignedInfo> (etiquetas pares y xmlns explícito), que es lo que se firma.
   const signedInfoCanonico =
     `<SignedInfo xmlns="${NS_DSIG}">` +
     `<CanonicalizationMethod Algorithm="${C14N}"></CanonicalizationMethod>` +
     `<SignatureMethod Algorithm="${RSA_SHA1}"></SignatureMethod>` +
-    `<Reference URI="#${id}"><Transforms><Transform Algorithm="${C14N}"></Transform></Transforms>` +
+    `<Reference URI="${referencia}"><Transforms><Transform Algorithm="${algoritmoTransform}"></Transform></Transforms>` +
     `<DigestMethod Algorithm="${SHA1}"></DigestMethod><DigestValue>${digest}</DigestValue></Reference>` +
     `</SignedInfo>`;
 
@@ -62,13 +87,15 @@ export function firmarDocumento(
 
   const { modulo, exponente, certificadoB64 } = datosCertificado(certificado.certificadoPem);
 
-  // Forma literal (etiquetas autocerradas) que se incrusta en el DTE.
+  // Forma literal que se incrusta en el documento. Se usan etiquetas pares (no
+  // autocerradas) para que coincida con la forma canónica C14N: C14N expande `<x/>` a
+  // `<x></x>`, y el digest del `<SetDTE>` se calcula sobre el documento ya incrustado.
   const signedInfoLiteral =
     `<SignedInfo>` +
-    `<CanonicalizationMethod Algorithm="${C14N}"/>` +
-    `<SignatureMethod Algorithm="${RSA_SHA1}"/>` +
-    `<Reference URI="#${id}"><Transforms><Transform Algorithm="${C14N}"/></Transforms>` +
-    `<DigestMethod Algorithm="${SHA1}"/><DigestValue>${digest}</DigestValue></Reference>` +
+    `<CanonicalizationMethod Algorithm="${C14N}"></CanonicalizationMethod>` +
+    `<SignatureMethod Algorithm="${RSA_SHA1}"></SignatureMethod>` +
+    `<Reference URI="${referencia}"><Transforms><Transform Algorithm="${algoritmoTransform}"></Transform></Transforms>` +
+    `<DigestMethod Algorithm="${SHA1}"></DigestMethod><DigestValue>${digest}</DigestValue></Reference>` +
     `</SignedInfo>`;
 
   return (
@@ -79,4 +106,35 @@ export function firmarDocumento(
     `<X509Data><X509Certificate>${certificadoB64}</X509Certificate></X509Data></KeyInfo>` +
     `</Signature>`
   );
+}
+
+/**
+ * Firma XMLDSig del elemento `<Documento>` referenciado por su `ID`.
+ *
+ * El `<Documento>` no tiene namespace propio (hereda el del `<DTE>`), así que su C14N
+ * declara el namespace en el nodo raíz de la referencia. Se firma esa forma, no la literal.
+ * Ver ADR-008.
+ */
+export function firmarDocumento(
+  id: string,
+  documentoCanonico: string,
+  certificado: CertificadoFirma,
+): string {
+  return firmarXml({ referencia: `#${id}`, canonico: documentoCanonico, certificado });
+}
+
+/**
+ * Firma envolvente del documento completo (la que exige el SII para el token).
+ *
+ * El digest se calcula sobre `documentoCanonico` (el documento **sin** la firma); al
+ * insertar el `<Signature>` dentro del elemento raíz, la transformada
+ * `enveloped-signature` lo excluye y el digest vuelve a coincidir.
+ */
+export function firmarEnvolvente(documentoCanonico: string, certificado: CertificadoFirma): string {
+  return firmarXml({
+    referencia: '',
+    canonico: documentoCanonico,
+    certificado,
+    transformada: 'envolvente',
+  });
 }

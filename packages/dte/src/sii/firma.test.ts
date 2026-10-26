@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 import { createHash, createPublicKey, verify } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { firmarDocumento } from './firma.js';
+import { firmarDocumento, firmarEnvolvente, firmarXml } from './firma.js';
 import { CERTIFICADO_PEM, CLAVE_PRIVADA_PEM, signedInfoCanonico } from './test/ayudas.js';
 
 const ID = 'T39F1';
@@ -23,6 +23,28 @@ describe('firma XMLDSig', () => {
   it('calcula el DigestValue como SHA1 del Documento (UTF-8)', () => {
     const digest = /<DigestValue>([^<]+)<\/DigestValue>/.exec(firma)?.[1];
     expect(digest).toBe(createHash('sha1').update(Buffer.from(DOCUMENTO, 'utf8')).digest('base64'));
+  });
+
+  it('rechaza una referencia XMLDSig inválida', () => {
+    expect(() =>
+      firmarXml({
+        referencia: 'sin-almohadilla',
+        canonico: DOCUMENTO,
+        certificado: {
+          certificadoPem: CERTIFICADO_PEM,
+          clavePrivadaPem: CLAVE_PRIVADA_PEM,
+        },
+      }),
+    ).toThrow(expect.objectContaining({ codigo: 'REFERENCIA_INVALIDA' }));
+  });
+
+  it('firma de forma envolvente con Reference URI=""', () => {
+    const envolvente = firmarEnvolvente(DOCUMENTO, {
+      certificadoPem: CERTIFICADO_PEM,
+      clavePrivadaPem: CLAVE_PRIVADA_PEM,
+    });
+    expect(envolvente).toContain('<Reference URI="">');
+    expect(envolvente).toContain('http://www.w3.org/2000/09/xmldsig#enveloped-signature');
   });
 
   it('la SignatureValue verifica contra el SignedInfo canónico', () => {

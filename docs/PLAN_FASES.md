@@ -70,6 +70,9 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
 `outbox` local no se poda; el saldo de stock de la nube se agrega en memoria.
 
 ## Fase 5 — Boleta electrónica real
+- **Estado del código (2026-10-25):** Etapa 1 (núcleo DTE, ADR-008) y Etapa 2 (envío +
+  cliente de la API, ADR-009) hechas y probadas con fixtures. Falta la Etapa 3 (provider,
+  cola offline y persistencia de folios) y la certificación real.
 - **Orden:** primero el **código** (esta fase), después la **certificación**. La fase deja el
   módulo completo y probado con fixtures; la certificación real (set de pruebas, F2117) se hace
   al final, con el certificado y CAF del dueño. Mientras no esté certificado, las instalaciones

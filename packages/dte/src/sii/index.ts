@@ -7,3 +7,5 @@ export * from './ted.js';
 export * from './firma.js';
 export * from './folios.js';
 export * from './documento.js';
+export * from './envio.js';
+export * from './cliente.js';
