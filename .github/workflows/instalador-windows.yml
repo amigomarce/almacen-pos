@@ -7,12 +7,12 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # La versión sale de "packageManager" en package.json.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -27,7 +27,7 @@ jobs:
 
       # La semilla de productos no se versiona: se reconstruye desde los exports de OFF.
       # La caché evita descargar el export completo en cada corrida.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: data/raw
           key: off-raw-${{ runner.os }}
@@ -41,7 +41,7 @@ jobs:
           ALMACEN_CLOUD_URL: ${{ vars.ALMACEN_CLOUD_URL }}
           ALMACEN_CONTACTO: ${{ vars.ALMACEN_CONTACTO }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: instalador-windows
           path: apps/pos/src-tauri/target/release/bundle/nsis/*.exe
