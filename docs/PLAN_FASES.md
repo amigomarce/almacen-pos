@@ -66,15 +66,16 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
   (nube), `CLOUD_URL` (caja), `EXPO_PUBLIC_*` (móvil).
 - Fiado / cuenta corriente (opcional) no se hizo.
 
-**TODOs menores:** `GET /report/sales/today` usa "últimas 24 h" (falta hora de Chile); el
-`outbox` local no se poda; el saldo de stock de la nube se agrega en memoria.
+**TODOs menores:** el `outbox` local no se poda; el saldo de stock de la nube se agrega en
+memoria. (Resuelto 2026-10-26: `GET /report/sales/today` cuenta desde las 00:00 de Chile.)
 
 ## Fase 5 — Boleta electrónica real
 - **Estado del código (2026-10-25):** Etapas 1 (núcleo DTE, ADR-008), 2 (envío + cliente de
   la API, ADR-009), 3 (provider, cola offline y folios persistidos, ADR-010) y 4 (boleta
   impresa, carga de certificado/CAF y activación, ADR-011) hechas y probadas con fixtures.
   `SII_DIRECTO` ya se puede elegir cuando `siiListo` (certificado vigente + CAF + datos
-  legales). Falta la **certificación real** con los documentos del dueño.
+  legales) y, en una caja real, con credenciales de **producción** (ADR-017). Falta la
+  **certificación real** con los documentos del dueño.
 - **Orden:** primero el **código** (esta fase), después la **certificación**. La fase deja el
   módulo completo y probado con fixtures; la certificación real (set de pruebas, F2117) se hace
   al final, con el certificado y CAF del dueño. Mientras no esté certificado, las instalaciones

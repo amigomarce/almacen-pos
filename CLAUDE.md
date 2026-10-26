@@ -42,7 +42,11 @@ Reglas que no se negocian:
 - Si ya existe configuración del local, **no se vuelve a preguntar**; el dueño puede cambiarla
   cuando quiera en Configuración. Queda en `store_settings.dte_provider`.
 - **`SII_DIRECTO` solo se habilita si hay certificado y CAF cargados** y la certificación ya se
-  hizo. No se puede elegir una modalidad que todavía no sabe emitir.
+  hizo. No se puede elegir una modalidad que todavía no sabe emitir. En el código, "certificación
+  hecha" = credenciales del ambiente de **producción** (`store_settings.sii_ambiente`); con datos
+  de certificación la caja real responde `SII_SIN_CERTIFICAR`. Solo en desarrollo
+  (`NODE_ENV !== 'production'`) se acepta certificación, con el aviso permanente
+  "AMBIENTE DE CERTIFICACIÓN SII – las boletas no tienen validez".
 - **Un solo sistema de boletas por RUT** (ADR-001): en modalidad D esta app **no emite DTE**;
   al pasar a A el dueño deja de usar e-Boleta. El paso D → A exige el **Formulario N° 2117**
   presencial; volver de A → D es en línea (máx. 3 h) y no sirve como contingencia.
@@ -79,8 +83,9 @@ Reglas que no se negocian:
 - **Productos exentos de IVA** (pocos, pero existen) → boleta exenta o línea exenta.
 - **Medios de pago**: efectivo, débito/crédito (POS externo tipo Transbank/Getnet/SumUp/etc.),
   transferencia. Registrar el medio de pago en cada venta.
-- **Redondeo de efectivo** a múltiplo de $10 cuando corresponda (verificar normativa vigente
-  en Fase 0; solo aplica a pagos en efectivo y sobre el total).
+- **Redondeo de efectivo** a la decena (Ley 20.956 art. 13: 1–5 baja, 6–9 sube): solo pagos en
+  efectivo y sobre el total. **La boleta lleva el total exacto**; el redondeo se guarda aparte
+  (`sales.rounding_clp`). Ver `docs/SII_BOLETA_ELECTRONICA.md` P8.
 - **"Fiado" / cuenta corriente** de vecinos (libreta digital): opcional, Fase 4.
 - **Promociones simples**: "2x $1.500", precio por pack.
 - **Stock negativo permitido** (con alerta): en un almacén real se vende aunque el sistema
@@ -89,15 +94,18 @@ Reglas que no se negocian:
 ## 5. Stack (resumen — detalle en docs/ARQUITECTURA.md)
 
 - Monorepo con **pnpm workspaces** + TypeScript estricto en todo.
-- `apps/pos` — **Tauri 2 + React + Vite** (app de escritorio liviana; Windows es el SO más
-  probable en el local, desarrollo en macOS). Impresión ESC/POS desde el lado Rust/Node.
+- `apps/pos` — **React + Vite** envuelta en **Tauri 2** (Windows es el SO más probable en el
+  local, desarrollo en macOS). Tauri no tiene lógica propia: lanza el servidor como sidecar
+  de Node 22 (ADR-005, ADR-014). La impresión ESC/POS la hace el servidor (`POST /print/...`).
 - `apps/server` — servidor local en la caja: **Node 22 + Fastify + SQLite (better-sqlite3)
   + Drizzle ORM**. Es la fuente de verdad del local.
-- `apps/cloud` — API de sincronización: **Fastify + PostgreSQL** (o Supabase), para la app móvil.
+- `apps/cloud` — API de sincronización y del dueño: **Fastify + Drizzle sobre el Postgres de
+  Supabase**, con Supabase Auth y Storage para respaldos (ADR-007, ADR-016).
 - `apps/mobile` — **Expo (React Native)** para el dueño (iOS/Android).
 - `packages/core` — dominio puro: productos, ventas, cálculo de IVA, redondeo, validación RUT.
 - `packages/dte` — generación de XML de boleta, timbre (TED), firma, cliente SII o proveedor.
 - `packages/printer` — plantillas ESC/POS (58 mm y 80 mm), timbre PDF417.
+- `packages/sync` — contrato compartido caja ↔ nube (outbox, movimientos de stock, versiones).
 - `data/` — scripts ETL de la base de productos chilenos.
 
 Si propones cambiar el stack, explica por qué en un ADR en `docs/decisiones/` antes de hacerlo.
@@ -106,16 +114,20 @@ Si propones cambiar el stack, explica por qué en un ADR en `docs/decisiones/` a
 
 ```bash
 pnpm install
-pnpm dev:pos         # caja en http://127.0.0.1:5173 + server local (Tauri más adelante, ADR-005)
+pnpm dev:pos         # caja en http://127.0.0.1:5173 + server local (navegador)
+pnpm dev:pos:app     # la misma caja dentro de la ventana de Tauri
 pnpm dev:mobile      # app del dueño (Expo)
 pnpm dev:cloud       # API de sincronización
 pnpm test            # vitest en todos los paquetes
 pnpm lint && pnpm typecheck
+pnpm format          # prettier (pnpm format:check en CI)
 pnpm data:build      # reconstruye la base semilla de productos
 pnpm dev:server      # servidor local (Fastify + SQLite) en 127.0.0.1:3001
 pnpm db:seed         # datos de prueba en apps/server/var/almacen.sqlite (PINs: dueño 1234, cajero 0000)
 pnpm coverage        # tests con umbrales de cobertura (core ≥ 95 %, dte y printer ≥ 90 %)
 pnpm --filter @almacen/server db:generate   # nueva migración tras cambiar schema.ts
+pnpm --filter @almacen/server device:info     # identidad de la caja para vincularla a la nube
+pnpm --filter @almacen/server sync:backfill   # encola en el outbox lo que ya existía
 pnpm --filter @almacen/server sii:cargar --cert cert.pem --clave clave.pem \
   --rut-envia 76.086.428-5 --fch-resol 2026-01-01 --nro-resol 80 --caf caf39.xml
 pnpm --filter @almacen/server respaldo:crear     # respaldo manual de la base
@@ -125,8 +137,9 @@ pnpm --filter @almacen/server respaldo:listar-nube
 pnpm --filter @almacen/server respaldo:restaurar-nube --id <id> --si
 pnpm --filter @almacen/pos tauri build   # app/instalador (Node 22 oficial y seed; ver docs/INSTALADOR.md)
 ```
-Requiere Node 22 (`.nvmrc`).
-(Créalos en el `package.json` raíz si no existen.)
+Requiere **Node 22** (`.nvmrc`). Con Node 20 los tests se caen (`better-sqlite3` con SIGSEGV
+y workers de la caja que no arrancan) y la cobertura del servidor sale en 0 %. Si `node -v` no
+dice v22, usa `export PATH=/opt/homebrew/opt/node@22/bin:$PATH` o `nvm use`.
 
 ## 7. Cómo trabajar en este repo
 
