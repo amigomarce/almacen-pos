@@ -113,6 +113,12 @@ Sin esas variables la caja funciona offline, sin sincronización ni Open Food Fa
 5. Vende una prueba y cierra la caja. Debe aparecer un respaldo en `.../respaldos/`.
 6. Cierra la app y verifica que no quede un proceso `node` escuchando en 3001.
 
+## Manual del dueño
+
+El manual rápido de una página está en [`MANUAL.md`](MANUAL.md); la versión para imprimir o
+guardar como PDF es [`manual-1-pagina.html`](manual-1-pagina.html) /
+[`manual-1-pagina.pdf`](manual-1-pagina.pdf). Incluye la caja y la app del dueño.
+
 ## Limitaciones actuales
 
 - El `.exe` no está firmado: Windows SmartScreen puede advertir. Falta firma/notarización.
