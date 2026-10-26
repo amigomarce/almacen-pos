@@ -194,8 +194,8 @@ con los cambios de ADR-017 y la poda del outbox. Detalle en [`INSTALADOR.md`](IN
 - Guía operativa en [`ACTIVAR_RESPALDO_NUBE.md`](ACTIVAR_RESPALDO_NUBE.md).
 
 **Pendiente de la Fase 6:**
-- Agregar tarjeta en Fly: la cuenta está en trial y la máquina se detiene a los 5 minutos, así
-  que hoy **no** está siempre encendida.
+- Agregar tarjeta en Fly: la cuenta está en trial y la máquina se detiene a los 5 minutos;
+  `auto_start` la despierta con la primera petición, pero hoy **no** es always-on.
 - Rotar `SUPABASE_SERVICE_ROLE_KEY` a la secret key nueva `SUPABASE_SECRET_KEY` cuando se cree
   en el panel de Supabase.
 - Instalar y probar el `.exe` en un PC Windows real (sidecar, semilla, impresora USB).

@@ -86,8 +86,10 @@ Trial machine stopping. To run for longer than 5m0s, add a credit card.
 ```
 
 Mientras no se agregue una tarjeta en <https://fly.io/dashboard>, la nube **no está siempre
-encendida**: la caja y el celular fallan hasta que alguien la vuelve a arrancar. Para el uso real
-hay que agregar el método de pago (el costo estimado sigue siendo US$ 3–5/mes).
+encendida**. `auto_start_machines = true` la vuelve a arrancar con la primera petición (unos
+segundos de espera), así que el celular puede tener un primer intento lento; la caja, que
+sincroniza cada 10 s, la mantiene despierta mientras está encendida. Para el uso real hay que
+agregar el método de pago (el costo estimado sigue siendo US$ 3–5/mes).
 
 ## Desplegar
 
