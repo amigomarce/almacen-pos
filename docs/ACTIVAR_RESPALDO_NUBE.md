@@ -11,6 +11,10 @@ bucket y la secret key se crean en el panel de Supabase y el secreto se carga en
 > La caja nunca recibe la secret key: sube el paquete cifrado a `apps/cloud` con su token de
 > dispositivo y es la nube la que escribe en Storage.
 
+> **Estado 2026-10-26:** esta instalación ya quedó activa usando una `service_role` legacy
+> (`SUPABASE_SERVICE_ROLE_KEY`) porque aún no se creó la secret key nueva. El procedimiento de
+> abajo sirve igual para crearla y rotar; `SUPABASE_SECRET_KEY` tiene prioridad.
+
 ## 0. Antes de empezar
 
 ```bash
@@ -18,8 +22,10 @@ fly auth whoami                       # sesión de Fly activa
 curl -s https://almacen-pos-nube.fly.dev/health
 ```
 
-Debe responder `{"status":"ok","db":"ok",...}`. Si no, revisa `fly status` y `fly logs` antes de
-seguir.
+Debe responder `{"status":"ok","db":"ok",...}`. Si la cuenta de Fly está en trial, la máquina
+puede estar detenida (se apaga a los 5 minutos): arráncala con
+`fly machine start <id> --app almacen-pos-nube` o agrega una tarjeta. Si no, revisa `fly status`
+y `fly logs` antes de seguir.
 
 ## 1. Crear el bucket privado
 
@@ -81,13 +87,14 @@ Debe aparecer `SUPABASE_SECRET_KEY`. Opcional, si el bucket tiene otro nombre:
 fly secrets set --app almacen-pos-nube SUPABASE_STORAGE_BUCKET=respaldos
 ```
 
-> En proyectos antiguos también se acepta `SUPABASE_SERVICE_ROLE_KEY`. Si ya existe esa variable,
-> no hace falta borrarla: el código prioriza `SUPABASE_SECRET_KEY`.
+> En proyectos antiguos también se acepta `SUPABASE_SERVICE_ROLE_KEY` (una `service_role`
+> legacy, que es un JWT). Si ya existe esa variable, no hace falta borrarla: el código prioriza
+> `SUPABASE_SECRET_KEY`. Esta instalación quedó así el 2026-10-26.
 
 ## 4. Redesplegar la nube
 
-La imagen que corre hoy puede ser anterior al soporte de `sb_secret_…`; hay que publicar el
-commit actual:
+Después de cargar el secreto hay que desplegar para que la máquina lo tome (y para publicar el
+commit actual):
 
 ```bash
 pnpm deploy:cloud

@@ -179,12 +179,27 @@ Windows). Se revisó su contenido: app, Node 22 oficial, servidor, migraciones, 
 para `win32-x64` y semilla de 11.039 productos con atribución ODbL. La app de macOS se recompiló
 con los cambios de ADR-017 y la poda del outbox. Detalle en [`INSTALADOR.md`](INSTALADOR.md).
 
+### Estado al 2026-10-26 — respaldo cifrado activo en producción
+
+**Hecho:**
+- Bucket privado `respaldos` creado en Supabase Storage.
+- `SUPABASE_SERVICE_ROLE_KEY` cargada en Fly como `service_role` legacy (JWT firmado con el
+  JWT secret); la nube se redesplegó y quedó con la última versión.
+- `CLOUD_DATABASE_URL` cambiada a la conexión directa IPv6 de Supabase: el pooler IPv4 no
+  responde desde Fly. Detalle en [`NUBE.md`](NUBE.md).
+- Caja `01a17677-cede-7337-91fe-4867efd1bdfc` vinculada al dueño y configurada con la URL de
+  Fly, respaldo automático y retención 7.
+- Primera subida verificada de punta a punta: 7.392 bytes, SHA-256 correcto, objeto en Storage,
+  descarga, descifrado y apertura de la base restaurada.
+- Guía operativa en [`ACTIVAR_RESPALDO_NUBE.md`](ACTIVAR_RESPALDO_NUBE.md).
+
 **Pendiente de la Fase 6:**
+- Agregar tarjeta en Fly: la cuenta está en trial y la máquina se detiene a los 5 minutos, así
+  que hoy **no** está siempre encendida.
+- Rotar `SUPABASE_SERVICE_ROLE_KEY` a la secret key nueva `SUPABASE_SECRET_KEY` cuando se cree
+  en el panel de Supabase.
 - Instalar y probar el `.exe` en un PC Windows real (sidecar, semilla, impresora USB).
 - Firma del instalador (Windows) y notarización (macOS).
-- Activar el respaldo cifrado en producción: bucket privado `respaldos` y
-  `SUPABASE_SECRET_KEY` en Fly; después probar una subida y una restauración reales. Paso a
-  paso en [`ACTIVAR_RESPALDO_NUBE.md`](ACTIVAR_RESPALDO_NUBE.md).
 
 ## Mejoras futuras (backlog)
 

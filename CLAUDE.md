@@ -102,7 +102,9 @@ Reglas que no se negocian:
   + Drizzle ORM**. Es la fuente de verdad del local.
 - `apps/cloud` — API de sincronización y del dueño: **Fastify + Drizzle sobre el Postgres de
   Supabase**, con Supabase Auth y Storage para respaldos (ADR-007, ADR-016). Publicada en
-  **Fly.io** siempre encendida: `https://almacen-pos-nube.fly.dev` (ADR-018, `docs/NUBE.md`).
+  **Fly.io**: `https://almacen-pos-nube.fly.dev` (ADR-018, `docs/NUBE.md`). Para que esté
+  siempre encendida hace falta tarjeta en Fly; la cuenta en trial detiene la máquina a los
+  5 minutos.
 - `apps/mobile` — **Expo (React Native)** para el dueño (iOS/Android).
 - `packages/core` — dominio puro: productos, ventas, cálculo de IVA, redondeo, validación RUT.
 - `packages/dte` — generación de XML de boleta, timbre (TED), firma, cliente SII o proveedor.
