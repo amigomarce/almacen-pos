@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { requiereSesion } from '../auth/rutas.js';
 import type { Sesiones } from '../auth/sesiones.js';
 import type { Db } from '../db/client.js';
-import { siiListo } from '../sii/config.js';
+import { ambienteSii, siiListo } from '../sii/config.js';
 import {
   actualizarConfiguracion,
   leerConfiguracion,
@@ -18,14 +18,32 @@ export function registrarConfiguracion(
 ): void {
   const { db, sesiones, permitirModoPrueba } = deps;
 
+  /**
+   * Estado del SII para elegir modalidad. `permitirModoPrueba` marca desarrollo: ahí se acepta
+   * el ambiente de certificación (producción está prohibida); en una caja real `SII_DIRECTO`
+   * exige credenciales de producción, es decir, la certificación ya hecha (CLAUDE.md §2).
+   */
+  const estadoSii = () => {
+    const listo = siiListo(db);
+    const ambiente = ambienteSii(db);
+    const certificado = ambiente === 'produccion';
+    return {
+      listo,
+      ambiente,
+      certificado,
+      habilitado: listo && (certificado || permitirModoPrueba),
+    };
+  };
+
   /** La caja la necesita para el aviso de modo prueba y el flujo de cobro. */
   app.get('/settings', { onRequest: requiereSesion(sesiones) }, () => {
-    const listo = siiListo(db);
+    const sii = estadoSii();
     return {
       ...leerConfiguracion(db),
-      siiListo: listo,
+      siiListo: sii.listo,
+      siiAmbiente: sii.ambiente,
       modalidadesDisponibles: MODALIDADES_DISPONIBLES.filter(
-        (m) => (m !== 'MOCK' || permitirModoPrueba) && (m !== 'SII_DIRECTO' || listo),
+        (m) => (m !== 'MOCK' || permitirModoPrueba) && (m !== 'SII_DIRECTO' || sii.habilitado),
       ),
     };
   });
@@ -64,9 +82,11 @@ export function registrarConfiguracion(
       },
     },
     (req) => {
+      const sii = estadoSii();
       const { antes, despues } = actualizarConfiguracion(db, req.body, {
         permitirModoPrueba,
-        siiListo: siiListo(db),
+        siiListo: sii.listo,
+        siiCertificado: sii.certificado,
       });
       if (antes.dteProvider !== despues.dteProvider) {
         req.log.warn(

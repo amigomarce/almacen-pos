@@ -7,6 +7,7 @@ import {
   type EstadoCaja,
   type Usuario,
 } from './api.js';
+import { AvisoCertificacion } from './componentes/AvisoCertificacion.js';
 import { AvisoModoPrueba } from './componentes/AvisoModoPrueba.js';
 import { ModalBoletaInicial } from './componentes/ModalBoletaInicial.js';
 import { PantallaApertura } from './pantallas/PantallaApertura.js';
@@ -151,6 +152,7 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
   return (
     <main className="app">
       {conexion.tipo === 'OK' && conexion.estado.modoPrueba && <AvisoModoPrueba />}
+      {conexion.tipo === 'OK' && conexion.estado.ambienteCertificacion && <AvisoCertificacion />}
       <header className="barra">
         <h1>Almacén POS</h1>
         {fase.tipo === 'CAJA' && (

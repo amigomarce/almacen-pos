@@ -46,6 +46,16 @@ describe('conexión y modo prueba', () => {
     render(<App api={servidorFalso().api} />);
     await screen.findByRole('status');
     expect(screen.queryByRole('note', { name: 'Modo prueba' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('note', { name: 'Ambiente de certificación' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('con SII_DIRECTO en certificación avisa que las boletas no tienen validez', async () => {
+    render(<App api={servidorFalso({ ambienteCertificacion: true }).api} />);
+    expect(
+      await screen.findByRole('note', { name: 'Ambiente de certificación' }),
+    ).toHaveTextContent('AMBIENTE DE CERTIFICACIÓN SII – las boletas no tienen validez');
   });
 });
 

@@ -144,6 +144,94 @@ describe('modalidad de boleta', () => {
     expect(incompleto.json()).toMatchObject({ error: 'DATOS_LOCAL_INCOMPLETOS' });
   });
 
+  describe('caja real: SII_DIRECTO exige la certificación hecha (CLAUDE.md §2)', () => {
+    const prepararSii = async (ambiente: 'certificacion' | 'produccion') => {
+      const app = crearApp({ db: c.db, permitirModoPrueba: false });
+      const login = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: { usuarioId: c.duenoId, pin: '1234' },
+      });
+      const headers = { authorization: `Bearer ${login.json<{ token: string }>().token}` };
+      await editar(
+        {
+          rut: DATOS_LOCAL.rut,
+          razonSocial: DATOS_LOCAL.razonSocial,
+          giro: DATOS_LOCAL.giro,
+          direccion: DATOS_LOCAL.direccion,
+          comuna: DATOS_LOCAL.comuna,
+          dteProvider: 'PUENTE_MANUAL',
+        },
+        headers,
+        app,
+      );
+      guardarCredencialesSii(
+        c.db,
+        {
+          ...CERTIFICADO,
+          rutEnvia: DATOS_LOCAL.rut,
+          fchResol: '2026-01-01',
+          nroResol: 80,
+          ambiente,
+        },
+        CLAVE_SII,
+      );
+      guardarCafSii(c.db, generarCafPrueba({ tipoDte: 39 }).xml, CLAVE_SII);
+      return { app, headers };
+    };
+
+    it('con datos de certificación no ofrece ni acepta SII_DIRECTO', async () => {
+      const { app, headers } = await prepararSii('certificacion');
+      const conf = await app.inject({ method: 'GET', url: '/settings', headers });
+      expect(conf.json()).toMatchObject({
+        siiListo: true,
+        siiAmbiente: 'certificacion',
+        modalidadesDisponibles: ['PUENTE_MANUAL'],
+      });
+      const res = await editar({ dteProvider: 'SII_DIRECTO' }, headers, app);
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toMatchObject({ error: 'SII_SIN_CERTIFICAR' });
+      expect(leerConfiguracion(c.db).dteProvider).toBe('PUENTE_MANUAL');
+    });
+
+    it('con datos de producción habilita SII_DIRECTO', async () => {
+      const { app, headers } = await prepararSii('produccion');
+      const conf = await app.inject({ method: 'GET', url: '/settings', headers });
+      expect(conf.json()).toMatchObject({
+        siiAmbiente: 'produccion',
+        modalidadesDisponibles: ['PUENTE_MANUAL', 'SII_DIRECTO'],
+      });
+      const res = await editar({ dteProvider: 'SII_DIRECTO' }, headers, app);
+      expect(res.statusCode).toBe(200);
+      const salud = await app.inject({ method: 'GET', url: '/health' });
+      expect(salud.json()).toMatchObject({ ambienteCertificacion: false });
+    });
+  });
+
+  it('en desarrollo acepta certificación y /health avisa que no tiene validez', async () => {
+    await editar({
+      rut: DATOS_LOCAL.rut,
+      razonSocial: DATOS_LOCAL.razonSocial,
+      giro: DATOS_LOCAL.giro,
+      direccion: DATOS_LOCAL.direccion,
+      comuna: DATOS_LOCAL.comuna,
+    });
+    guardarCredencialesSii(
+      c.db,
+      { ...CERTIFICADO, rutEnvia: DATOS_LOCAL.rut, fchResol: '2026-01-01', nroResol: 0 },
+      CLAVE_SII,
+    );
+    guardarCafSii(c.db, generarCafPrueba({ tipoDte: 39 }).xml, CLAVE_SII);
+    const antes = await c.app.inject({ method: 'GET', url: '/health' });
+    expect(antes.json()).toMatchObject({ ambienteCertificacion: false });
+    expect((await editar({ dteProvider: 'SII_DIRECTO' })).statusCode).toBe(200);
+    const despues = await c.app.inject({ method: 'GET', url: '/health' });
+    expect(despues.json()).toMatchObject({
+      modalidadBoleta: 'SII_DIRECTO',
+      ambienteCertificacion: true,
+    });
+  });
+
   it('guarda y valida la URL de nube y la retención del respaldo', async () => {
     const guardada = await editar({ cloudUrl: 'https://api.ejemplo.cl/' });
     expect(guardada.json()).toMatchObject({

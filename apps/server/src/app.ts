@@ -32,6 +32,7 @@ import { buscarProducto, type DependenciasLookup } from './productos/lookup.js';
 import { requiereSesion } from './auth/rutas.js';
 import type { Semilla } from './productos/semilla.js';
 import { estadoColaSii } from './sii/cola.js';
+import { ambienteSii } from './sii/config.js';
 
 export interface OpcionesApp {
   db: Db;
@@ -142,8 +143,12 @@ export function crearApp({
     }
     // Público (sin sesión) para que la pantalla de PIN ya muestre el aviso de modo prueba.
     let modalidadBoleta: string | null = null;
+    let ambienteCertificacion = false;
     try {
       modalidadBoleta = leerConfiguracion(db).dteProvider;
+      // SII_DIRECTO con datos de certificación: las boletas no tienen validez tributaria.
+      ambienteCertificacion =
+        modalidadBoleta === 'SII_DIRECTO' && ambienteSii(db) === 'certificacion';
     } catch {
       // Base sin migrar o caída: se informa como null.
     }
@@ -160,6 +165,7 @@ export function crearApp({
       semilla: semilla !== null,
       modalidadBoleta,
       modoPrueba: modalidadBoleta === 'MOCK',
+      ambienteCertificacion,
       sii,
       hora: new Date().toISOString(),
     };

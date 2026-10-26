@@ -44,6 +44,8 @@ interface UsuarioFalso {
 
 export interface EstadoFalso {
   modoPrueba: boolean;
+  /** `/health`: SII_DIRECTO en ambiente de certificación. */
+  ambienteCertificacion: boolean;
   usuarios: UsuarioFalso[];
   tokens: Map<string, UsuarioFalso>;
   fallos: Map<string, number>;
@@ -68,6 +70,7 @@ export interface EstadoFalso {
   dteProvider: 'MOCK' | 'PUENTE_MANUAL' | 'SII_DIRECTO';
   boletaConfirmada: boolean;
   siiListo: boolean;
+  siiAmbiente: 'certificacion' | 'produccion' | null;
   requiereInstalacion: boolean;
   redondeo: boolean;
   /** `true` = hay impresora (imprime); `false` = sin impresora configurada. */
@@ -107,6 +110,7 @@ const redondear = (total: number) => {
 export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
   const estado: EstadoFalso = {
     modoPrueba: false,
+    ambienteCertificacion: false,
     usuarios: [
       { id: 'u1', name: 'Dueño', role: 'DUENO', pin: '1234' },
       { id: 'u2', name: 'Cajero', role: 'CAJERO', pin: '0000' },
@@ -133,6 +137,7 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
     respaldos: [],
     boletaConfirmada: true,
     siiListo: false,
+    siiAmbiente: null,
     requiereInstalacion: false,
     impresoraCfg: {
       transporte: 'DESACTIVADA',
@@ -240,10 +245,16 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
     dteProvider: estado.dteProvider,
     boletaConfirmada: estado.boletaConfirmada,
     siiListo: estado.siiListo,
+    siiAmbiente: estado.siiAmbiente,
     modoPrueba: estado.dteProvider === 'MOCK',
     modeloEmision: estado.local['modeloEmision'] ?? 'SOLO_NO_ELECTRONICOS',
     cashRoundingEnabled: estado.redondeo,
-    modalidadesDisponibles: ['PUENTE_MANUAL', 'MOCK', ...(estado.siiListo ? ['SII_DIRECTO'] : [])],
+    // Como una caja real: con datos de certificación no se ofrece SII_DIRECTO.
+    modalidadesDisponibles: [
+      'PUENTE_MANUAL',
+      'MOCK',
+      ...(estado.siiListo && estado.siiAmbiente !== 'certificacion' ? ['SII_DIRECTO'] : []),
+    ],
   });
 
   const fetchFn = vi.fn<typeof fetch>((entrada, init) => {
@@ -273,6 +284,7 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
           hora: '2026-10-25T12:00:00.000Z',
           modalidadBoleta: estado.modoPrueba ? 'MOCK' : 'PUENTE_MANUAL',
           modoPrueba: estado.modoPrueba,
+          ambienteCertificacion: estado.ambienteCertificacion,
         });
       case 'GET /auth/inicial':
         return json(200, { requiereConfiguracion: estado.requiereInstalacion });

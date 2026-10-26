@@ -42,6 +42,16 @@ describe('configuración del local', () => {
     expect(screen.getByText('No hay cambios que guardar.')).toBeInTheDocument();
   });
 
+  it('con datos de certificación explica por qué no ofrece la boleta desde la caja', async () => {
+    montar({ siiListo: true, siiAmbiente: 'certificacion' });
+    expect(
+      await screen.findByText(/se habilita al terminar la certificación ante el SII/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('radio', { name: /Boleta electrónica desde la caja/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it('muestra el error del servidor (RUT inválido) y el modelo de emisión', async () => {
     const { s, u } = montar();
     await u.type(await screen.findByLabelText('RUT'), '1-1');

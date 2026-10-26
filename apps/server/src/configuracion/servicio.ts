@@ -124,12 +124,17 @@ export interface OpcionesEdicion {
   permitirModoPrueba: boolean;
   /** `true` si hay certificado vigente y al menos un CAF con folios. */
   siiListo: boolean;
+  /**
+   * `true` si las credenciales son del ambiente de producción (certificación ya hecha). Sin
+   * eso, `SII_DIRECTO` solo se acepta en desarrollo (`permitirModoPrueba`).
+   */
+  siiCertificado: boolean;
 }
 
 export function actualizarConfiguracion(
   db: Db,
   cambios: CambiosConfiguracion,
-  { permitirModoPrueba, siiListo }: OpcionesEdicion,
+  { permitirModoPrueba, siiListo, siiCertificado }: OpcionesEdicion,
 ): { antes: Configuracion; despues: Configuracion } {
   if (cambios.dteProvider !== undefined) {
     if (!modalidadDisponible(cambios.dteProvider)) {
@@ -148,6 +153,12 @@ export function actualizarConfiguracion(
       throw new ErrorDominio(
         'SII_NO_CONFIGURADO',
         'Antes de emitir desde la caja carga el certificado digital y un CAF vigente',
+      );
+    }
+    if (cambios.dteProvider === 'SII_DIRECTO' && !siiCertificado && !permitirModoPrueba) {
+      throw new ErrorDominio(
+        'SII_SIN_CERTIFICAR',
+        'La caja tiene datos del ambiente de certificación del SII: termina la certificación y carga los de producción',
       );
     }
   }

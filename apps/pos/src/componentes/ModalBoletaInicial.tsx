@@ -18,7 +18,8 @@ export interface Props {
 /**
  * Pregunta bloqueante del primer arranque de la caja (CLAUDE.md §2). No se puede vender
  * hasta que el dueño elija cómo emitirá las boletas. La opción "Con la app del SII" viene
- * preseleccionada; "Desde esta caja" solo se habilita con certificado y CAF cargados.
+ * preseleccionada; "Desde esta caja" solo se habilita con certificado y CAF cargados y la
+ * certificación ante el SII hecha (credenciales de producción).
  */
 export function ModalBoletaInicial({ api, config, usuario, alConfirmar, alSalir }: Props) {
   const [modalidad, setModalidad] = useState<ModalidadBoleta>('PUENTE_MANUAL');
@@ -28,6 +29,7 @@ export function ModalBoletaInicial({ api, config, usuario, alConfirmar, alSalir 
   const esDueno = usuario.role === 'DUENO';
   const disponibles = config.modalidadesDisponibles ?? ['PUENTE_MANUAL'];
   const puedeSii = disponibles.includes('SII_DIRECTO');
+  const faltaCertificar = config.siiListo === true && config.siiAmbiente === 'certificacion';
 
   const confirmar = async () => {
     setGuardando(true);
@@ -104,7 +106,9 @@ export function ModalBoletaInicial({ api, config, usuario, alConfirmar, alSalir 
               <span className="suave">
                 {puedeSii
                   ? 'La caja imprime la boleta y la envía al SII. Requiere el trámite del Formulario N° 2117.'
-                  : 'Todavía no está disponible: falta cargar el certificado digital y un CAF.'}
+                  : faltaCertificar
+                    ? 'Todavía no está disponible: falta terminar la certificación ante el SII.'
+                    : 'Todavía no está disponible: falta cargar el certificado digital y un CAF.'}
               </span>
             </span>
           </label>

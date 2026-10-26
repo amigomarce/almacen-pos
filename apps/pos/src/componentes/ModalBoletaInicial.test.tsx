@@ -47,6 +47,20 @@ describe('ModalBoletaInicial', () => {
     expect(screen.getByText(/falta cargar el certificado digital/i)).toBeInTheDocument();
   });
 
+  it('con datos de certificación explica que falta terminar la certificación', () => {
+    render(
+      <ModalBoletaInicial
+        api={apiCon(() => Promise.reject(new Error('no')))}
+        config={config({ siiListo: true, siiAmbiente: 'certificacion' })}
+        usuario={DUENO}
+        alConfirmar={vi.fn()}
+        alSalir={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('radio', { name: /Desde esta caja/ })).toBeDisabled();
+    expect(screen.getByText(/falta terminar la certificación ante el SII/i)).toBeInTheDocument();
+  });
+
   it('permite elegir emitir desde la caja y guarda la modalidad', async () => {
     const u = userEvent.setup();
     const alConfirmar = vi.fn();

@@ -32,6 +32,8 @@ export interface EstadoServidor {
   modalidadBoleta: string | null;
   /** `true` con MOCK: hay que mostrar "MODO PRUEBA – no emite boletas". */
   modoPrueba: boolean;
+  /** `true` con SII_DIRECTO en ambiente de certificación: las boletas no tienen validez. */
+  ambienteCertificacion?: boolean;
 }
 
 export interface Usuario {
@@ -280,6 +282,8 @@ export interface ConfiguracionLocal {
   dteProvider: ModalidadBoleta;
   boletaConfirmada?: boolean;
   siiListo?: boolean;
+  /** Ambiente de las credenciales del SII; `SII_DIRECTO` exige `produccion` en una caja real. */
+  siiAmbiente?: 'certificacion' | 'produccion' | null;
   siiFchResol?: string | null;
   siiNroResol?: number | null;
   cloudUrl?: string | null;

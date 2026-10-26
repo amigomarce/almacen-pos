@@ -258,6 +258,11 @@ export function siiListo(db: Db, ahora = new Date()): boolean {
   return hayFolios(db, ahora);
 }
 
+/** Ambiente del SII cargado con `sii:cargar`; `null` si todavía no hay credenciales. */
+export function ambienteSii(db: Db): AmbienteSii | null {
+  return db.select({ a: storeSettings.siiAmbiente }).from(storeSettings).get()?.a ?? null;
+}
+
 /** CAF vigente con folios disponibles para el tipo de documento. */
 export function hayFolios(db: Db, ahora = new Date()): boolean {
   const fila = db

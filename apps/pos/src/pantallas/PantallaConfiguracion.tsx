@@ -172,6 +172,14 @@ function SeccionLocal({ api }: { api: ClienteApi }) {
             </label>
           ))}
         </fieldset>
+        {!disponibles.includes('SII_DIRECTO') &&
+          config.siiListo === true &&
+          config.siiAmbiente === 'certificacion' && (
+            <p className="suave">
+              La boleta desde la caja se habilita al terminar la certificación ante el SII: hoy
+              están cargados los datos del ambiente de certificación.
+            </p>
+          )}
         <fieldset className="opciones">
           <legend>Pagos con tarjeta</legend>
           <label className="opcion">
