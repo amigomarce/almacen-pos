@@ -14,8 +14,8 @@ const entorno = process.env as Record<string, string | undefined>;
 const perfil = entorno['EAS_BUILD_PROFILE'] ?? 'development';
 const permitirHttp = perfil !== 'production';
 
-/** ID del proyecto en expo.dev. Lo entrega `eas init` (ver docs/APP_DUENO.md). */
-const EAS_PROJECT_ID: string = '';
+/** Proyecto @amigomarce/almacen-dueno en expo.dev (lo entregó `eas init`). */
+const EAS_PROJECT_ID = '1fe8ed33-1ffd-46d4-a431-a58d286e4d69';
 
 const config: ExpoConfig = {
   name: 'Almacén Dueño',
@@ -43,7 +43,7 @@ const config: ExpoConfig = {
     ['expo-camera', { cameraPermission: 'Escanear códigos de barras de productos' }],
     ['expo-build-properties', { android: { usesCleartextTraffic: permitirHttp } }],
   ],
-  extra: EAS_PROJECT_ID ? { eas: { projectId: EAS_PROJECT_ID } } : {},
+  extra: { eas: { projectId: EAS_PROJECT_ID } },
 };
 
 export default config;
