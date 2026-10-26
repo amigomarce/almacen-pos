@@ -100,7 +100,7 @@ export function generarCafPrueba(opciones: OpcionesCafPrueba = {}): CafPrueba {
 
   const desde = opciones.desde ?? 1;
   const hasta = opciones.hasta ?? 100;
-  const rut = opciones.rut ?? '76.086.428-5';
+  const rut = opciones.rut ?? '76086428-5';
   const razonSocial = opciones.razonSocial ?? 'ALMACEN DE PRUEBA';
   const tipoDte = opciones.tipoDte ?? 39;
 

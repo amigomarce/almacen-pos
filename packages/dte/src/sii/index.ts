@@ -1,6 +1,7 @@
 export * from './tipos.js';
 export * from './xml.js';
 export * from './fechas.js';
+export * from './rut.js';
 export * from './caf.js';
 export * from './ted.js';
 export * from './firma.js';

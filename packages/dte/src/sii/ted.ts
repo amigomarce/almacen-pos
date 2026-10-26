@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 import { createSign } from 'node:crypto';
 import { ErrorDominio } from '@almacen/core';
 import type { TipoDte } from '../tipos.js';
+import { normalizarRutDte } from './rut.js';
 import { elem, escaparTexto } from './xml.js';
 import type { Caf } from './tipos.js';
 
@@ -38,6 +39,12 @@ export function construirTed(datos: DatosTed, caf: Caf): { ted: string; dd: stri
     throw new ErrorDominio(
       'CAF_TIPO_DISTINTO',
       `El CAF es para DTE ${caf.tipoDte}, no ${datos.tipoDte}`,
+    );
+  }
+  if (normalizarRutDte(caf.rut) !== normalizarRutDte(datos.rutEmisor)) {
+    throw new ErrorDominio(
+      'CAF_OTRO_EMISOR',
+      `El CAF es del RUT ${caf.rut}, no del emisor ${datos.rutEmisor}`,
     );
   }
 

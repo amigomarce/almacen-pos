@@ -1,13 +1,14 @@
 import type { TipoDte } from '../tipos.js';
 
-/** Datos del emisor que van al encabezado del DTE (boleta 39/41). */
+/**
+ * Datos del emisor que van al encabezado de la boleta (39/41). El schema de boleta no
+ * incluye `Acteco` (eso es de factura); el SII identifica al emisor por su RUT.
+ */
 export interface EmisorDte {
   /** RUT con guion y dígito verificador: "76.086.428-5". */
   rut: string;
   razonSocial: string;
   giro: string;
-  /** Código de actividad económica (6 dígitos, ej. "471100"). */
-  acteco: string;
   direccion: string;
   comuna: string;
 }

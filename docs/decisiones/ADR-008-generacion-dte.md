@@ -15,50 +15,105 @@ offline y ser testeable sin SII.
 
 Implementar el módulo en `packages/dte/src/sii/` **desde cero**, sin librerías de XML ni de C14N:
 
-- **XML compacto** (`xml.ts`): generamos el DTE sin espacios entre etiquetas y sin namespaces en
-  el documento interno, de modo que la forma "aplanada" del `<DD>` y la forma canónica (C14N) del
-  `<Documento>` coinciden con la cadena literal que firmamos.
+- **XML compacto** (`xml.ts`): se genera sin espacios entre etiquetas. La forma "aplanada" del
+  `<DD>` y la forma canónica (C14N) del `<Documento>` coinciden con la cadena literal, salvo la
+  declaración de namespace que C14N agrega al nodo raíz de la referencia (ver abajo).
 - **Criptografía con `node:crypto`**: `RSA-SHA1` y `SHA1` nativos.
 - **Fixtures sintéticos** (`test/ayudas.ts`): certificado autofirmado y CAF descartables generados
   en los tests. Nunca se usan credenciales reales (CLAUDE.md §3).
 
-No se añadió librería porque: el schema es fijo y acotado, el DTE interno no tiene namespaces (se
-firma aislado antes de incrustarse en `EnvioBOLETA`), y así controlamos la forma canónica. El
-paquete `dte` solo lo consume `apps/server` (Node); no entra al bundle del navegador (la caja habla
-con el server por HTTP).
+No se añadió librería porque el schema es acotado, el paquete `dte` solo lo consume `apps/server`
+(Node) y así controlamos la forma canónica. El bundle del navegador no lo incluye: la caja habla
+con el servidor por HTTP.
 
-## Hechos técnicos verificados (DTE_v10.xsd y referencia XML-DSIG/SII)
+## Hechos verificados contra el schema oficial de boleta
 
-- Emisor: `<RUTEmisor>`, `<RznSoc>`, `<GiroEmis>`, `<Acteco>`, `<DirOrigen>`, `<CmnaOrigen>`.
-- Receptor: `<RUTRecep>`, `<RznSocRecep>` (boleta a consumidor final: `66666666-6`).
-- `IdDoc`: `<TipoDTE>`, `<Folio>`, `<FchEmis>`, `<FmaPago>1</FmaPago>`.
-- `Totales`: `<MntNeto>`, `<MntExe>`, `<TasaIVA>`, `<IVA>`, `<MntTotal>` (41 no lleva neto/IVA).
-- `Detalle`: `<NroLinDet>`, `<IndExe>1</IndExe>`, `<NmbItem>`, `<QtyItem>`, `<UnmdItem>`,
-  `<PrcItem>`, `<MontoItem>`.
+La boleta **no** usa `DTE_v10.xsd` (ese es el schema de factura: 33/34/46/52/56/61). Usa
+`EnvioBOLETA_v11.xsd` (descargado de `schema_envio_bol.zip`), que define su propio
+`BOLETADefType`. El formato de referencia es **"Formato Boletas Electrónicas de Ventas y
+Servicios" v4.2 (2025-09-08)**.
+
+- **Raíz**: `<DTE version="1.0" xmlns="http://www.sii.cl/SiiDte">`.
+- **IdDoc**: `<TipoDTE>`, `<Folio>`, `<FchEmis>`, `<IndServicio>` (3 = Boleta de Ventas y
+  Servicio). **No** lleva `FmaPago` (eso es de factura).
+- **Emisor**: `<RUTEmisor>`, `<RznSocEmisor>`, `<GiroEmisor>`, `<DirOrigen>`, `<CmnaOrigen>`.
+  **No** lleva `Acteco` (eso es de factura).
+- **Receptor**: `<RUTRecep>` (`66666666-6` para consumidor final), `<RznSocRecep>`.
+- **Totales**: `<MntNeto>`, `<MntExe>` (si hay exento), `<IVA>`, `<MntTotal>`. **No** lleva
+  `TasaIVA`.
+- **Detalle**: `<NroLinDet>`, `<IndExe>1</IndExe>` (solo exento), `<NmbItem>`, `<QtyItem>`,
+  `<UnmdItem>`, `<PrcItem>`, `<MontoItem>`.
+  - `MontoItem` y `PrcItem` son **brutos** (con IVA), porque no se declara `IndMntNeto=2`.
+    El formato v4.2 lo dice explícitamente para `PrcItem`.
+  - `PrcItem` se **deriva del monto de la línea** (`MontoItem / QtyItem`, hasta 6 decimales) para
+    que cuadre también con descuentos y ventas "por monto" (ADR-006). Se omite si el monto es 0
+    (el schema exige `≥ 0.000001`).
+  - `UnmdItem` es glosa libre de hasta 4 caracteres, "sin validación" según el formato v4.2:
+    se usa `UN` y `KG`.
 - **TED**: `<TED version="1.0"><DD>…<CAF>…</CAF><TSTED>…</TSTED></DD><FRMT algoritmo="SHA1withRSA">…</FRMT></TED>`.
-  El `DD` lleva `RE, TD, F, FE, RR, RSR, MNT, IT1, CAF, TSTED`. La firma `FRMT` es **SHA1withRSA
-  sobre el `DD` aplanado, codificado en ISO-8859-1**, con la clave privada del CAF (`RSASK`).
+  El `DD` lleva `RE, TD, F, FE, RR, RSR, MNT, IT1, CAF, TSTED`. La firma `FRMT` es
+  **SHA1withRSA sobre el `DD` aplanado, codificado en ISO-8859-1**, con la clave privada del CAF
+  (`RSASK`). `RSR` e `IT1` se recortan a 40 caracteres.
 - **CAF**: `<CAF version="1.0"><DA>…</DA><FRMA algoritmo="SHA1withRSA">…</FRMA></CAF>` más el
-  `<RSASK>` (clave privada). El elemento `<CAF>` se incrusta **verbatim** en el `DD`.
-- **Firma XMLDSig**: `DigestValue` = SHA1 sobre la forma canónica del `<Documento>` en UTF-8;
-  `SignatureValue` = RSA-SHA1 sobre el `<SignedInfo>` canónico en UTF-8, con el certificado del
-  emisor. El `<Documento>` se referencia por su atributo `ID` (xs:ID).
+  `<RSASK>`. El elemento `<CAF>` se incrusta **verbatim** en el `DD`. Se valida que el RUT del CAF
+  coincida con el del emisor.
+- **Firma XMLDSig**: el `<Signature>` es **hermano** del `<Documento>` dentro del `<DTE>`
+  (`ref="ds:Signature"` en el schema). `DigestValue` = SHA1 sobre la forma canónica del
+  `<Documento>`; `SignatureValue` = RSA-SHA1 sobre la forma canónica de `<SignedInfo>`;
+  `KeyInfo` = `RSAKeyValue` + `X509Data/X509Certificate` (ambos obligatorios en
+  `xmldsignature_v10.xsd`).
+
+### Namespace y C14N (punto delicado)
+
+En el documento final el `<Documento>` **hereda** el namespace por defecto del `<DTE>`. C14N
+declara ese namespace en el nodo raíz de la referencia, así que el digest se calcula sobre:
+
+```
+<Documento xmlns="http://www.sii.cl/SiiDte" ID="…">…</Documento>
+```
+
+y no sobre la forma literal (que no repite el `xmlns`). Esto se verificó de forma independiente:
+el `DigestValue` generado coincide con el SHA1 del C14N calculado por `libxml2`/`xsltproc`, y el
+`SignatureValue` verifica con `openssl` contra el C14N del `<SignedInfo>`.
+
+**Invariante para la Etapa 2**: el `EnvioBOLETA` no debe declarar namespaces adicionales en
+ancestros del `<DTE>` (por ejemplo `xmlns:xsi`). Si los declara, C14N los incluye en el
+`<Documento>` y el digest deja de cuadrar. La alternativa, si se necesitan, es pasarlos a la
+firma y canonicalizar con ellos.
+
+## Verificación
+
+- El `<DTE>` generado **valida contra `EnvioBOLETA_v11.xsd`** (con un wrapper que declara
+  `DTE` como elemento global del tipo `BOLETADefType`).
+- Los tests verifican criptográficamente: `FRMT` contra la clave pública del CAF, y
+  `DigestValue`/`SignatureValue` contra el certificado del emisor.
+- Se validó además con `xmllint` (schema), `xsltproc` + `xmllint --c14n` (digest) y `openssl
+  dgst -verify` (firma).
 
 ## Consecuencias
 
-- `packages/dte/tsconfig.json` ahora incluye `types: ["node"]` (usa `node:crypto`).
-- `packages/dte` exporta `./sii` desde su índice; no afecta al navegador (solo lo importa el server).
+- `packages/dte/tsconfig.json` incluye `types: ["node"]` (usa `node:crypto`).
+- `packages/dte` exporta `./sii` desde su índice; no afecta al navegador.
+- Las fechas (`FchEmis`, `TSTED`, `TmstFirma`) se formatean en **`America/Santiago`**, no en la
+  zona del servidor. Si el servidor corre en UTC, formatear con la hora local desplazaría el día
+  cerca de medianoche.
+- Los datos legales del emisor se validan contra los largos del schema y **fallan** si no caben
+  (razón social 100, giro 80, dirección 70, comuna 20). El nombre del ítem se recorta a 80.
 - El control de folios (`EstadoFolios`) es en memoria; la persistencia del "último folio usado"
   queda para la Etapa 3 (proveedor).
 
 ## `TODO(SII)` pendiente de validar en el ambiente de certificación
 
-1. Validar el XML generado contra `DTE_v10.xsd` y `EnvioBOLETA_v11.xsd` reales.
-2. `UnmdItem`: confirmar el código oficial de unidad ("KGS" vs "KG").
-3. `PrcItem`/`MontoItem`: confirmar si el precio debe ser el neto para que `QtyItem × PrcItem ==
-   MontoItem`, y el desfase de $1 en ventas "por monto" (ADR-006).
-4. Serialización final a ISO-8859-1 (el archivo y el body HTTP), con su declaración `encoding`.
-5. Desencriptar el `RSASK` real del CAF del SII (los fixtures usan PEM sin cifrar; verificar el
-   esquema de cifrado del CAF entregado por sii.cl).
-6. Confirmar que el CAF real viene en `<AUTORIZACION>` con `<RSASK>` en PEM PKCS#1.
-7. `FmaPago=1` en boletas (contado) y los campos opcionales que el SII exige en la práctica.
+1. Validar el `EnvioBOLETA` completo contra `EnvioBOLETA_v11.xsd` y su firma de `SetDTE` (Etapa 2).
+2. `UnmdItem`: el formato v4.2 lo declara "sin validación"; confirmar si la validación de negocio
+   del SII exige un código específico (p. ej. `KGM`).
+3. Serialización final del envío a **ISO-8859-1** con su declaración `encoding` (el fragmento
+   `<DTE>` no la lleva; la lleva el archivo `EnvioBOLETA`).
+4. Descifrado del `RSASK` real del CAF (los fixtures usan PEM PKCS#1 sin cifrar) y confirmación de
+   que el `<RE>` del CAF real viene sin puntos.
+5. `TmstFirma`/`TSTED` en hora local sin offset: confirmar que el SII lo acepta así.
+6. `IndServicio=3` ("Boleta de Ventas y Servicio") para un almacén: confirmar con el contador.
+7. Persistencia y alerta de folios (CAF por agotarse), y renovación de CAF.
+8. Revisar si la Res. Ex. 154/2025 (Anexo Técnico v2.5, obligatorio desde 2026-05-01) actualiza
+   también el schema de boletas; a la fecha de este ADR la descarga oficial sigue siendo
+   `schema_envio_bol.zip` (EnvioBOLETA_v11).

@@ -72,4 +72,11 @@ describe('TED (timbre electrónico)', () => {
       expect.objectContaining({ codigo: 'CAF_TIPO_DISTINTO' }),
     );
   });
+
+  it('rechaza un CAF de otro emisor', () => {
+    const caf = parsearCaf(generarCafPrueba({ rut: '11111111-1' }).xml);
+    expect(() => construirTed(datosTed(), caf)).toThrow(
+      expect.objectContaining({ codigo: 'CAF_OTRO_EMISOR' }),
+    );
+  });
 });

@@ -7,7 +7,7 @@ describe('parsearCaf', () => {
     const { xml } = generarCafPrueba({ tipoDte: 39, desde: 10, hasta: 50 });
     const caf = parsearCaf(xml);
     expect(caf).toMatchObject({
-      rut: '76.086.428-5',
+      rut: '76086428-5',
       razonSocial: 'ALMACEN DE PRUEBA',
       tipoDte: 39,
       folioDesde: 10,
