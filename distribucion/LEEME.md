@@ -15,7 +15,8 @@ distribucion/
 ├── instalables/
 │   ├── macOS/
 │   │   └── Almacen-POS-0.1.0-macOS-AppleSilicon.dmg
-│   ├── Windows/     ← el .exe se genera en CI o en un PC Windows
+│   ├── Windows/
+│   │   └── Almacen-POS-0.1.0-Windows-x64.exe
 │   ├── Android/     ← el .apk se genera con EAS Build
 │   └── iPhone/      ← se distribuye por TestFlight
 └── manuales/
@@ -52,24 +53,28 @@ SHA-256 del DMG:
 d845dc019e473a792ff3e380747c40a7fccce011b7c2144a53c6a7566f73465e
 ```
 
-## Windows (pendiente de generar)
+## Windows (incluido, sin probar en PC real)
 
-El instalador `.exe` **no está incluido** en esta carpeta porque todavía no se probó en un PC
-Windows real. Se obtiene de una de estas dos formas:
+Archivo: `instalables/Windows/Almacen-POS-0.1.0-Windows-x64.exe`
 
-- **GitHub Actions:** ejecutar el workflow `instalador-windows` y descargar el artefacto
-  `instalador-windows` (contiene `apps/pos/src-tauri/target/release/bundle/nsis/*.exe`).
-- **En un PC Windows:** seguir [`manuales/Guia-Instalacion.md`](manuales/Guia-Instalacion.md) y
-  ejecutar `pnpm data:build` y `pnpm --filter @almacen/pos tauri build`.
+Generado por el workflow **`instalador-windows`** de GitHub Actions (run `40298970706`, commit
+`9d154c5`). Es una instalación **por usuario** (no pide administrador).
 
-Cuando lo tengas, cópialo como:
+1. Ejecuta el `.exe`. SmartScreen puede advertir porque no está firmado: **Más información →
+   Ejecutar de todas formas**.
+2. Abre **Almacén POS**. El primer arranque crea la base, la semilla y el dueño.
+3. Prueba en el PC real: sidecar, impresora USB, gaveta, lector y respaldo. Es lo único que
+   falta validar de este instalador.
+
+SHA-256 del `.exe`:
 
 ```text
-instalables/Windows/Almacen-POS-0.1.0-Windows-x64.exe
+1b40a4369d6c92a703b5f16c98f116840490853d32ff4f80e3fed4bd722bacd6
 ```
 
-El `.exe` no está firmado: Windows SmartScreen puede advertir. Elegir **Más información →
-Ejecutar de todas formas**.
+Para regenerarlo: ejecutar el workflow o compilar en un PC Windows
+([`manuales/Guia-Instalacion.md`](manuales/Guia-Instalacion.md)). El artefacto de CI contiene
+`apps/pos/src-tauri/target/release/bundle/nsis/*.exe`.
 
 ## Android (pendiente de generar)
 

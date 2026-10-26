@@ -1,20 +1,28 @@
 # Instalador de Windows
 
-El `.exe` **no está incluido** todavía: la app de macOS está verificada, pero el instalador de
-Windows solo se generó en CI y falta probarlo en un PC Windows real.
+Archivo incluido:
 
-## Cómo obtenerlo
+```text
+Almacen-POS-0.1.0-Windows-x64.exe
+```
+
+Generado por el workflow **`instalador-windows`** de GitHub Actions (run `40298970706`, commit
+`9d154c5`). **Falta probarlo en un PC Windows real**: sidecar, impresora USB, gaveta y lector.
+
+SHA-256:
+
+```text
+1b40a4369d6c92a703b5f16c98f116840490853d32ff4f80e3fed4bd722bacd6
+```
+
+## Cómo regenerarlo
 
 ### Opción A — GitHub Actions (recomendada)
 
 1. Ejecutar el workflow **`instalador-windows`** en GitHub Actions.
 2. Descargar el artefacto **`instalador-windows`**.
 3. Dentro viene `apps/pos/src-tauri/target/release/bundle/nsis/*.exe`.
-4. Copiarlo acá como:
-
-   ```text
-   Almacen-POS-0.1.0-Windows-x64.exe
-   ```
+4. Copiarlo acá con el nombre de arriba.
 
 ### Opción B — compilar en un PC Windows
 
