@@ -6,6 +6,7 @@ import {
   type ConfigImpresora,
   type ConfiguracionLocal,
   type ModalidadBoleta,
+  type RespaldoLocal,
 } from '../api.js';
 
 const MODALIDADES: Record<ModalidadBoleta, { titulo: string; detalle: string }> = {
@@ -479,12 +480,99 @@ function SeccionImpresora({ api }: { api: ClienteApi }) {
   );
 }
 
+function tamanoLegible(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const mb = bytes / 1024 / 1024;
+  return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
+}
+
+const fechaRespaldo = (iso: string) =>
+  new Date(iso).toLocaleString('es-CL', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+    timeZone: 'America/Santiago',
+  });
+
+function SeccionRespaldos({ api }: { api: ClienteApi }) {
+  const [respaldos, setRespaldos] = useState<RespaldoLocal[]>([]);
+  const [creando, setCreando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .respaldos()
+      .then((r) => {
+        setRespaldos(r.respaldos);
+      })
+      .catch((e: unknown) => {
+        setError(e instanceof ErrorApi ? e.message : 'No se pudieron leer los respaldos');
+      });
+  }, [api]);
+
+  const crear = async () => {
+    setCreando(true);
+    setError(null);
+    setAviso(null);
+    try {
+      const nuevo = await api.crearRespaldo();
+      setRespaldos((previos) => [nuevo, ...previos]);
+      setAviso('Respaldo creado.');
+    } catch (e) {
+      setError(e instanceof ErrorApi ? e.message : 'No se pudo crear el respaldo');
+    } finally {
+      setCreando(false);
+    }
+  };
+
+  const ultimo = respaldos[0];
+
+  return (
+    <div className="tarjeta">
+      <h2>Respaldos</h2>
+      <p className="suave">
+        La caja respalda sola una vez al día. Guarda una copia fuera de este equipo: si se pierde la
+        caja, ese respaldo es lo que permite recuperar ventas y boletas.
+      </p>
+      {ultimo ? (
+        <p>
+          Último respaldo: <strong>{fechaRespaldo(ultimo.creadoEn)}</strong> ·{' '}
+          {tamanoLegible(ultimo.tamanoBytes)}
+          {ultimo.incluyeClaveSii ? ' · incluye la clave del SII' : ''}
+        </p>
+      ) : (
+        <p>Todavía no hay respaldos.</p>
+      )}
+      <p className="suave">
+        Se conservan los últimos 14. El respaldo incluye la clave del SII: guárdalo en un lugar
+        seguro, porque sin ella no se pueden leer los datos tributarios.
+      </p>
+      <div className="fila fila-izquierda">
+        <button type="button" className="boton" disabled={creando} onClick={() => void crear()}>
+          {creando ? 'Respaldando…' : 'Respaldar ahora'}
+        </button>
+      </div>
+      {error && (
+        <p className="mensaje-error" role="alert">
+          {error}
+        </p>
+      )}
+      {aviso && (
+        <p className="mensaje-aviso" role="status">
+          {aviso}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** Configuración del local (solo el dueño). */
 export function PantallaConfiguracion({ api }: { api: ClienteApi }) {
   return (
     <section className="pantalla-caja">
       <SeccionLocal api={api} />
       <SeccionImpresora api={api} />
+      <SeccionRespaldos api={api} />
     </section>
   );
 }

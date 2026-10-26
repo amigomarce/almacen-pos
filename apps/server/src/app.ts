@@ -26,6 +26,7 @@ import { registrarBotones } from './productos/botones.js';
 import { buscarProductos, FILTROS_PRODUCTOS } from './productos/busqueda.js';
 import { registrarGestionProductos } from './productos/gestion.js';
 import { registrarRecepciones } from './recepciones/rutas.js';
+import { registrarRespaldos } from './respaldos/rutas.js';
 import { buscarProducto, type DependenciasLookup } from './productos/lookup.js';
 import { requiereSesion } from './auth/rutas.js';
 import type { Semilla } from './productos/semilla.js';
@@ -56,6 +57,8 @@ export interface OpcionesApp {
   claveSii?: () => Buffer;
   /** `fetch` inyectable para el cliente del SII (tests de la cola de envío). */
   fetchSii?: typeof fetch;
+  /** Respaldos locales; si falta, la app no expone `/backups`. */
+  respaldos?: { dir: string; rutaDb: string; rutaClaveSii?: string; retener?: number };
 }
 
 export function crearApp({
@@ -72,6 +75,7 @@ export function crearApp({
   logger = false,
   claveSii,
   fetchSii,
+  respaldos,
 }: OpcionesApp): FastifyInstance {
   const app = Fastify({
     logger,
@@ -117,6 +121,7 @@ export function crearApp({
   registrarGestionProductos(app, { db, sesiones });
   registrarRecepciones(app, { db, sesiones });
   registrarImpresion(app, { db, sesiones, impresion, ...(ejecutar ? { ejecutar } : {}) });
+  if (respaldos) registrarRespaldos(app, { db, sesiones, ...respaldos });
 
   app.get('/health', () => {
     let estadoDb: 'ok' | 'error' = 'ok';

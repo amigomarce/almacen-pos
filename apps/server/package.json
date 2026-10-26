@@ -12,7 +12,10 @@
     "db:seed": "tsx src/db/seed-cli.ts",
     "device:info": "tsx src/sincronizacion/identidad-cli.ts",
     "sync:backfill": "tsx src/sincronizacion/backfill-cli.ts",
-    "sii:cargar": "tsx src/sii/cargar-cli.ts"
+    "sii:cargar": "tsx src/sii/cargar-cli.ts",
+    "respaldo:crear": "tsx src/respaldos/respaldos-cli.ts crear",
+    "respaldo:listar": "tsx src/respaldos/respaldos-cli.ts listar",
+    "respaldo:restaurar": "tsx src/respaldos/respaldos-cli.ts restaurar"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",

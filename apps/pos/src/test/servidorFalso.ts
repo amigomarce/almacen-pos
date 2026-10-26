@@ -1,5 +1,11 @@
 import { vi } from 'vitest';
-import { ClienteApi, type ProductoLocal, type Rol, type SesionCaja } from '../api.js';
+import {
+  ClienteApi,
+  type ProductoLocal,
+  type RespaldoLocal,
+  type Rol,
+  type SesionCaja,
+} from '../api.js';
 
 const producto = (
   id: string,
@@ -55,6 +61,7 @@ export interface EstadoFalso {
   /** Datos del local (GET/PATCH /settings). */
   local: Record<string, unknown>;
   configGuardada: Record<string, unknown>[];
+  respaldos: RespaldoLocal[];
   impresoraCfg: Record<string, unknown>;
   anulaciones: Record<string, unknown>[];
   cierres: Record<string, unknown>[];
@@ -122,6 +129,7 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
       prefijosBalanzaPrecio: [],
     },
     configGuardada: [],
+    respaldos: [],
     boletaConfirmada: true,
     siiListo: false,
     impresoraCfg: {
@@ -355,6 +363,29 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
           built_at: '2026-10-25T11:35:19.120Z',
           product_count: 11027,
         });
+      case 'GET /backups':
+        if (!usuario) return sinSesion();
+        if (usuario.role !== 'DUENO') {
+          return json(403, {
+            error: 'SIN_PERMISO',
+            mensaje: 'Solo el dueño puede ver los respaldos',
+          });
+        }
+        return json(200, { respaldos: estado.respaldos });
+      case 'POST /backups': {
+        if (!usuario) return sinSesion();
+        if (usuario.role !== 'DUENO') {
+          return json(403, { error: 'SIN_PERMISO', mensaje: 'Solo el dueño puede respaldar' });
+        }
+        const nuevo: RespaldoLocal = {
+          nombre: `almacen-2026-10-25_23-10-0${estado.respaldos.length}`,
+          creadoEn: new Date('2026-10-25T23:10:00-03:00').toISOString(),
+          tamanoBytes: 1024 * 1024,
+          incluyeClaveSii: false,
+        };
+        estado.respaldos.unshift(nuevo);
+        return json(200, nuevo);
+      }
       case 'PATCH /settings':
         if (!usuario) return sinSesion();
         estado.configGuardada.push(cuerpo);

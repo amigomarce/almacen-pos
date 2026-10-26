@@ -96,6 +96,13 @@ export interface AcercaDe {
 
 export type TransporteImpresora = 'DESACTIVADA' | 'RED' | 'SISTEMA' | 'ARCHIVO';
 
+export interface RespaldoLocal {
+  nombre: string;
+  creadoEn: string;
+  tamanoBytes: number;
+  incluyeClaveSii: boolean;
+}
+
 export interface ConfigImpresora {
   transporte: TransporteImpresora;
   destino: string | null;
@@ -456,6 +463,14 @@ export class ClienteApi {
 
   configuracion(): Promise<ConfiguracionLocal> {
     return this.pedir<ConfiguracionLocal>('/settings');
+  }
+
+  respaldos(): Promise<{ respaldos: RespaldoLocal[] }> {
+    return this.pedir<{ respaldos: RespaldoLocal[] }>('/backups');
+  }
+
+  crearRespaldo(): Promise<RespaldoLocal> {
+    return this.pedir<RespaldoLocal>('/backups', { metodo: 'POST' });
   }
 
   registrarVenta(pedido: PedidoVenta): Promise<VentaRegistrada> {

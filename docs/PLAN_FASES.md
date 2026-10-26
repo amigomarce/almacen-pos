@@ -112,6 +112,22 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
   trámite del **Formulario N° 2117** y la salida del sistema gratuito (ADR-001).
 - Respaldos automáticos (local + nube). Manual de uso de 1 página para el dueño.
 
+### Estado al 2026-10-25 — respaldos (primera etapa de la Fase 6)
+
+**Hecho (ADR-012):**
+- Respaldo local automático: copia consistente de SQLite (API de backup, respeta WAL), al
+  arrancar y cada 6 h, con un máximo de uno por día (20 h).
+- Cada respaldo incluye la base, la clave del SII (si existe) y un manifiesto; permisos
+  privados y retención de 14.
+- Restauración por consola con la caja detenida, validación del archivo y copia previa
+  automática.
+- API de respaldos (dueño) y sección **Configuración → Respaldos** con "Respaldar ahora".
+- Guía en [`RESPALDOS.md`](RESPALDOS.md).
+
+**Pendiente de la Fase 6:** instalador Windows/Tauri con el servidor Node como sidecar,
+asistente de primera configuración (datos, impresora, escáner, QR), manual de 1 página y
+respaldo automático a un bucket de nube.
+
 ## Mejoras futuras (backlog)
 
 - **Imágenes de producto en la caja y el móvil.** La semilla y Open Food Facts traen

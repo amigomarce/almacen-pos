@@ -90,6 +90,24 @@ describe('configuración del local', () => {
   });
 });
 
+describe('respaldos', () => {
+  it('muestra el último respaldo y crea uno nuevo', async () => {
+    const s = servidorConSesion();
+    const dueno = s.estado.usuarios.find((u) => u.role === 'DUENO');
+    if (!dueno) throw new Error('falta el dueño');
+    s.estado.tokens.set('t-prueba', dueno);
+    s.api.usarToken('t-prueba');
+    const u = userEvent.setup();
+    render(<PantallaConfiguracion api={s.api} />);
+
+    expect(await screen.findByText('Todavía no hay respaldos.')).toBeInTheDocument();
+    await u.click(screen.getByRole('button', { name: 'Respaldar ahora' }));
+    expect(await screen.findByText('Respaldo creado.')).toBeInTheDocument();
+    expect(s.estado.respaldos).toHaveLength(1);
+    expect(screen.getByText(/Último respaldo/)).toBeInTheDocument();
+  });
+});
+
 describe('Acerca de', () => {
   it('muestra la versión y la atribución ODbL con sus enlaces', async () => {
     const s = servidorConSesion();

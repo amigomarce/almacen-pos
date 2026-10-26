@@ -118,6 +118,9 @@ pnpm coverage        # tests con umbrales de cobertura (core ≥ 95 %, dte y pri
 pnpm --filter @almacen/server db:generate   # nueva migración tras cambiar schema.ts
 pnpm --filter @almacen/server sii:cargar --cert cert.pem --clave clave.pem \
   --rut-envia 76.086.428-5 --fch-resol 2026-01-01 --nro-resol 80 --caf caf39.xml
+pnpm --filter @almacen/server respaldo:crear     # respaldo manual de la base
+pnpm --filter @almacen/server respaldo:listar
+pnpm --filter @almacen/server respaldo:restaurar --respaldo var/respaldos/<carpeta> --si
 ```
 Requiere Node 22 (`.nvmrc`).
 (Créalos en el `package.json` raíz si no existen.)

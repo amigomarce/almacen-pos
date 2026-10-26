@@ -1,3 +1,4 @@
+import { dirname, join } from 'node:path';
 import { RUTA_SEMILLA, cargarNormalizacion } from '@almacen/data';
 import pkg from '../package.json' with { type: 'json' };
 import { crearApp } from './app.js';
@@ -6,6 +7,7 @@ import { abrirDb } from './db/client.js';
 import { migrar } from './db/migrar.js';
 import { RUTA_ENV, cargarEnvLocal, variable } from './env.js';
 import { ClienteOff } from './productos/off.js';
+import { iniciarRespaldos } from './respaldos/servicio.js';
 import { Semilla } from './productos/semilla.js';
 import { leerClaveSii } from './sii/cifrado.js';
 import { iniciarEnvioSii } from './sii/envio.js';
@@ -19,6 +21,8 @@ const puerto = Number(variable('PORT') ?? 3001);
 const host = variable('HOST') ?? '127.0.0.1';
 const rutaDb = variable('ALMACEN_DB') ?? 'var/almacen.sqlite';
 const rutaSemilla = variable('ALMACEN_SEMILLA') ?? RUTA_SEMILLA;
+const dirRespaldos = variable('ALMACEN_RESPALDOS') ?? join(dirname(rutaDb), 'respaldos');
+const rutaClaveSii = variable('ALMACEN_SII_KEY') ?? 'var/sii.key';
 
 const db = abrirDb(rutaDb);
 migrar(db);
@@ -41,10 +45,29 @@ const app = crearApp({
   off,
   permitirModoPrueba,
   logger: true,
-  claveSii: () => leerClaveSii(),
+  claveSii: () => leerClaveSii(rutaClaveSii),
+  respaldos: { dir: dirRespaldos, rutaDb, rutaClaveSii },
 });
 
 if (conEnv) app.log.info(`Variables cargadas de ${RUTA_ENV}`);
+
+iniciarRespaldos(db, {
+  dir: dirRespaldos,
+  rutaDb,
+  rutaClaveSii,
+  log: {
+    info: (obj, msg) => {
+      app.log.info(obj, msg);
+    },
+    warn: (obj, msg) => {
+      app.log.warn(obj, msg);
+    },
+    error: (obj, msg) => {
+      app.log.error(obj, msg);
+    },
+  },
+});
+app.log.info(`Respaldos locales en ${dirRespaldos} (uno por día, se conservan 14).`);
 
 if (semilla) {
   app.log.info(
