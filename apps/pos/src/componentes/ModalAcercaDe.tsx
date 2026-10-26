@@ -46,6 +46,11 @@ export function ModalAcercaDe({ api, alCerrar }: { api: ClienteApi; alCerrar: ()
           <p>
             <strong>{datos.app}</strong> · versión {datos.version}
           </p>
+          <h3>Desarrollo</h3>
+          <p>
+            Desarrollado por <strong>{datos.developer.name}</strong> ·{' '}
+            <a href={`mailto:${datos.developer.email}`}>{datos.developer.email}</a>
+          </p>
           <h3>Datos de productos</h3>
           <p className="atribucion">
             <ConEnlaces texto={datos.attribution} />

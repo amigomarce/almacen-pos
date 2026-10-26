@@ -339,6 +339,7 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
         return json(200, {
           app: 'Almacén POS',
           version: '0.1.0',
+          developer: { name: 'Arrayan Labs', email: 'arrayan.labs@gmail.com' },
           license: 'ODbL-1.0',
           license_url: 'https://opendatacommons.org/licenses/odbl/1-0/',
           attribution:

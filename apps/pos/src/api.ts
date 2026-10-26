@@ -85,6 +85,7 @@ export interface CierreCaja {
 export interface AcercaDe {
   app: string;
   version: string;
+  developer: { name: string; email: string };
   license: string;
   license_url: string;
   attribution: string;

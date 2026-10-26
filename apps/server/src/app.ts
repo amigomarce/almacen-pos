@@ -166,6 +166,7 @@ export function crearApp({
     return {
       app: 'Almacén POS',
       version: pkg.version,
+      developer: { name: 'Arrayan Labs', email: 'arrayan.labs@gmail.com' },
       license: meta['license'] ?? LICENCIA,
       license_url: meta['license_url'] ?? URL_LICENCIA,
       attribution: meta['attribution'] ?? TEXTO_ATRIBUCION,

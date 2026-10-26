@@ -99,6 +99,11 @@ describe('Acerca de', () => {
     expect(ventana).toHaveTextContent(
       'Datos de productos de Open Food Facts (https://openfoodfacts.org) y proyectos asociados.',
     );
+    expect(ventana).toHaveTextContent('Desarrollado por Arrayan Labs');
+    expect(within(ventana).getByRole('link', { name: 'arrayan.labs@gmail.com' })).toHaveAttribute(
+      'href',
+      'mailto:arrayan.labs@gmail.com',
+    );
     expect(
       within(ventana).getByRole('link', { name: 'https://openfoodfacts.org' }),
     ).toHaveAttribute('href', 'https://openfoodfacts.org');
