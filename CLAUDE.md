@@ -139,7 +139,9 @@ pnpm --filter @almacen/pos tauri build   # app/instalador (Node 22 oficial y see
 ```
 Requiere **Node 22** (`.nvmrc`). Con Node 20 los tests se caen (`better-sqlite3` con SIGSEGV
 y workers de la caja que no arrancan) y la cobertura del servidor sale en 0 %. Si `node -v` no
-dice v22, usa `export PATH=/opt/homebrew/opt/node@22/bin:$PATH` o `nvm use`.
+dice v22, usa `export PATH=/opt/homebrew/opt/node@22/bin:$PATH` o `nvm use`. `pnpm install`
+(`engineStrict`) y los scripts `dev:*`, `test`, `coverage`, `data:build` y `db:seed`
+(`scripts/verificar-node.mjs`) se niegan a correr con otra versión.
 
 ## 7. Cómo trabajar en este repo
 

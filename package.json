@@ -4,23 +4,23 @@
   "type": "module",
   "packageManager": "pnpm@12.15.0",
   "engines": {
-    "node": ">=22"
+    "node": "^22"
   },
   "scripts": {
-    "dev:pos": "pnpm --parallel --filter @almacen/server --filter @almacen/pos dev",
-    "dev:pos:app": "pnpm --filter @almacen/pos tauri dev",
-    "dev:mobile": "pnpm --filter @almacen/mobile start",
-    "dev:cloud": "pnpm --filter @almacen/cloud dev",
-    "dev:server": "pnpm --filter @almacen/server dev",
-    "data:build": "pnpm --filter @almacen/data build",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "coverage": "vitest run --coverage",
+    "dev:pos": "node scripts/verificar-node.mjs && pnpm --parallel --filter @almacen/server --filter @almacen/pos dev",
+    "dev:pos:app": "node scripts/verificar-node.mjs && pnpm --filter @almacen/pos tauri dev",
+    "dev:mobile": "node scripts/verificar-node.mjs && pnpm --filter @almacen/mobile start",
+    "dev:cloud": "node scripts/verificar-node.mjs && pnpm --filter @almacen/cloud dev",
+    "dev:server": "node scripts/verificar-node.mjs && pnpm --filter @almacen/server dev",
+    "data:build": "node scripts/verificar-node.mjs && pnpm --filter @almacen/data build",
+    "test": "node scripts/verificar-node.mjs && vitest run",
+    "test:watch": "node scripts/verificar-node.mjs && vitest",
+    "coverage": "node scripts/verificar-node.mjs && vitest run --coverage",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r --parallel typecheck",
-    "db:seed": "pnpm --filter @almacen/server db:seed"
+    "db:seed": "node scripts/verificar-node.mjs && pnpm --filter @almacen/server db:seed"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
