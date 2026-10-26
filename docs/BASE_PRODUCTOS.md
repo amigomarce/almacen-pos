@@ -144,6 +144,29 @@ productos) y caché en memoria (encontrados 24 h, no encontrados 1 h, fallos 1 m
 el mismo código de `data/` (`@almacen/data`: `normalizarProducto`, `MapeoCategorias`, marcas
 canónicas), así que un producto de OFF se ve igual que uno de la semilla.
 
+### Imágenes de producto (mejora pendiente)
+
+La semilla ya trae `image_url` y el lookup la devuelve cuando el código se encuentra en la
+semilla o en Open Food Facts (8.379 de los 11.027 productos de la semilla tienen imagen al
+2026-10-25). Sin embargo, hoy la caja **no las muestra ni las conserva**:
+
+- `ProductoSugerido` en la POS no declara `imageUrl` y no hay miniaturas en la interfaz.
+- `products` (local) no tiene columna de imagen; al dar de alta el producto, la URL se pierde.
+- `/products` (búsqueda/listado), la sincronización con la nube y la app móvil tampoco la llevan.
+
+Mejora propuesta:
+
+1. Agregar `image_url` a `products` (local y espejo en la nube) y al evento de sincronización.
+2. Devolverla en lookup, alta, búsqueda y listado; conservarla al crear el producto.
+3. Mostrar miniatura con placeholder en el modal de alta, la venta y la pantalla de productos.
+4. Tests de servidor, POS y sync.
+
+Consideración offline: las URLs de Open Food Facts requieren internet. Para que las imágenes
+funcionen sin conexión hay que **descargar y cachear** los archivos (trabajo aparte); sin caché,
+la caja muestra la foto con red y el placeholder sin ella. Las fotos de OFF son **CC BY-SA**,
+licencia distinta de la base de datos: si se cachean o empaquetan, requieren su propia
+atribución (ver ADR-004).
+
 ## 5. Atribución
 
 Incluir en "Acerca de" de la app: datos de productos de Open Food Facts y proyectos

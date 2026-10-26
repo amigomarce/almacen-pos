@@ -33,7 +33,7 @@ Nuestro caso de uso:
 | Base local de cada almacén (semilla + productos propios + precios) | Base derivada de **uso interno** | §4.5: el uso interno no es público → **sin obligación** de compartir los productos ni los precios que crea cada local. |
 | Aporte opt-in a la base central (futuro) | Se mezcla con la base derivada que distribuimos | Lo aportado pasa a ser ODbL al redistribuirlo. El texto del opt-in debe decirlo. Nunca incluye precios ni stock. Ideal: devolverlo también a OFF. |
 | Lista curada propia | Si se fusiona con OFF en `seed_products` → parte de la base derivada → ODbL | Decisión: mantenerla bajo ODbL igual (simple, sin mezclar licencias). |
-| Imágenes | CC BY-SA, licencia aparte | Solo guardamos `image_url`; **no empaquetamos imágenes**. Si en el futuro se cachean, requieren atribución CC BY-SA propia. |
+| Imágenes | CC BY-SA, licencia aparte | Solo guardamos `image_url` en la semilla; **no empaquetamos imágenes**. Hoy la caja no persiste ni muestra esa URL (mejora en `PLAN_FASES.md`). Si en el futuro se cachean, requieren atribución CC BY-SA propia. |
 | Nombre y logo de OFF | No cubiertos por la ODbL | Citarlos como fuente; no usar el logo ni sugerir respaldo de OFF. |
 
 ## Decisión

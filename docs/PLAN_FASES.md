@@ -111,3 +111,13 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
   e-Boleta por el total exacto. Al elegir **"Desde esta caja"** (`SII_DIRECTO`) se advierte el
   trámite del **Formulario N° 2117** y la salida del sistema gratuito (ADR-001).
 - Respaldos automáticos (local + nube). Manual de uso de 1 página para el dueño.
+
+## Mejoras futuras (backlog)
+
+- **Imágenes de producto en la caja y el móvil.** La semilla y Open Food Facts traen
+  `image_url` (8.379 de 11.027 productos de la semilla) y el lookup la devuelve, pero hoy la
+  POS no la declara ni la muestra, `products` no la guarda y la sincronización no la lleva.
+  Propuesta: agregar `image_url` a `products` (local + nube), conservarla al dar de alta,
+  mostrarla con placeholder en alta/venta/productos y sincronizarla. Para uso offline hay que
+  cachear los archivos; las fotos de OFF son CC BY-SA y requieren atribución propia. Detalle
+  en [`BASE_PRODUCTOS.md`](BASE_PRODUCTOS.md) §4.
