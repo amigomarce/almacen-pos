@@ -34,20 +34,22 @@ en la constante `EAS_PROJECT_ID` de `apps/mobile/app.config.ts` y haz commit.
 
 ### 1. La nube que usará el teléfono
 
-- **Piloto en la red local:** levanta la nube escuchando en la red y usa la IP del Mac:
+- **Uso real (configurado):** `https://almacen-pos-nube.fly.dev`, publicada en Fly.io y
+  siempre encendida ([`NUBE.md`](NUBE.md)). Es la que usa el perfil `preview` hoy. Con ella la
+  app funciona desde cualquier red.
+- **Solo para pruebas en la red local:** levanta la nube escuchando en la red y usa la IP del Mac:
   ```bash
   CLOUD_HOST=0.0.0.0 pnpm dev:cloud     # puerto 3002
   ipconfig getifaddr en0                # IP del Mac, p. ej. 192.168.1.20
   ```
   La URL queda `http://192.168.1.20:3002`. Solo funciona con el teléfono en la misma Wi-Fi y
   el Mac encendido; si el router cambia la IP del Mac hay que recompilar.
-- **Uso real:** publica `apps/cloud` con `https://` (Fly.io, Railway, Render…) y usa esa URL.
 
 ### 2. Variables del perfil `preview`
 
 ```bash
 cd apps/mobile
-npx eas-cli env:create --environment preview --name EXPO_PUBLIC_CLOUD_URL --value http://192.168.1.20:3002 --visibility plaintext
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_CLOUD_URL --value https://almacen-pos-nube.fly.dev --visibility plaintext
 npx eas-cli env:create --environment preview --name EXPO_PUBLIC_SUPABASE_URL --value https://<proyecto>.supabase.co --visibility plaintext
 npx eas-cli env:create --environment preview --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value <anon key> --visibility sensitive
 ```
@@ -71,13 +73,13 @@ QR de **Configuración → Primera configuración**.
 
 ## iPhone: TestFlight
 
-Requisitos: cuenta Apple Developer y la nube publicada en `https://` (iOS bloquea `http://`
-en apps distribuidas).
+Requisitos: cuenta Apple Developer. La nube ya está en `https://` (iOS bloquea `http://` en
+apps distribuidas).
 
 ```bash
 cd apps/mobile
 # Variables del perfil production (URL https)
-npx eas-cli env:create --environment production --name EXPO_PUBLIC_CLOUD_URL --value https://nube.ejemplo.cl --visibility plaintext
+npx eas-cli env:create --environment production --name EXPO_PUBLIC_CLOUD_URL --value https://almacen-pos-nube.fly.dev --visibility plaintext
 npx eas-cli env:create --environment production --name EXPO_PUBLIC_SUPABASE_URL --value https://<proyecto>.supabase.co --visibility plaintext
 npx eas-cli env:create --environment production --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value <anon key> --visibility sensitive
 
@@ -105,6 +107,5 @@ production` genera el `.aab` y `eas submit --platform android` lo sube.
 
 ## Pendiente
 
-- Publicar `apps/cloud` en `https://` (necesario para iOS y para usar la app fuera del local).
 - La URL de la nube queda fija en cada build. Si se vuelve un problema, el QR de vinculación
   puede llevarla (la caja ya la conoce, ADR-016) y la app guardarla.

@@ -62,8 +62,11 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
 **Pendiente en esta fase:**
 - Probar la app en un emulador o teléfono (no se ejecutó en el entorno de desarrollo) y
   pulir la UI; el escáner con cámara necesita un dispositivo real.
-- Provisionar Supabase para la prueba real: `CLOUD_DATABASE_URL` y `SUPABASE_JWT_SECRET`
-  (nube), `CLOUD_URL` (caja), `EXPO_PUBLIC_*` (móvil).
+- ~~Provisionar Supabase y publicar la nube~~: hecho 2026-10-26. La nube corre en Fly.io
+  (`https://almacen-pos-nube.fly.dev`, siempre encendida, ADR-018, [`NUBE.md`](NUBE.md)) sobre
+  Supabase `sa-east-1`. Falta `SUPABASE_SERVICE_ROLE_KEY` para el respaldo en Storage.
+- App del dueño instalable: EAS Build configurado (APK `preview`, TestFlight `production`,
+  [`APP_DUENO.md`](APP_DUENO.md)); falta instalar el APK y probar la vinculación con la caja.
 - Fiado / cuenta corriente (opcional) no se hizo.
 
 **TODOs menores (resueltos 2026-10-26):** `GET /report/sales/today` cuenta desde las 00:00 de
