@@ -13,10 +13,14 @@ secrets/
 *.pfx
 *.p12
 *.pem
+*.key
 CAF*.xml
 data/raw/
 coverage/
 data/out/
+
+# Datos locales de la caja (SQLite, respaldos y la clave del SII)
+apps/server/var/
 
 # Configuración pública de la caja en Tauri (sin secretos)
 !apps/pos/.env.tauri

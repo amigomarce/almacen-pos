@@ -71,15 +71,17 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
 
 ## Fase 5 — Boleta electrónica real
 - **Estado del código (2026-10-25):** Etapas 1 (núcleo DTE, ADR-008), 2 (envío + cliente de
-  la API, ADR-009) y 3 (provider, cola offline y folios persistidos, ADR-010) hechas y
-  probadas con fixtures. Falta la Etapa 4: representación impresa de la boleta válida y
-  certificación real. `SII_DIRECTO` aún no se puede elegir en Configuración.
+  la API, ADR-009), 3 (provider, cola offline y folios persistidos, ADR-010) y 4 (boleta
+  impresa, carga de certificado/CAF y activación, ADR-011) hechas y probadas con fixtures.
+  `SII_DIRECTO` ya se puede elegir cuando `siiListo` (certificado vigente + CAF + datos
+  legales). Falta la **certificación real** con los documentos del dueño.
 - **Orden:** primero el **código** (esta fase), después la **certificación**. La fase deja el
   módulo completo y probado con fixtures; la certificación real (set de pruebas, F2117) se hace
   al final, con el certificado y CAF del dueño. Mientras no esté certificado, las instalaciones
   nuevas siguen en D (comprobante de venta + e-Boleta).
 - **Pregunta de modalidad en el primer arranque** (lo aprobado en `CLAUDE.md` §2): si el local
-  no tiene configuración, la caja muestra una pantalla **bloqueante** antes de la primera venta:
+  no tiene configuración, la caja muestra una pantalla **bloqueante** antes de la primera venta
+  (implementada en la Etapa 4, ADR-011):
   *"¿Cómo emitirá las boletas?"* con **"Con la app del SII"** (`PUENTE_MANUAL`)
   **preseleccionada** y **"Desde esta caja"** (`SII_DIRECTO`) habilitada solo si hay
   certificado, CAF y certificación. No se puede vender hasta confirmar; si ya hay

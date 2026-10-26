@@ -69,6 +69,24 @@ describe('entrar con PIN', () => {
     expect(s.estado.sesionCaja?.efectivoInicialClp).toBe(12000);
   });
 
+  it('bloquea la primera venta hasta confirmar la modalidad de boleta', async () => {
+    const u = userEvent.setup();
+    const s = servidorFalso({ boletaConfirmada: false });
+    render(<App api={s.api} />);
+    await u.click(await screen.findByRole('button', { name: /Dueño/ }));
+    await teclear(u, '1234');
+    await u.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(
+      await screen.findByRole('heading', { name: '¿Cómo emitirá las boletas?' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText('Escanea o escribe un código')).not.toBeInTheDocument();
+
+    await u.click(screen.getByRole('button', { name: 'Confirmar y vender' }));
+    expect(await screen.findByRole('heading', { name: 'Abrir Caja 1' })).toBeInTheDocument();
+    expect(s.estado.configGuardada.at(-1)).toEqual({ dteProvider: 'PUENTE_MANUAL' });
+  });
+
   it('funciona con el teclado físico', async () => {
     const u = userEvent.setup();
     const s = servidorFalso();

@@ -65,6 +65,14 @@ export function registrarImpresion(app: FastifyInstance, deps: DependenciasImpre
     };
   };
 
+  /** Resolución con la que se emiten las boletas (solo si el local ya tiene SII configurado). */
+  const resolucionSii = () => {
+    const c = leerConfiguracion(db);
+    return c.siiNroResol !== null && c.siiFchResol
+      ? { numero: c.siiNroResol, fecha: c.siiFchResol }
+      : null;
+  };
+
   /** Imprime y responde; si la impresora falla, 503 con la vista previa igual. */
   const imprimir = async (
     reply: FastifyReply,
@@ -190,7 +198,11 @@ export function registrarImpresion(app: FastifyInstance, deps: DependenciasImpre
           pagadoClp: v.pagadoClp,
           vueltoClp: v.vueltoClp,
           exentoClp: v.totales.exentoClp,
+          netoClp: v.totales.netoClp,
+          ivaClp: v.totales.ivaClp,
+          tasaIva: v.totales.tasaIva,
           documento: v.documento,
+          resolucion: resolucionSii(),
           motivoSinDocumento: v.motivoSinDocumento,
           anulada: v.estado === 'ANULADA',
           reimpresion: req.body?.reimpresion ?? false,

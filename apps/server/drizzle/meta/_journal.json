@@ -50,6 +50,13 @@
       "when": 1792978061564,
       "tag": "0006_sii_directo",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1792979571846,
+      "tag": "0007_modalidad_confirmada",
+      "breakpoints": true
     }
   ]
 }

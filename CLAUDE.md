@@ -116,6 +116,8 @@ pnpm dev:server      # servidor local (Fastify + SQLite) en 127.0.0.1:3001
 pnpm db:seed         # datos de prueba en apps/server/var/almacen.sqlite (PINs: dueño 1234, cajero 0000)
 pnpm coverage        # tests con umbrales de cobertura (core ≥ 95 %, dte y printer ≥ 90 %)
 pnpm --filter @almacen/server db:generate   # nueva migración tras cambiar schema.ts
+pnpm --filter @almacen/server sii:cargar --cert cert.pem --clave clave.pem \
+  --rut-envia 76.086.428-5 --fch-resol 2026-01-01 --nro-resol 80 --caf caf39.xml
 ```
 Requiere Node 22 (`.nvmrc`).
 (Créalos en el `package.json` raíz si no existen.)

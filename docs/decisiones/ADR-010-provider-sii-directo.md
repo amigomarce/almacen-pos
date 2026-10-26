@@ -88,10 +88,10 @@ base. Reemitir consumiría un folio nuevo en cada reimpresión.
 
 ### Activación
 
-`SII_DIRECTO` **todavía no se puede elegir** en Configuración. Falta la Etapa 4: representación
-impresa de la boleta válida (con o sin PDF417, Res. Ex. 207/2025) y la certificación real.
-El provider, la cola y la persistencia de folios ya están implementados y probados con
-fixtures; la activación es un cambio de configuración, no de arquitectura.
+La activación se completó en la Etapa 4 (ADR-011): la modalidad aparece en Configuración
+solo cuando `siiListo(db)` (datos legales, certificado vigente y CAF), el dueño la confirma
+en la pregunta del primer arranque y la impresora ya sabe imprimir la boleta válida. La
+certificación real ante el SII sigue pendiente de los documentos del dueño.
 
 ## Verificación
 

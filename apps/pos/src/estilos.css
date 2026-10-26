@@ -839,6 +839,19 @@ body {
   flex-direction: column;
 }
 
+.opcion-deshabilitada {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.fila-botones {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
 .acerca-de h3 {
   margin: 0.75rem 0 0.25rem;
 }

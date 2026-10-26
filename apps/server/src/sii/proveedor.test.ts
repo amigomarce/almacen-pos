@@ -213,6 +213,17 @@ describe('venta con emisión directa al SII', () => {
     expect(c.db.select().from(taxDocuments).all()).toHaveLength(1);
     expect(c.db.select().from(taxDocuments).get()?.folio).toBe(antes?.folio);
 
+    const impresion = await c.app.inject({
+      method: 'POST',
+      url: `/sales/${v.id}/print`,
+      headers: cajero,
+    });
+    expect(impresion.statusCode).toBe(200);
+    const vista = impresion.json<{ impreso: boolean; motivo: string; vistaPrevia: string }>();
+    expect(vista).toMatchObject({ impreso: false, motivo: 'SIN_IMPRESORA' });
+    expect(vista.vistaPrevia).toContain('BOLETA ELECTRÓNICA');
+    expect(vista.vistaPrevia).toContain('Verifique documento en');
+
     const health = await c.app.inject({ method: 'GET', url: '/health' });
     expect(health.json()).toMatchObject({ sii: { pendientes: 1, atrasadas: 0 } });
   });

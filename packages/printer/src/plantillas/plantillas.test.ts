@@ -1,4 +1,4 @@
-import { cuadrarCaja, ErrorDominio } from '@almacen/core';
+import { cuadrarCaja } from '@almacen/core';
 import { describe, expect, it } from 'vitest';
 import { aEscPos, aTexto, CMD } from '../escpos.js';
 import { ticketCierre, textoDiferencia } from './cierre.js';
@@ -145,12 +145,77 @@ describe('ticketVenta', () => {
     }
   });
 
-  it('se niega a imprimir algo marcado como boleta válida (llega en la Fase 5)', () => {
-    const boleta = {
-      ...venta,
-      documento: { leyendas: [], folioExterno: null, validoComoBoleta: true },
-    };
-    expect(() => ticketVenta(boleta, 32)).toThrow(ErrorDominio);
+  it('imprime la boleta electrónica válida con folio, IVA, verificación y resolución', () => {
+    const texto = aTexto(
+      ticketVenta(
+        {
+          ...venta,
+          netoClp: 6750,
+          ivaClp: 1283,
+          resolucion: { numero: 80, fecha: '2026-01-01' },
+          documento: {
+            tipoDte: 39,
+            folio: 123,
+            leyendas: [],
+            folioExterno: null,
+            validoComoBoleta: true,
+          },
+        },
+        32,
+      ),
+    );
+    expect(texto).toContain('BOLETA ELECTRÓNICA');
+    expect(texto).toContain('N° 123');
+    expect(texto).not.toContain('NO VÁLIDO');
+    expect(texto).not.toContain('Venta N°');
+    expect(texto).toMatch(/Neto\s+\$6\.750/);
+    expect(texto).toMatch(/IVA 19%\s+\$1\.283/);
+    const plano = texto.replace(/\s+/g, ' ');
+    expect(plano).toContain('Verifique documento en www.sii.cl');
+    expect(plano).toContain('Resolución SII N° 80 de 2026-01-01');
+  });
+
+  it('boleta exenta 41: no imprime neto ni IVA', () => {
+    const texto = aTexto(
+      ticketVenta(
+        {
+          ...venta,
+          exentoClp: 8033,
+          documento: {
+            tipoDte: 41,
+            folio: 7,
+            leyendas: [],
+            folioExterno: null,
+            validoComoBoleta: true,
+          },
+        },
+        32,
+      ),
+    );
+    expect(texto).toContain('BOLETA ELECTRÓNICA EXENTA');
+    expect(texto).not.toMatch(/\bNeto\b/);
+    expect(texto).not.toMatch(/\bIVA\b/);
+    expect(texto).toMatch(/Exento\s+\$8\.033/);
+  });
+
+  it('deriva el desglose de IVA si el servidor no manda neto/IVA', () => {
+    const texto = aTexto(
+      ticketVenta(
+        {
+          ...venta,
+          documento: {
+            tipoDte: 39,
+            folio: 1,
+            leyendas: [],
+            folioExterno: null,
+            validoComoBoleta: true,
+          },
+        },
+        48,
+      ),
+    );
+    expect(texto).toMatch(/Neto\s+\$6\.750/);
+    expect(texto).toMatch(/IVA 19%\s+\$1\.283/);
   });
 
   it('marca anuladas, reimpresiones y montos exentos', () => {

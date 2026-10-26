@@ -18,7 +18,11 @@ const MODALIDADES: Record<ModalidadBoleta, { titulo: string; detalle: string }> 
     titulo: 'Modo prueba',
     detalle: 'No emite boletas. Solo para probar la caja: muestra el aviso "MODO PRUEBA".',
   },
-  SII_DIRECTO: { titulo: 'Boleta electrónica desde la caja', detalle: 'Disponible más adelante.' },
+  SII_DIRECTO: {
+    titulo: 'Boleta electrónica desde la caja',
+    detalle:
+      'La caja timbra e imprime la boleta y la envía al SII. Requiere certificado digital y CAF cargados.',
+  },
   PROVEEDOR_EXTERNO: { titulo: 'Proveedor de boletas', detalle: 'Disponible más adelante.' },
 };
 

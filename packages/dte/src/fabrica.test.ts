@@ -18,10 +18,17 @@ describe('crearProvider', () => {
     expect(crearProvider('PUENTE_MANUAL', 'TODO_MEDIO_PAGO')).toBeInstanceOf(PuenteManualProvider);
     expect(modalidadDisponible('MOCK')).toBe(true);
     expect(modalidadDisponible('PUENTE_MANUAL')).toBe(true);
+    expect(modalidadDisponible('SII_DIRECTO')).toBe(true);
   });
 
-  it.each(['SII_DIRECTO', 'PROVEEDOR_EXTERNO'] as const)('%s todavía no está disponible', (n) => {
-    expect(modalidadDisponible(n)).toBe(false);
-    expect(() => crearProvider(n, 'SOLO_NO_ELECTRONICOS')).toThrow(ErrorDominio);
+  it('SII_DIRECTO se construye con la configuración del local, no con crearProvider', () => {
+    expect(() => crearProvider('SII_DIRECTO', 'SOLO_NO_ELECTRONICOS')).toThrow(
+      expect.objectContaining({ codigo: 'SII_REQUIERE_CONFIGURACION' }),
+    );
+  });
+
+  it('PROVEEDOR_EXTERNO todavía no está disponible', () => {
+    expect(modalidadDisponible('PROVEEDOR_EXTERNO')).toBe(false);
+    expect(() => crearProvider('PROVEEDOR_EXTERNO', 'SOLO_NO_ELECTRONICOS')).toThrow(ErrorDominio);
   });
 });

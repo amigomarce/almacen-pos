@@ -11,7 +11,8 @@
     "db:generate": "drizzle-kit generate",
     "db:seed": "tsx src/db/seed-cli.ts",
     "device:info": "tsx src/sincronizacion/identidad-cli.ts",
-    "sync:backfill": "tsx src/sincronizacion/backfill-cli.ts"
+    "sync:backfill": "tsx src/sincronizacion/backfill-cli.ts",
+    "sii:cargar": "tsx src/sii/cargar-cli.ts"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",

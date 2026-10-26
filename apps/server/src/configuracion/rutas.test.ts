@@ -1,8 +1,11 @@
+import { generarCafPrueba } from '@almacen/dte/test';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { crearApp } from '../app.js';
 import { abrirDb } from '../db/client.js';
 import { migrar } from '../db/migrar.js';
 import * as t from '../db/schema.js';
+import { guardarCafSii, guardarCredencialesSii } from '../sii/config.js';
+import { CERTIFICADO, CLAVE_SII, DATOS_LOCAL } from '../test/sii.js';
 import { entrarComo, prepararApp, type CtxPrueba } from '../test/sesion.js';
 import { leerConfiguracion } from './servicio.js';
 
@@ -23,7 +26,12 @@ describe('modalidad de boleta', () => {
     migrar(db);
     expect(db.select().from(t.storeSettings).all()).toHaveLength(0);
     const conf = leerConfiguracion(db);
-    expect(conf).toMatchObject({ dteProvider: 'PUENTE_MANUAL', modoPrueba: false, version: 1 });
+    expect(conf).toMatchObject({
+      dteProvider: 'PUENTE_MANUAL',
+      boletaConfirmada: false,
+      modoPrueba: false,
+      version: 1,
+    });
     expect(db.select().from(t.storeSettings).all()).toHaveLength(1);
     // La columna también tiene ese valor por defecto.
     db.delete(t.storeSettings).run();
@@ -64,6 +72,7 @@ describe('modalidad de boleta', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
       dteProvider: 'PUENTE_MANUAL',
+      boletaConfirmada: true,
       modoPrueba: false,
       rut: '76.086.428-5',
       razonSocial: 'Almacén Don Pepe',
@@ -83,8 +92,60 @@ describe('modalidad de boleta', () => {
     expect((await editar({ rut: null })).json()).toMatchObject({ rut: null });
   });
 
-  it.each(['SII_DIRECTO', 'PROVEEDOR_EXTERNO'])('%s todavía no se puede elegir', async (m) => {
-    const res = await editar({ dteProvider: m });
+  it('SII_DIRECTO exige certificado y CAF cargados', async () => {
+    await editar({
+      rut: DATOS_LOCAL.rut,
+      razonSocial: DATOS_LOCAL.razonSocial,
+      giro: DATOS_LOCAL.giro,
+      direccion: DATOS_LOCAL.direccion,
+      comuna: DATOS_LOCAL.comuna,
+    });
+    const res = await editar({ dteProvider: 'SII_DIRECTO' });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ error: 'SII_NO_CONFIGURADO' });
+  });
+
+  it('habilita SII_DIRECTO con certificado, CAF y datos legales', async () => {
+    await editar({
+      rut: DATOS_LOCAL.rut,
+      razonSocial: DATOS_LOCAL.razonSocial,
+      giro: DATOS_LOCAL.giro,
+      direccion: DATOS_LOCAL.direccion,
+      comuna: DATOS_LOCAL.comuna,
+    });
+    guardarCredencialesSii(
+      c.db,
+      {
+        ...CERTIFICADO,
+        rutEnvia: DATOS_LOCAL.rut,
+        fchResol: '2026-01-01',
+        nroResol: 80,
+      },
+      CLAVE_SII,
+    );
+    guardarCafSii(c.db, generarCafPrueba({ tipoDte: 39 }).xml, CLAVE_SII);
+
+    const conf = await c.app.inject({ method: 'GET', url: '/settings', headers: dueno });
+    expect(conf.json()).toMatchObject({
+      siiListo: true,
+      modalidadesDisponibles: ['PUENTE_MANUAL', 'MOCK', 'SII_DIRECTO'],
+    });
+
+    const res = await editar({ dteProvider: 'SII_DIRECTO' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({
+      dteProvider: 'SII_DIRECTO',
+      siiFchResol: '2026-01-01',
+      siiNroResol: 80,
+    });
+
+    const incompleto = await editar({ giro: '' });
+    expect(incompleto.statusCode).toBe(400);
+    expect(incompleto.json()).toMatchObject({ error: 'DATOS_LOCAL_INCOMPLETOS' });
+  });
+
+  it('PROVEEDOR_EXTERNO todavía no se puede elegir', async () => {
+    const res = await editar({ dteProvider: 'PROVEEDOR_EXTERNO' });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({ error: 'MODALIDAD_NO_DISPONIBLE' });
   });

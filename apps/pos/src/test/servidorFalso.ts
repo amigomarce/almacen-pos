@@ -58,7 +58,9 @@ export interface EstadoFalso {
   impresoraCfg: Record<string, unknown>;
   anulaciones: Record<string, unknown>[];
   cierres: Record<string, unknown>[];
-  dteProvider: 'MOCK' | 'PUENTE_MANUAL';
+  dteProvider: 'MOCK' | 'PUENTE_MANUAL' | 'SII_DIRECTO';
+  boletaConfirmada: boolean;
+  siiListo: boolean;
   redondeo: boolean;
   /** `true` = hay impresora (imprime); `false` = sin impresora configurada. */
   impresora: boolean;
@@ -120,6 +122,8 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
       prefijosBalanzaPrecio: [],
     },
     configGuardada: [],
+    boletaConfirmada: true,
+    siiListo: false,
     impresoraCfg: {
       transporte: 'DESACTIVADA',
       destino: null,
@@ -224,10 +228,12 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
   const configuracion = () => ({
     ...estado.local,
     dteProvider: estado.dteProvider,
+    boletaConfirmada: estado.boletaConfirmada,
+    siiListo: estado.siiListo,
     modoPrueba: estado.dteProvider === 'MOCK',
     modeloEmision: estado.local['modeloEmision'] ?? 'SOLO_NO_ELECTRONICOS',
     cashRoundingEnabled: estado.redondeo,
-    modalidadesDisponibles: ['PUENTE_MANUAL', 'MOCK'],
+    modalidadesDisponibles: ['PUENTE_MANUAL', 'MOCK', ...(estado.siiListo ? ['SII_DIRECTO'] : [])],
   });
 
   const fetchFn = vi.fn<typeof fetch>((entrada, init) => {
@@ -354,8 +360,10 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
         if (cuerpo['rut'] === '1-1')
           return json(400, { error: 'RUT_INVALIDO', mensaje: 'El RUT no es válido' });
         estado.local = { ...estado.local, ...cuerpo };
-        if (cuerpo['dteProvider'])
-          estado.dteProvider = cuerpo['dteProvider'] as 'MOCK' | 'PUENTE_MANUAL';
+        if (cuerpo['dteProvider']) {
+          estado.dteProvider = cuerpo['dteProvider'] as 'MOCK' | 'PUENTE_MANUAL' | 'SII_DIRECTO';
+          estado.boletaConfirmada = true;
+        }
         if (typeof cuerpo['cashRoundingEnabled'] === 'boolean')
           estado.redondeo = cuerpo['cashRoundingEnabled'];
         return json(200, configuracion());

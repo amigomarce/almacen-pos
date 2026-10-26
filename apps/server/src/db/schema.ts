@@ -77,6 +77,8 @@ export const storeSettings = sqliteTable(
       .notNull()
       .default('SOLO_NO_ELECTRONICOS'),
     dteProvider: text('dte_provider', { enum: PROVIDERS }).notNull().default('PUENTE_MANUAL'),
+    /** `false` hasta que el dueño confirme cómo emitirá las boletas en el primer arranque. */
+    dteProviderConfirmed: booleano('dte_provider_confirmed', false),
     cashRoundingEnabled: booleano('cash_rounding_enabled', true),
     /** Prefijos de balanza (20–29) cuyas etiquetas traen precio, ej. "26,27". El resto, peso. */
     scalePricePrefixes: text('scale_price_prefixes'),

@@ -245,6 +245,10 @@ export interface ConfiguracionLocal {
   direccion?: string | null;
   comuna?: string | null;
   dteProvider: ModalidadBoleta;
+  boletaConfirmada?: boolean;
+  siiListo?: boolean;
+  siiFchResol?: string | null;
+  siiNroResol?: number | null;
   modoPrueba: boolean;
   modeloEmision: 'SOLO_NO_ELECTRONICOS' | 'TODO_MEDIO_PAGO';
   cashRoundingEnabled: boolean;

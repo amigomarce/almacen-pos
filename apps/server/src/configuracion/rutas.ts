@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { requiereSesion } from '../auth/rutas.js';
 import type { Sesiones } from '../auth/sesiones.js';
 import type { Db } from '../db/client.js';
+import { siiListo } from '../sii/config.js';
 import {
   actualizarConfiguracion,
   leerConfiguracion,
@@ -18,12 +19,16 @@ export function registrarConfiguracion(
   const { db, sesiones, permitirModoPrueba } = deps;
 
   /** La caja la necesita para el aviso de modo prueba y el flujo de cobro. */
-  app.get('/settings', { onRequest: requiereSesion(sesiones) }, () => ({
-    ...leerConfiguracion(db),
-    modalidadesDisponibles: MODALIDADES_DISPONIBLES.filter(
-      (m) => m !== 'MOCK' || permitirModoPrueba,
-    ),
-  }));
+  app.get('/settings', { onRequest: requiereSesion(sesiones) }, () => {
+    const listo = siiListo(db);
+    return {
+      ...leerConfiguracion(db),
+      siiListo: listo,
+      modalidadesDisponibles: MODALIDADES_DISPONIBLES.filter(
+        (m) => (m !== 'MOCK' || permitirModoPrueba) && (m !== 'SII_DIRECTO' || listo),
+      ),
+    };
+  });
 
   app.patch<{ Body: CambiosConfiguracion }>(
     '/settings',
@@ -56,7 +61,10 @@ export function registrarConfiguracion(
       },
     },
     (req) => {
-      const { antes, despues } = actualizarConfiguracion(db, req.body, { permitirModoPrueba });
+      const { antes, despues } = actualizarConfiguracion(db, req.body, {
+        permitirModoPrueba,
+        siiListo: siiListo(db),
+      });
       if (antes.dteProvider !== despues.dteProvider) {
         req.log.warn(
           { de: antes.dteProvider, a: despues.dteProvider, usuario: req.sesion?.usuario.name },

@@ -1,0 +1,1 @@
+ALTER TABLE `store_settings` ADD `dte_provider_confirmed` integer DEFAULT false NOT NULL;

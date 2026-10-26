@@ -3,10 +3,12 @@ import {
   api as apiPorDefecto,
   ErrorApi,
   type ClienteApi,
+  type ConfiguracionLocal,
   type EstadoCaja,
   type Usuario,
 } from './api.js';
 import { AvisoModoPrueba } from './componentes/AvisoModoPrueba.js';
+import { ModalBoletaInicial } from './componentes/ModalBoletaInicial.js';
 import { PantallaApertura } from './pantallas/PantallaApertura.js';
 import { PantallaPin } from './pantallas/PantallaPin.js';
 import { ModalAcercaDe } from './componentes/ModalAcercaDe.js';
@@ -38,6 +40,11 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
   // Con un token guardado se intenta retomar la sesión; sin token, directo al PIN.
   const [vista, setVista] = useState<Vista>('VENTA');
   const [acercaDe, setAcercaDe] = useState(false);
+  // Configuración cargada junto al usuario: `null` con el mismo id = no se pudo leer.
+  const [config, setConfig] = useState<{
+    usuarioId: string;
+    valor: ConfiguracionLocal | null;
+  } | null>(null);
   const [fase, setFase] = useState<Fase>(() =>
     leerToken() ? { tipo: 'CARGANDO' } : { tipo: 'PIN' },
   );
@@ -45,6 +52,7 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
   const volverAlPin = useCallback(() => {
     guardarToken(null);
     api.usarToken(null);
+    setConfig(null);
     setFase({ tipo: 'PIN' });
   }, [api]);
 
@@ -69,6 +77,26 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
 
   useEffect(() => api.alPerderSesion(volverAlPin), [api, volverAlPin]);
 
+  // Configuración del local: decide si falta la pregunta bloqueante de la modalidad.
+  const usuarioId = fase.tipo === 'CAJA' ? fase.usuario.id : null;
+  const configActual = usuarioId !== null && config?.usuarioId === usuarioId ? config.valor : null;
+  const configPendiente = usuarioId !== null && config?.usuarioId !== usuarioId;
+  useEffect(() => {
+    if (!usuarioId) return;
+    let vigente = true;
+    api
+      .configuracion()
+      .then((c) => {
+        if (vigente) setConfig({ usuarioId, valor: c });
+      })
+      .catch(() => {
+        if (vigente) setConfig({ usuarioId, valor: null });
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [api, usuarioId, vista]);
+
   // Al iniciar: si hay un token guardado y sigue vigente, se retoma la sesión.
   useEffect(() => {
     const token = leerToken();
@@ -82,6 +110,7 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
 
   const alEntrar = (token: string, usuario: Usuario) => {
     setVista('VENTA');
+    setConfig(null);
     guardarToken(token);
     api.usarToken(token);
     void cargarCaja(usuario);
@@ -152,21 +181,34 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
       <div className="contenido">
         {fase.tipo === 'CARGANDO' && <p className="pantalla-centrada">Cargando…</p>}
         {fase.tipo === 'PIN' && <PantallaPin api={api} alEntrar={alEntrar} />}
-        {fase.tipo === 'CAJA' && (
-          <Caja
-            fase={fase}
-            vista={vista}
-            api={api}
-            reintentar={() => void cargarCaja(fase.usuario)}
-            alAbrir={(caja) => {
-              setFase({ ...fase, caja });
-            }}
-            alCerrarCaja={(caja) => {
-              setFase({ ...fase, caja });
-              setVista('VENTA');
-            }}
-          />
-        )}
+        {fase.tipo === 'CAJA' &&
+          (configPendiente ? (
+            <p className="pantalla-centrada">Cargando configuración…</p>
+          ) : configActual?.boletaConfirmada === false && vista !== 'CONFIGURACION' ? (
+            <ModalBoletaInicial
+              api={api}
+              config={configActual}
+              usuario={fase.usuario}
+              alConfirmar={(actualizada) => {
+                setConfig({ usuarioId: fase.usuario.id, valor: actualizada });
+              }}
+              alSalir={() => void salir()}
+            />
+          ) : (
+            <Caja
+              fase={fase}
+              vista={vista}
+              api={api}
+              reintentar={() => void cargarCaja(fase.usuario)}
+              alAbrir={(caja) => {
+                setFase({ ...fase, caja });
+              }}
+              alCerrarCaja={(caja) => {
+                setFase({ ...fase, caja });
+                setVista('VENTA');
+              }}
+            />
+          ))}
       </div>
     </main>
   );
