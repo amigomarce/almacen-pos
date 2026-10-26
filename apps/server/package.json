@@ -16,6 +16,8 @@
     "respaldo:crear": "tsx src/respaldos/respaldos-cli.ts crear",
     "respaldo:listar": "tsx src/respaldos/respaldos-cli.ts listar",
     "respaldo:restaurar": "tsx src/respaldos/respaldos-cli.ts restaurar",
+    "respaldo:listar-nube": "tsx src/respaldos/respaldos-cli.ts listar-nube",
+    "respaldo:restaurar-nube": "tsx src/respaldos/respaldos-cli.ts restaurar-nube",
     "sidecar": "node scripts/preparar-sidecar.mjs"
   },
   "devDependencies": {
@@ -34,6 +36,7 @@
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.4",
     "fastify": "^5.12.7",
+    "tar": "^7.5.22",
     "uuid": "^14.0.3"
   }
 }

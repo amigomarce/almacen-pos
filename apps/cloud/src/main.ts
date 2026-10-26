@@ -4,6 +4,7 @@ import { crearVerificadorJwt } from './auth/supabase.js';
 import { drizzleDb } from './db/client.js';
 import { migrar } from './db/migrar.js';
 import { RUTA_ENV, cargarEnvLocal, variable } from './env.js';
+import { crearAlmacenSupabase } from './respaldos/almacen.js';
 
 const conEnv = cargarEnvLocal();
 
@@ -27,17 +28,31 @@ await migrar(db);
 // JWT secret legacy (HS256). Sin ninguno de los dos, los endpoints del dueño responden 401.
 const supabaseUrl = variable('SUPABASE_URL');
 const secretoJwt = variable('SUPABASE_JWT_SECRET');
+const serviceRoleKey = variable('SUPABASE_SERVICE_ROLE_KEY');
+const almacenObjetos =
+  supabaseUrl && serviceRoleKey
+    ? crearAlmacenSupabase({
+        url: supabaseUrl,
+        serviceKey: serviceRoleKey,
+        bucket: variable('SUPABASE_STORAGE_BUCKET') ?? 'respaldos',
+      })
+    : null;
 const app = crearApp({
   db,
   ...(supabaseUrl || secretoJwt
     ? { verificarJwt: crearVerificadorJwt({ url: supabaseUrl, secreto: secretoJwt }) }
     : {}),
+  almacenObjetos,
   logger: true,
 });
 
 if (conEnv) app.log.info(`Variables cargadas de ${RUTA_ENV}`);
 if (!supabaseUrl && !secretoJwt)
   app.log.warn('Sin SUPABASE_URL ni SUPABASE_JWT_SECRET: el login del dueño queda deshabilitado.');
+if (!almacenObjetos)
+  app.log.warn(
+    'Sin SUPABASE_SERVICE_ROLE_KEY: el respaldo en la nube queda deshabilitado (sync sigue funcionando).',
+  );
 
 try {
   await app.listen({ port: puerto, host });

@@ -100,7 +100,8 @@ ALMACEN_NODE=/ruta/a/node22/bin/node \
 pnpm --filter @almacen/pos tauri build
 ```
 
-- `ALMACEN_CLOUD_URL`: activa la sincronización con la nube.
+- `ALMACEN_CLOUD_URL`: valor inicial de la URL de nube; después se puede cambiar en
+  **Configuración → Nube y respaldo cifrado** sin recompilar.
 - `ALMACEN_CONTACTO`: activa Open Food Facts en línea.
 - `ALMACEN_NODE`: runtime que se copia al sidecar en macOS.
 

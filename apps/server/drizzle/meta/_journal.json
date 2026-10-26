@@ -57,6 +57,13 @@
       "when": 1792979571846,
       "tag": "0007_modalidad_confirmada",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1792987509638,
+      "tag": "0008_nube_respaldos",
+      "breakpoints": true
     }
   ]
 }

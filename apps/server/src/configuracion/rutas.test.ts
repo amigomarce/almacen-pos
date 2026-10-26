@@ -144,6 +144,27 @@ describe('modalidad de boleta', () => {
     expect(incompleto.json()).toMatchObject({ error: 'DATOS_LOCAL_INCOMPLETOS' });
   });
 
+  it('guarda y valida la URL de nube y la retención del respaldo', async () => {
+    const guardada = await editar({ cloudUrl: 'https://api.ejemplo.cl/' });
+    expect(guardada.json()).toMatchObject({
+      cloudUrl: 'https://api.ejemplo.cl',
+      cloudBackupEnabled: false,
+      cloudBackupRetention: 7,
+    });
+    for (const mala of ['ftp://x', 'no-es-url', 'https://user:pass@x.cl', 'https://x.cl?q=1']) {
+      expect((await editar({ cloudUrl: mala })).json()).toMatchObject({
+        error: 'NUBE_URL_INVALIDA',
+      });
+    }
+    expect((await editar({ cloudBackupRetention: 0 })).statusCode).toBe(400);
+    expect((await editar({ cloudBackupRetention: 31 })).statusCode).toBe(400);
+
+    await editar({ cloudUrl: null });
+    const sinUrl = await editar({ cloudBackupEnabled: true });
+    expect(sinUrl.statusCode).toBe(400);
+    expect(sinUrl.json()).toMatchObject({ error: 'NUBE_URL_REQUERIDA' });
+  });
+
   it('PROVEEDOR_EXTERNO todavía no se puede elegir', async () => {
     const res = await editar({ dteProvider: 'PROVEEDOR_EXTERNO' });
     expect(res.statusCode).toBe(400);

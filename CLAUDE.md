@@ -121,6 +121,8 @@ pnpm --filter @almacen/server sii:cargar --cert cert.pem --clave clave.pem \
 pnpm --filter @almacen/server respaldo:crear     # respaldo manual de la base
 pnpm --filter @almacen/server respaldo:listar
 pnpm --filter @almacen/server respaldo:restaurar --respaldo var/respaldos/<carpeta> --si
+pnpm --filter @almacen/server respaldo:listar-nube
+pnpm --filter @almacen/server respaldo:restaurar-nube --id <id> --si
 pnpm --filter @almacen/pos tauri build   # app/instalador (Node 22 oficial y seed; ver docs/INSTALADOR.md)
 ```
 Requiere Node 22 (`.nvmrc`).

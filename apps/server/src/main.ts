@@ -7,6 +7,11 @@ import { abrirDb } from './db/client.js';
 import { migrar } from './db/migrar.js';
 import { RUTA_ENV, cargarEnvLocal, variable } from './env.js';
 import { ClienteOff } from './productos/off.js';
+import {
+  iniciarRespaldoNube,
+  subirUltimoRespaldo,
+  type OpcionesRespaldoNube,
+} from './respaldos/nube.js';
 import { iniciarRespaldos } from './respaldos/servicio.js';
 import { Semilla } from './productos/semilla.js';
 import { leerClaveSii } from './sii/cifrado.js';
@@ -23,6 +28,7 @@ const rutaDb = variable('ALMACEN_DB') ?? 'var/almacen.sqlite';
 const rutaSemilla = variable('ALMACEN_SEMILLA') ?? RUTA_SEMILLA;
 const dirRespaldos = variable('ALMACEN_RESPALDOS') ?? join(dirname(rutaDb), 'respaldos');
 const rutaClaveSii = variable('ALMACEN_SII_KEY') ?? 'var/sii.key';
+const rutaClaveRespaldo = variable('ALMACEN_RESPALDO_KEY') ?? join(dirname(rutaDb), 'respaldo.key');
 
 const db = abrirDb(rutaDb);
 migrar(db);
@@ -52,6 +58,15 @@ if (Number.isInteger(padre) && padre > 0) {
   }, 5_000).unref();
 }
 
+const nube: OpcionesRespaldoNube = {
+  db,
+  dir: dirRespaldos,
+  rutaClave: rutaClaveRespaldo,
+  rutaDb,
+  rutaClaveSii,
+};
+const subirNube = () => subirUltimoRespaldo(nube);
+
 const app = crearApp({
   db,
   semilla,
@@ -59,28 +74,40 @@ const app = crearApp({
   permitirModoPrueba,
   logger: true,
   claveSii: () => leerClaveSii(rutaClaveSii),
-  respaldos: { dir: dirRespaldos, rutaDb, rutaClaveSii },
+  respaldos: {
+    dir: dirRespaldos,
+    rutaDb,
+    rutaClaveSii,
+    rutaClaveRespaldo,
+    subirNube,
+  },
 });
 
 if (conEnv) app.log.info(`Variables cargadas de ${RUTA_ENV}`);
+
+const log = {
+  info: (obj: object, msg: string) => {
+    app.log.info(obj, msg);
+  },
+  warn: (obj: object, msg: string) => {
+    app.log.warn(obj, msg);
+  },
+  error: (obj: object, msg: string) => {
+    app.log.error(obj, msg);
+  },
+};
 
 iniciarRespaldos(db, {
   dir: dirRespaldos,
   rutaDb,
   rutaClaveSii,
-  log: {
-    info: (obj, msg) => {
-      app.log.info(obj, msg);
-    },
-    warn: (obj, msg) => {
-      app.log.warn(obj, msg);
-    },
-    error: (obj, msg) => {
-      app.log.error(obj, msg);
-    },
+  log,
+  alCrear: async () => {
+    await subirUltimoRespaldo({ ...nube, log });
   },
 });
 app.log.info(`Respaldos locales en ${dirRespaldos} (uno por día, se conservan 14).`);
+iniciarRespaldoNube({ ...nube, log });
 
 if (semilla) {
   app.log.info(
@@ -102,16 +129,18 @@ if (off) {
   );
 }
 
-// Sincronización con la nube (Fase 4): solo si está configurada la URL de la nube.
-const cloudUrl = variable('CLOUD_URL');
-if (cloudUrl) {
-  const identidad = obtenerIdentidad(db);
-  iniciarSincronizacion(db, { cloudUrl, deviceToken: identidad.deviceToken }, 10_000, app.log);
+// Sincronización con la nube (Fase 4): la URL se puede cambiar en Configuración; el env es
+// solo el valor inicial de desarrollo.
+const cloudUrl = () => leerConfiguracion(db).cloudUrl ?? variable('CLOUD_URL') ?? null;
+const identidad = obtenerIdentidad(db);
+iniciarSincronizacion(db, { cloudUrl, deviceToken: identidad.deviceToken }, 10_000, app.log);
+const urlNube = cloudUrl();
+if (urlNube) {
   app.log.info(
-    `Sincronización con la nube activa (${cloudUrl}; instalación ${identidad.installationId}).`,
+    `Sincronización con la nube activa (${urlNube}; instalación ${identidad.installationId}).`,
   );
 } else {
-  app.log.warn('CLOUD_URL sin definir: la caja no sincroniza con la nube.');
+  app.log.warn('Nube sin URL: configúrala en Configuración para sincronizar y respaldar.');
 }
 
 // Cola de boletas al SII (Fase 5): solo si el local emite directo. En `PUENTE_MANUAL` no hay

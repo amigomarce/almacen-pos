@@ -126,6 +126,32 @@ describe('respaldos', () => {
   });
 });
 
+describe('nube', () => {
+  it('guarda la URL, prueba la conexión y muestra la clave de respaldo', async () => {
+    const { s, u } = montar();
+    const url = await screen.findByLabelText('Dirección de la nube');
+    await u.type(url, 'https://api.ejemplo.cl');
+    await u.click(screen.getByRole('checkbox', { name: /Respaldar automáticamente en la nube/ }));
+    const retencion = screen.getByLabelText('Copias a conservar en la nube (1 a 30)');
+    await u.clear(retencion);
+    await u.type(retencion, '10');
+    await u.click(screen.getByRole('button', { name: 'Guardar nube' }));
+
+    expect(await screen.findByText('Configuración de nube guardada.')).toBeInTheDocument();
+    expect(s.estado.configGuardada.at(-1)).toMatchObject({
+      cloudUrl: 'https://api.ejemplo.cl',
+      cloudBackupEnabled: true,
+      cloudBackupRetention: 10,
+    });
+
+    await u.click(screen.getByRole('button', { name: 'Probar conexión' }));
+    expect(await screen.findByText(/Nube conectada/)).toBeInTheDocument();
+
+    await u.click(screen.getByRole('button', { name: 'Ver clave de respaldo' }));
+    expect(await screen.findByText('clave-de-prueba')).toBeInTheDocument();
+  });
+});
+
 describe('Acerca de', () => {
   it('muestra la versión y la atribución ODbL con sus enlaces', async () => {
     const s = servidorConSesion();

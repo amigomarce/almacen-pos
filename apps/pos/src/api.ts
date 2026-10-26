@@ -118,6 +118,14 @@ export interface RespaldoLocal {
   creadoEn: string;
   tamanoBytes: number;
   incluyeClaveSii: boolean;
+  nube: {
+    subidoEn?: string;
+    id?: string;
+    objeto?: string;
+    sha256?: string;
+    error?: string;
+    intentoEn?: string;
+  } | null;
 }
 
 export interface ConfigImpresora {
@@ -274,6 +282,9 @@ export interface ConfiguracionLocal {
   siiListo?: boolean;
   siiFchResol?: string | null;
   siiNroResol?: number | null;
+  cloudUrl?: string | null;
+  cloudBackupEnabled?: boolean;
+  cloudBackupRetention?: number;
   modoPrueba: boolean;
   modeloEmision: 'SOLO_NO_ELECTRONICOS' | 'TODO_MEDIO_PAGO';
   cashRoundingEnabled: boolean;
@@ -289,6 +300,9 @@ export interface CambiosConfiguracion {
   comuna?: string | null;
   dteProvider?: ModalidadBoleta;
   modeloEmision?: 'SOLO_NO_ELECTRONICOS' | 'TODO_MEDIO_PAGO';
+  cloudUrl?: string | null;
+  cloudBackupEnabled?: boolean;
+  cloudBackupRetention?: number;
   cashRoundingEnabled?: boolean;
   prefijosBalanzaPrecio?: string[];
 }
@@ -500,6 +514,17 @@ export class ClienteApi {
 
   crearRespaldo(): Promise<RespaldoLocal> {
     return this.pedir<RespaldoLocal>('/backups', { metodo: 'POST' });
+  }
+
+  probarNube(): Promise<{ ok: boolean; status: number; version: string | null }> {
+    return this.pedir<{ ok: boolean; status: number; version: string | null }>(
+      '/backups/probar-nube',
+      { metodo: 'POST' },
+    );
+  }
+
+  claveRespaldo(): Promise<{ clave: string }> {
+    return this.pedir<{ clave: string }>('/backups/clave');
   }
 
   registrarVenta(pedido: PedidoVenta): Promise<VentaRegistrada> {

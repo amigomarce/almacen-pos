@@ -1,3 +1,4 @@
+import { ErrorDominio } from '@almacen/core';
 import type { EntidadSync, EventoSync } from '@almacen/sync';
 import { eq, isNull } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
@@ -11,8 +12,11 @@ interface EventoBajado extends EventoSync {
   id: string;
 }
 
+export type FuenteUrlNube = string | (() => string | null);
+
 export interface DepsSincronizar {
-  cloudUrl: string;
+  /** URL fija o función que la lee de la configuración (para cambiarla desde la app). */
+  cloudUrl: FuenteUrlNube;
   deviceToken: string;
   /** Inyectable para tests. */
   fetchFn?: Fetch;
@@ -33,7 +37,11 @@ const sinBarraFinal = (url: string) => url.replace(/\/+$/, '');
  */
 export async function sincronizar(db: Db, deps: DepsSincronizar): Promise<ResultadoSincronizacion> {
   const fetchFn = deps.fetchFn ?? fetch;
-  const base = sinBarraFinal(deps.cloudUrl);
+  const cloudUrl = typeof deps.cloudUrl === 'string' ? deps.cloudUrl : deps.cloudUrl();
+  if (!cloudUrl) {
+    throw new ErrorDominio('NUBE_URL_REQUERIDA', 'Configura la dirección de la nube');
+  }
+  const base = sinBarraFinal(cloudUrl);
   const auth = { authorization: `Bearer ${deps.deviceToken}` };
 
   const pendientes = db.select().from(outbox).where(isNull(outbox.syncedAt)).all();
@@ -80,6 +88,8 @@ export function iniciarSincronizacion(
   log?: { error: (obj: object, msg: string) => void },
 ): () => void {
   const timer = setInterval(() => {
+    const url = typeof deps.cloudUrl === 'string' ? deps.cloudUrl : deps.cloudUrl();
+    if (!url) return;
     sincronizar(db, deps).catch((err: unknown) => {
       log?.error({ err }, 'Sincronización con la nube falló');
     });

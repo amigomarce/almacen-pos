@@ -235,6 +235,31 @@ export const outbox = pgTable(
 );
 
 /** Cierres de caja que la caja sube, para mostrar el aviso al dueño en el móvil. */
+/**
+ * Respaldos cifrados que la caja sube a Storage. El objeto vive fuera de Postgres; aquí solo
+ * quedan metadatos para listar, retener y restaurar.
+ */
+export const backups = pgTable(
+  'backups',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    ownerId: text('owner_id').notNull(),
+    installationId: text('installation_id').notNull(),
+    filename: text('filename').notNull(),
+    objectKey: text('object_key').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    sha256: text('sha256'),
+    createdAt: ahora('created_at'),
+  },
+  (t) => [
+    check('backups_tamano', sql`${t.sizeBytes} >= 0`),
+    index('backups_dueno_idx').on(t.ownerId, t.installationId, t.createdAt),
+    uniqueIndex('backups_objeto_uq').on(t.objectKey),
+  ],
+);
+
 export const cashCloses = pgTable(
   'cash_closes',
   {

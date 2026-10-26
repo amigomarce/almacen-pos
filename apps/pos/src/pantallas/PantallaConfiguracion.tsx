@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toQR } from 'toqr';
 import {
   ErrorApi,
@@ -503,16 +503,21 @@ function SeccionRespaldos({ api }: { api: ClienteApi }) {
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
-  useEffect(() => {
+  const cargar = useCallback(() => {
     api
       .respaldos()
       .then((r) => {
         setRespaldos(r.respaldos);
+        setError(null);
       })
       .catch((e: unknown) => {
         setError(e instanceof ErrorApi ? e.message : 'No se pudieron leer los respaldos');
       });
   }, [api]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
 
   const crear = async () => {
     setCreando(true);
@@ -539,11 +544,17 @@ function SeccionRespaldos({ api }: { api: ClienteApi }) {
         caja, ese respaldo es lo que permite recuperar ventas y boletas.
       </p>
       {ultimo ? (
-        <p>
-          Último respaldo: <strong>{fechaRespaldo(ultimo.creadoEn)}</strong> ·{' '}
-          {tamanoLegible(ultimo.tamanoBytes)}
-          {ultimo.incluyeClaveSii ? ' · incluye la clave del SII' : ''}
-        </p>
+        <>
+          <p>
+            Último respaldo: <strong>{fechaRespaldo(ultimo.creadoEn)}</strong> ·{' '}
+            {tamanoLegible(ultimo.tamanoBytes)}
+            {ultimo.incluyeClaveSii ? ' · incluye la clave del SII' : ''}
+          </p>
+          {ultimo.nube?.subidoEn ? (
+            <p className="suave">En la nube: {fechaRespaldo(ultimo.nube.subidoEn)}</p>
+          ) : null}
+          {ultimo.nube?.error ? <p className="mensaje-error">Nube: {ultimo.nube.error}</p> : null}
+        </>
       ) : (
         <p>Todavía no hay respaldos.</p>
       )}
@@ -554,6 +565,9 @@ function SeccionRespaldos({ api }: { api: ClienteApi }) {
       <div className="fila fila-izquierda">
         <button type="button" className="boton" disabled={creando} onClick={() => void crear()}>
           {creando ? 'Respaldando…' : 'Respaldar ahora'}
+        </button>
+        <button type="button" className="boton boton-texto" onClick={cargar}>
+          Actualizar estado
         </button>
       </div>
       {error && (
@@ -805,6 +819,168 @@ function SeccionPrimeraConfiguracion({ api }: { api: ClienteApi }) {
   );
 }
 
+function SeccionNube({ api }: { api: ClienteApi }) {
+  const [url, setUrl] = useState('');
+  const [habilitado, setHabilitado] = useState(false);
+  const [retencion, setRetencion] = useState(7);
+  const [guardando, setGuardando] = useState(false);
+  const [probando, setProbando] = useState(false);
+  const [prueba, setPrueba] = useState<string | null>(null);
+  const [clave, setClave] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .configuracion()
+      .then((c) => {
+        setUrl(c.cloudUrl ?? '');
+        setHabilitado(c.cloudBackupEnabled ?? false);
+        setRetencion(c.cloudBackupRetention ?? 7);
+      })
+      .catch((e: unknown) => {
+        setError(e instanceof ErrorApi ? e.message : 'No se pudo leer la configuración de nube');
+      });
+  }, [api]);
+
+  const guardar = async () => {
+    setGuardando(true);
+    setError(null);
+    setAviso(null);
+    setPrueba(null);
+    try {
+      const actualizada = await api.guardarConfiguracion({
+        cloudUrl: url.trim() === '' ? null : url.trim(),
+        cloudBackupEnabled: habilitado,
+        cloudBackupRetention: retencion,
+      });
+      setUrl(actualizada.cloudUrl ?? '');
+      setHabilitado(actualizada.cloudBackupEnabled ?? false);
+      setRetencion(actualizada.cloudBackupRetention ?? 7);
+      setAviso('Configuración de nube guardada.');
+      window.dispatchEvent(new Event('almacen:configuracion'));
+    } catch (e) {
+      setError(e instanceof ErrorApi ? e.message : 'No se pudo guardar la configuración de nube');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const probar = async () => {
+    setProbando(true);
+    setPrueba(null);
+    try {
+      const r = await api.probarNube();
+      setPrueba(
+        r.ok ? `Nube conectada (versión ${r.version ?? '?'})` : `La nube respondió ${r.status}`,
+      );
+    } catch (e) {
+      setPrueba(e instanceof ErrorApi ? e.message : 'No se pudo probar la nube');
+    } finally {
+      setProbando(false);
+    }
+  };
+
+  const verClave = async () => {
+    setError(null);
+    try {
+      setClave((await api.claveRespaldo()).clave);
+    } catch (e) {
+      setError(e instanceof ErrorApi ? e.message : 'No se pudo obtener la clave de respaldo');
+    }
+  };
+
+  return (
+    <div className="tarjeta" id="nube">
+      <h2>Nube y respaldo cifrado</h2>
+      <p className="suave">
+        La caja sincroniza con la nube y puede subir un respaldo cifrado una vez al día. La URL es
+        la de <code>apps/cloud</code>, por ejemplo <code>https://api.tu-nube.cl</code>.
+      </p>
+      <div className="formulario">
+        <label className="etiqueta-campo">
+          Dirección de la nube
+          <input
+            className="campo"
+            value={url}
+            maxLength={300}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              setAviso(null);
+            }}
+            placeholder="https://api.tu-nube.cl"
+          />
+        </label>
+        <label className="etiqueta-campo">
+          Copias a conservar en la nube (1 a 30)
+          <input
+            className="campo"
+            type="number"
+            min={1}
+            max={30}
+            value={retencion}
+            onChange={(e) => {
+              setRetencion(Number(e.target.value));
+              setAviso(null);
+            }}
+          />
+        </label>
+      </div>
+      <label className="casilla">
+        <input
+          type="checkbox"
+          checked={habilitado}
+          onChange={(e) => {
+            setHabilitado(e.target.checked);
+            setAviso(null);
+          }}
+        />
+        Respaldar automáticamente en la nube
+      </label>
+      <p className="suave">
+        El respaldo se cifra con una clave que queda en este equipo. Descárgala y guárdala: sin ella
+        no se puede restaurar un respaldo remoto.
+      </p>
+      <div className="fila fila-izquierda">
+        <button type="button" className="boton" disabled={guardando} onClick={() => void guardar()}>
+          {guardando ? 'Guardando…' : 'Guardar nube'}
+        </button>
+        <button type="button" className="boton" disabled={probando} onClick={() => void probar()}>
+          {probando ? 'Probando…' : 'Probar conexión'}
+        </button>
+        <button type="button" className="boton boton-texto" onClick={() => void verClave()}>
+          Ver clave de respaldo
+        </button>
+      </div>
+      {error && (
+        <p className="mensaje-error" role="alert">
+          {error}
+        </p>
+      )}
+      {aviso && (
+        <p className="mensaje-aviso" role="status">
+          {aviso}
+        </p>
+      )}
+      {prueba && <p className="mensaje-aviso">{prueba}</p>}
+      {clave && (
+        <div className="clave-respaldo">
+          <p className="mensaje-error">
+            Guarda esta clave fuera del equipo. No se puede recuperar desde la nube.
+          </p>
+          <code>{clave}</code>
+          <a
+            href={`data:text/plain;charset=utf-8,${encodeURIComponent(clave)}`}
+            download="respaldo.key.txt"
+          >
+            Descargar clave
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Configuración del local (solo el dueño). */
 export function PantallaConfiguracion({ api }: { api: ClienteApi }) {
   return (
@@ -813,6 +989,7 @@ export function PantallaConfiguracion({ api }: { api: ClienteApi }) {
       <SeccionLocal api={api} />
       <SeccionImpresora api={api} />
       <SeccionRespaldos api={api} />
+      <SeccionNube api={api} />
     </section>
   );
 }

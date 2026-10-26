@@ -16,6 +16,9 @@ import { registrarReportes } from './reportes/rutas.js';
 import type { RepoReportes } from './reportes/servicio.js';
 import { crearRepoRecepciones } from './recepciones/repo.js';
 import { registrarRecepciones } from './recepciones/rutas.js';
+import { registrarRespaldos } from './respaldos/rutas.js';
+import { crearRepoRespaldos, type RepoRespaldos } from './respaldos/servicio.js';
+import type { AlmacenObjetos } from './respaldos/almacen.js';
 import type { RepoRecepciones } from './recepciones/servicio.js';
 import { crearRepoSyncNube } from './sincronizacion/repo.js';
 import { registrarSincronizacion } from './sincronizacion/rutas.js';
@@ -29,6 +32,9 @@ export interface OpcionesApp {
   repoReportes?: RepoReportes;
   repoRecepciones?: RepoRecepciones;
   repoSync?: RepoSyncNube;
+  repoRespaldos?: RepoRespaldos;
+  almacenObjetos?: AlmacenObjetos | null;
+  maxRespaldoBytes?: number;
   verificarJwt?: VerificadorJwt;
   logger?: boolean;
 }
@@ -40,6 +46,9 @@ export function crearApp({
   repoReportes = crearRepoReportes(db),
   repoRecepciones = crearRepoRecepciones(db),
   repoSync = crearRepoSyncNube(db),
+  repoRespaldos = crearRepoRespaldos(db),
+  almacenObjetos = null,
+  maxRespaldoBytes,
   verificarJwt = () => Promise.resolve(null),
   logger = false,
 }: OpcionesApp): FastifyInstance {
@@ -89,6 +98,12 @@ export function crearApp({
   registrarProductos(app, { repo: repoProductos, verificarJwt });
   registrarReportes(app, { repo: repoReportes, verificarJwt });
   registrarRecepciones(app, { repo: repoRecepciones, verificarJwt });
+  registrarRespaldos(app, {
+    repoInstalaciones,
+    repoRespaldos,
+    almacen: almacenObjetos,
+    ...(maxRespaldoBytes === undefined ? {} : { maxBytes: maxRespaldoBytes }),
+  });
 
   return app;
 }

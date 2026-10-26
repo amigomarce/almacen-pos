@@ -75,8 +75,10 @@ sigue vendiendo aunque el celular no tenga señal.
 
 - La caja respalda sola **una vez al día** y conserva los últimos 14. En
   **Configuración → Respaldos** puedes crear uno ahora.
-- **Copia la carpeta de respaldos a un pendrive o a la nube** una vez por semana. El respaldo
-  incluye la clave del SII: guárdalo en un lugar seguro.
+- En **Configuración → Nube y respaldo cifrado** puedes activar el respaldo automático en la
+  nube. Descarga la **clave de respaldo** y guárdala: sin ella no se puede restaurar.
+- **Copia también la carpeta local a un pendrive** una vez por semana. El respaldo incluye la
+  clave del SII: guárdalo en un lugar seguro.
 - **Sin internet:** la caja sigue vendiendo; las boletas SII se encolan.
 - **No imprime:** revisa papel, cable o red y usa **Configuración → Impresora → Imprimir prueba**.
 - **No abre o no conecta:** cierra y vuelve a abrir la app; si sigue, reinicia el equipo.

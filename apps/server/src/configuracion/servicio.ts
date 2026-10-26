@@ -28,6 +28,10 @@ export interface Configuracion {
   /** Resolución que autoriza la emisión (se imprime en la boleta válida). */
   siiFchResol: string | null;
   siiNroResol: number | null;
+  /** URL base de la nube (apps/cloud), si está configurada. */
+  cloudUrl: string | null;
+  cloudBackupEnabled: boolean;
+  cloudBackupRetention: number;
   /** `true` con MOCK: la caja debe mostrar "MODO PRUEBA – no emite boletas". */
   modoPrueba: boolean;
   cashRoundingEnabled: boolean;
@@ -45,6 +49,9 @@ export interface CambiosConfiguracion {
   comuna?: string | null;
   modeloEmision?: ModeloEmision;
   dteProvider?: NombreProvider;
+  cloudUrl?: string | null;
+  cloudBackupEnabled?: boolean;
+  cloudBackupRetention?: number;
   cashRoundingEnabled?: boolean;
   prefijosBalanzaPrecio?: string[];
 }
@@ -62,6 +69,9 @@ const aConfiguracion = (f: Fila): Configuracion => ({
   boletaConfirmada: f.dteProviderConfirmed,
   siiFchResol: f.siiFchResol,
   siiNroResol: f.siiNroResol,
+  cloudUrl: f.cloudUrl,
+  cloudBackupEnabled: f.cloudBackupEnabled,
+  cloudBackupRetention: f.cloudBackupRetention,
   modoPrueba: f.dteProvider === 'MOCK',
   cashRoundingEnabled: f.cashRoundingEnabled,
   prefijosBalanzaPrecio: f.scalePricePrefixes
@@ -87,6 +97,27 @@ const textoOpcional = (v: string | null | undefined): string | null | undefined 
   const t = v.trim();
   return t === '' ? null : t;
 };
+
+/** URL base de la nube: http/https, sin credenciales, query ni hash. */
+export function normalizarUrlNube(valor: string): string {
+  const texto = valor.trim();
+  let url: URL;
+  try {
+    url = new URL(texto);
+  } catch {
+    throw new ErrorDominio('NUBE_URL_INVALIDA', 'La dirección de la nube no es válida');
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new ErrorDominio('NUBE_URL_INVALIDA', 'La nube debe usar http:// o https://');
+  }
+  if (url.username || url.password) {
+    throw new ErrorDominio('NUBE_URL_INVALIDA', 'La dirección de la nube no debe llevar usuario');
+  }
+  if (url.search || url.hash) {
+    throw new ErrorDominio('NUBE_URL_INVALIDA', 'La dirección de la nube no debe llevar ? ni #');
+  }
+  return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
+}
 
 export interface OpcionesEdicion {
   /** `false` en producción: no se puede pasar a MOCK (no emitiría boletas). */
@@ -120,6 +151,23 @@ export function actualizarConfiguracion(
       );
     }
   }
+  const cloudUrl =
+    cambios.cloudUrl === undefined
+      ? undefined
+      : cambios.cloudUrl === null || cambios.cloudUrl.trim() === ''
+        ? null
+        : normalizarUrlNube(cambios.cloudUrl);
+  if (
+    cambios.cloudBackupRetention !== undefined &&
+    (!Number.isInteger(cambios.cloudBackupRetention) ||
+      cambios.cloudBackupRetention < 1 ||
+      cambios.cloudBackupRetention > 30)
+  ) {
+    throw new ErrorDominio(
+      'RESPALDO_RETENCION_INVALIDA',
+      'La retención de respaldos en la nube debe ser un entero entre 1 y 30',
+    );
+  }
   let rut = textoOpcional(cambios.rut);
   if (rut) {
     const formateado = formatearRut(rut);
@@ -141,6 +189,14 @@ export function actualizarConfiguracion(
       direccion: direccion !== undefined ? direccion : antes.direccion,
       comuna: comuna !== undefined ? comuna : antes.comuna,
     };
+    const urlNube = cloudUrl !== undefined ? cloudUrl : antes.cloudUrl;
+    const respaldoNube = cambios.cloudBackupEnabled ?? antes.cloudBackupEnabled;
+    if (respaldoNube && !urlNube) {
+      throw new ErrorDominio(
+        'NUBE_URL_REQUERIDA',
+        'Configura la dirección de la nube antes de activar el respaldo automático',
+      );
+    }
     if (
       proveedor === 'SII_DIRECTO' &&
       (!legal.rut || !legal.razonSocial || !legal.giro || !legal.direccion || !legal.comuna)
@@ -159,6 +215,9 @@ export function actualizarConfiguracion(
       modeloEmision: cambios.modeloEmision,
       dteProvider: cambios.dteProvider,
       dteProviderConfirmed: cambios.dteProvider === undefined ? undefined : true,
+      cloudUrl,
+      cloudBackupEnabled: cambios.cloudBackupEnabled,
+      cloudBackupRetention: cambios.cloudBackupRetention,
       cashRoundingEnabled: cambios.cashRoundingEnabled,
       scalePricePrefixes:
         cambios.prefijosBalanzaPrecio === undefined

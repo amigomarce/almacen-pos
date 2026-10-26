@@ -154,9 +154,22 @@ HTML/PDF ([`manual-1-pagina.html`](manual-1-pagina.html) y
 [`manual-1-pagina.pdf`](manual-1-pagina.pdf)). Cubre primer arranque, venta, cierre, anulación,
 productos nuevos, boleta electrónica, respaldos y todas las pestañas de la app del dueño.
 
+### Estado al 2026-10-26 — respaldo cifrado en la nube y URL configurable
+
+**Hecho (ADR-016):**
+- Respaldo cifrado AES-256-GCM en Supabase Storage (paquete con base + clave SII + manifiesto),
+  con `respaldo.key` local que el dueño descarga y guarda.
+- Subida automática tras el respaldo diario, reintentos cada 15 min, retención 1–30 y estado
+  visible en Configuración.
+- Adaptador `AlmacenObjetos` (Supabase hoy; S3/R2 mañana), bucket privado y `service_role`
+  solo en `apps/cloud`.
+- URL de `apps/cloud` configurable desde la app; la sincronización la lee en cada ciclo sin
+  reiniciar.
+- Restauración desde la nube por consola (`respaldo:listar-nube`, `respaldo:restaurar-nube`).
+
 **Pendiente de la Fase 6:** el instalador de Windows queda **en pausa hasta tener una máquina
-Windows** (el workflow manual está escrito pero sin ejecutar); además faltan el respaldo
-automático a un bucket de nube, firma/notarización y URL de nube configurable desde la app.
+Windows** (el workflow manual está escrito pero sin ejecutar); faltan firma/notarización y la
+prueba real con Supabase Storage en producción.
 
 ## Mejoras futuras (backlog)
 

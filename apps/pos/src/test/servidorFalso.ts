@@ -416,6 +416,12 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
           },
         });
       }
+      case 'GET /backups/clave':
+        if (!usuario) return sinSesion();
+        return json(200, { clave: 'clave-de-prueba' });
+      case 'POST /backups/probar-nube':
+        if (!usuario) return sinSesion();
+        return json(200, { ok: true, status: 200, version: '0.1.0' });
       case 'GET /backups':
         if (!usuario) return sinSesion();
         if (usuario.role !== 'DUENO') {
@@ -435,6 +441,7 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
           creadoEn: new Date('2026-10-25T23:10:00-03:00').toISOString(),
           tamanoBytes: 1024 * 1024,
           incluyeClaveSii: false,
+          nube: null,
         };
         estado.respaldos.unshift(nuevo);
         return json(200, nuevo);

@@ -85,6 +85,11 @@ export const storeSettings = sqliteTable(
     /** Identidad de la instalación para sincronizar con la nube (Fase 4): se genera una vez. */
     installationId: text('installation_id'),
     deviceToken: text('device_token'),
+    /** URL base de apps/cloud, configurable desde Configuración. */
+    cloudUrl: text('cloud_url'),
+    /** Respaldo cifrado automático a Supabase Storage/S3. */
+    cloudBackupEnabled: booleano('cloud_backup_enabled', false),
+    cloudBackupRetention: integer('cloud_backup_retention').notNull().default(7),
     /** Emisión directa al SII (Fase 5): ambiente, resolución y credenciales cifradas. */
     siiAmbiente: text('sii_ambiente', { enum: ['certificacion', 'produccion'] }),
     siiRutEnvia: text('sii_rut_envia'),

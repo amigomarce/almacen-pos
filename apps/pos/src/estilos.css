@@ -958,3 +958,18 @@ body {
   font-size: 0.9rem;
   font-weight: 600;
 }
+
+.clave-respaldo {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.clave-respaldo code {
+  display: block;
+  margin: 0.5rem 0;
+  word-break: break-all;
+  font-size: 0.9rem;
+}

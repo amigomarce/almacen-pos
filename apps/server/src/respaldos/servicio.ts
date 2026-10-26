@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -36,17 +37,29 @@ export interface OpcionesRespaldo {
   horasEntreRespaldos?: number;
 }
 
+export interface EstadoNubeRespaldo {
+  subidoEn?: string;
+  id?: string;
+  objeto?: string;
+  sha256?: string;
+  error?: string;
+  intentoEn?: string;
+}
+
 export interface RespaldoInfo {
   nombre: string;
   creadoEn: Date;
   tamanoBytes: number;
   incluyeClaveSii: boolean;
+  /** Estado del envío cifrado a la nube, si se intentó. */
+  nube: EstadoNubeRespaldo | null;
 }
 
-interface Manifiesto {
+export interface Manifiesto {
   version: number;
   creadoEn: string;
   incluyeClaveSii: boolean;
+  nube?: EstadoNubeRespaldo;
 }
 
 export interface LoggerRespaldos {
@@ -94,6 +107,7 @@ function leerManifiesto(destino: string, mtime: Date): Manifiesto {
       version: 1,
       creadoEn: Number.isNaN(fecha.getTime()) ? mtime.toISOString() : fecha.toISOString(),
       incluyeClaveSii: crudo.incluyeClaveSii ?? existsSync(join(destino, NOMBRE_CLAVE)),
+      ...(crudo.nube && typeof crudo.nube === 'object' ? { nube: crudo.nube } : {}),
     };
   } catch {
     return {
@@ -102,6 +116,28 @@ function leerManifiesto(destino: string, mtime: Date): Manifiesto {
       incluyeClaveSii: existsSync(join(destino, NOMBRE_CLAVE)),
     };
   }
+}
+
+/** Manifiesto de un respaldo concreto (para el envío a la nube). */
+export function leerManifiestoRespaldo(dir: string, nombre: string): Manifiesto {
+  const destino = join(dir, nombre);
+  return leerManifiesto(destino, statSync(destino).mtime);
+}
+
+/** Actualiza el manifiesto sin dejar un JSON a medias (escribe y renombra). */
+export function actualizarManifiestoRespaldo(
+  dir: string,
+  nombre: string,
+  cambios: Partial<Manifiesto>,
+): void {
+  const destino = join(dir, nombre);
+  const actual = leerManifiesto(destino, statSync(destino).mtime);
+  const siguiente: Manifiesto = { ...actual, ...cambios };
+  const ruta = join(destino, MANIFIESTO);
+  const temporal = `${ruta}.tmp`;
+  writeFileSync(temporal, `${JSON.stringify(siguiente, null, 2)}\n`, { mode: 0o600 });
+  chmodSync(temporal, 0o600);
+  renameSync(temporal, ruta);
 }
 
 /** Respaldos válidos, del más nuevo al más antiguo. */
@@ -119,6 +155,7 @@ export function listarRespaldos(dir: string): RespaldoInfo[] {
           creadoEn: new Date(manifiesto.creadoEn),
           tamanoBytes: tamanoDirectorio(destino),
           incluyeClaveSii: manifiesto.incluyeClaveSii,
+          nube: manifiesto.nube ?? null,
         },
       ];
     })
@@ -177,6 +214,7 @@ export async function crearRespaldo(db: Db, opciones: OpcionesRespaldo): Promise
       creadoEn: fecha,
       tamanoBytes: tamanoDirectorio(destino),
       incluyeClaveSii,
+      nube: null,
     };
   } catch (error) {
     // No se deja un respaldo a medias que parezca válido.
@@ -218,7 +256,12 @@ export async function respaldarSiCorresponde(
  */
 export function iniciarRespaldos(
   db: Db,
-  opciones: OpcionesRespaldo & { intervaloMs?: number; log: LoggerRespaldos },
+  opciones: OpcionesRespaldo & {
+    intervaloMs?: number;
+    log: LoggerRespaldos;
+    /** Se llama después de crear un respaldo (por ejemplo, para subirlo a la nube). */
+    alCrear?: (info: RespaldoInfo) => Promise<void>;
+  },
 ): () => void {
   let enCurso = false;
   const pasada = async (): Promise<void> => {
@@ -231,6 +274,14 @@ export function iniciarRespaldos(
           { respaldo: info.nombre, bytes: info.tamanoBytes, claveSii: info.incluyeClaveSii },
           'Respaldo automático creado',
         );
+        try {
+          await opciones.alCrear?.(info);
+        } catch (error) {
+          opciones.log.warn(
+            { err: error },
+            'El respaldo local se creó, pero no se pudo subir a la nube',
+          );
+        }
       }
     } catch (error) {
       opciones.log.error({ err: error }, 'Falló el respaldo automático');

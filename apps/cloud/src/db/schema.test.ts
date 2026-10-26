@@ -51,6 +51,7 @@ describe('migraciones', () => {
     const tablas = r.rows.map((f) => f['table_name']).sort();
     expect(tablas).toEqual(
       [
+        'backups',
         'cash_closes',
         'categories',
         'installations',

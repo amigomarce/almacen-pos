@@ -50,6 +50,9 @@ export function registrarConfiguracion(
               type: 'string',
               enum: ['MOCK', 'PUENTE_MANUAL', 'SII_DIRECTO', 'PROVEEDOR_EXTERNO'],
             },
+            cloudUrl: { type: ['string', 'null'], maxLength: 300 },
+            cloudBackupEnabled: { type: 'boolean' },
+            cloudBackupRetention: { type: 'integer', minimum: 1, maximum: 30 },
             cashRoundingEnabled: { type: 'boolean' },
             prefijosBalanzaPrecio: {
               type: 'array',

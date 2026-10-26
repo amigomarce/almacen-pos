@@ -59,7 +59,15 @@ export interface OpcionesApp {
   /** `fetch` inyectable para el cliente del SII (tests de la cola de envío). */
   fetchSii?: typeof fetch;
   /** Respaldos locales; si falta, la app no expone `/backups`. */
-  respaldos?: { dir: string; rutaDb: string; rutaClaveSii?: string; retener?: number };
+  respaldos?: {
+    dir: string;
+    rutaDb: string;
+    rutaClaveSii?: string;
+    rutaClaveRespaldo?: string;
+    retener?: number;
+    subirNube?: () => Promise<unknown>;
+    fetchFn?: typeof fetch;
+  };
 }
 
 export function crearApp({

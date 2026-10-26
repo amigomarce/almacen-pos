@@ -64,6 +64,25 @@ describe('sincronizar', () => {
     expect(pendientes[0]?.syncedAt).not.toBeNull();
   });
 
+  it('acepta una URL dinámica y falla si no hay nube configurada', async () => {
+    const identidad = obtenerIdentidad(c.db);
+    const { fn } = fetchFalsa();
+    await expect(
+      sincronizar(c.db, {
+        cloudUrl: () => null,
+        deviceToken: identidad.deviceToken,
+        fetchFn: fn,
+      }),
+    ).rejects.toMatchObject({ codigo: 'NUBE_URL_REQUERIDA' });
+
+    const r = await sincronizar(c.db, {
+      cloudUrl: () => 'http://nube.test',
+      deviceToken: identidad.deviceToken,
+      fetchFn: fn,
+    });
+    expect(r).toEqual({ subidos: 0, bajados: 0 });
+  });
+
   it('baja y aplica los cambios del dueño y los confirma', async () => {
     const identidad = obtenerIdentidad(c.db);
     const prod = c.db
