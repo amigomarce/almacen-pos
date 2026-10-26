@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { crearAlmacenSupabase } from './almacen.js';
+import { cabecerasAuth, crearAlmacenSupabase } from './almacen.js';
 
 const OPCIONES = {
   url: 'https://proyecto.supabase.co/',
@@ -23,6 +23,19 @@ describe('adaptador de Supabase Storage', () => {
     expect(headers.get('apikey')).toBe('service-role');
     expect(headers.get('x-upsert')).toBe('true');
     expect(init?.method).toBe('POST');
+  });
+
+  it('con una secret key nueva (sb_secret_…) usa solo apikey, no Bearer', async () => {
+    const fetchFn = vi.fn<typeof fetch>(() => Promise.resolve(new Response(null, { status: 200 })));
+    const almacen = crearAlmacenSupabase({ ...OPCIONES, serviceKey: 'sb_secret_abc', fetchFn });
+    await almacen.subir('x.apos', Buffer.from('d'), 'application/octet-stream');
+    const headers = new Headers(fetchFn.mock.calls[0]?.[1]?.headers);
+    expect(headers.get('apikey')).toBe('sb_secret_abc');
+    expect(headers.has('authorization')).toBe(false);
+    expect(cabecerasAuth('eyJ.jwt.legacy')).toEqual({
+      authorization: 'Bearer eyJ.jwt.legacy',
+      apikey: 'eyJ.jwt.legacy',
+    });
   });
 
   it('descarga y distingue el 404', async () => {

@@ -28,7 +28,8 @@ await migrar(db);
 // JWT secret legacy (HS256). Sin ninguno de los dos, los endpoints del dueño responden 401.
 const supabaseUrl = variable('SUPABASE_URL');
 const secretoJwt = variable('SUPABASE_JWT_SECRET');
-const serviceRoleKey = variable('SUPABASE_SERVICE_ROLE_KEY');
+// Secret key nueva (`sb_secret_…`); `SUPABASE_SERVICE_ROLE_KEY` queda para proyectos antiguos.
+const serviceRoleKey = variable('SUPABASE_SECRET_KEY') ?? variable('SUPABASE_SERVICE_ROLE_KEY');
 const almacenObjetos =
   supabaseUrl && serviceRoleKey
     ? crearAlmacenSupabase({
@@ -51,7 +52,7 @@ if (!supabaseUrl && !secretoJwt)
   app.log.warn('Sin SUPABASE_URL ni SUPABASE_JWT_SECRET: el login del dueño queda deshabilitado.');
 if (!almacenObjetos)
   app.log.warn(
-    'Sin SUPABASE_SERVICE_ROLE_KEY: el respaldo en la nube queda deshabilitado (sync sigue funcionando).',
+    'Sin SUPABASE_SECRET_KEY: el respaldo en la nube queda deshabilitado (sync sigue funcionando).',
   );
 
 try {

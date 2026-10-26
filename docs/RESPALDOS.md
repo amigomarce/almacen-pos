@@ -77,8 +77,8 @@ Qué viaja a la nube:
 ### Configurar Supabase Storage
 
 1. Crea un bucket privado llamado `respaldos` (o define `SUPABASE_STORAGE_BUCKET`).
-2. En `apps/cloud`, define `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` (solo en el servidor;
-   nunca en la caja ni en el móvil).
+2. En `apps/cloud`, define `SUPABASE_URL` y `SUPABASE_SECRET_KEY` (o la
+   `SUPABASE_SERVICE_ROLE_KEY` antigua; solo en el servidor, nunca en la caja ni en el móvil).
 3. Despliega `apps/cloud` con HTTPS y pon esa URL en Configuración → Nube.
 4. Activa el respaldo y descarga la clave de respaldo.
 

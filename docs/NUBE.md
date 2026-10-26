@@ -24,12 +24,15 @@ Se cargan con `fly secrets` (nunca en `fly.toml` ni en el repo):
 | `CLOUD_DATABASE_URL` | Postgres de Supabase (pooler `sa-east-1`) |
 | `SUPABASE_URL` | Validar el JWT del dueño contra el JWKS del proyecto |
 | `SUPABASE_JWT_SECRET` | Validación HS256 de respaldo |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Falta.** Activa el respaldo cifrado en Storage (ADR-016) |
+| `SUPABASE_SECRET_KEY` | **Falta.** Activa el respaldo cifrado en Storage (ADR-016). Es la secret key nueva (`sb_secret_…`); en proyectos antiguos se acepta `SUPABASE_SERVICE_ROLE_KEY` |
 
 ```bash
 fly secrets list --app almacen-pos-nube
-fly secrets set --app almacen-pos-nube SUPABASE_SERVICE_ROLE_KEY=...   # reinicia la máquina
+fly secrets set --app almacen-pos-nube SUPABASE_SECRET_KEY=sb_secret_...   # reinicia la máquina
 ```
+
+La secret key nueva **no es un JWT**: se envía solo en el header `apikey` (el adaptador de
+Storage ya lo hace). Nunca va en la caja ni en la app móvil.
 
 ## Desplegar
 

@@ -64,8 +64,9 @@ de entorno fija. Para el primer cliente (un local, una caja) se necesita:
 
 - Para una caja, el respaldo remoto es automático y no requiere exponer Storage a la caja:
   el token de dispositivo solo habla con `apps/cloud`.
-- El servidor de nube necesita `SUPABASE_SERVICE_ROLE_KEY`; es el secreto más sensible del
-  sistema y no debe viajar al cliente.
+- El servidor de nube necesita `SUPABASE_SECRET_KEY` (o la `SUPABASE_SERVICE_ROLE_KEY` antigua);
+  es el secreto más sensible del sistema y no debe viajar al cliente. La secret key nueva
+  (`sb_secret_…`) no es un JWT y viaja solo en el header `apikey`.
 - El proxy por `apps/cloud` es suficiente para un cliente. Si se escala a miles de cajas,
   conviene emitir URLs firmadas y subir directo a Storage (ADR futuro), sin cambiar el
   contrato de la caja.

@@ -64,7 +64,7 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
   pulir la UI; el escáner con cámara necesita un dispositivo real.
 - ~~Provisionar Supabase y publicar la nube~~: hecho 2026-10-26. La nube corre en Fly.io
   (`https://almacen-pos-nube.fly.dev`, siempre encendida, ADR-018, [`NUBE.md`](NUBE.md)) sobre
-  Supabase `sa-east-1`. Falta `SUPABASE_SERVICE_ROLE_KEY` para el respaldo en Storage.
+  Supabase `sa-east-1`. Falta `SUPABASE_SECRET_KEY` para el respaldo en Storage.
 - App del dueño instalable: EAS Build configurado (APK `preview`, TestFlight `production`,
   [`APP_DUENO.md`](APP_DUENO.md)); falta instalar el APK y probar la vinculación con la caja.
 - Fiado / cuenta corriente (opcional) no se hizo.
@@ -182,7 +182,8 @@ con los cambios de ADR-017 y la poda del outbox. Detalle en [`INSTALADOR.md`](IN
 **Pendiente de la Fase 6:**
 - Instalar y probar el `.exe` en un PC Windows real (sidecar, semilla, impresora USB).
 - Firma del instalador (Windows) y notarización (macOS).
-- Prueba real del respaldo cifrado con Supabase Storage.
+- Activar el respaldo cifrado en producción: bucket privado `respaldos` y
+  `SUPABASE_SECRET_KEY` en Fly; después probar una subida y una restauración reales.
 
 ## Mejoras futuras (backlog)
 

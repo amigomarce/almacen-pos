@@ -15,7 +15,10 @@ export interface AlmacenObjetos {
 export interface OpcionesSupabaseStorage {
   /** `https://<proyecto>.supabase.co` */
   url: string;
-  /** `service_role`: solo vive en apps/cloud, nunca en la caja ni en el móvil. */
+  /**
+   * Secret key (`sb_secret_…`) o, en proyectos antiguos, la `service_role` (JWT). Solo vive en
+   * apps/cloud, nunca en la caja ni en el móvil.
+   */
   serviceKey: string;
   bucket: string;
   fetchFn?: Fetch;
@@ -28,6 +31,17 @@ const codificarRuta = (ruta: string) =>
     .map((parte) => encodeURIComponent(parte))
     .join('/');
 
+/**
+ * Cabeceras de autenticación. Las claves nuevas (`sb_secret_…`) no son JWT: van solo en
+ * `apikey` y el gateway de Supabase resuelve el rol. La `service_role` antigua (JWT) va
+ * también como `Authorization: Bearer`.
+ */
+export function cabecerasAuth(clave: string): Record<string, string> {
+  return clave.startsWith('sb_')
+    ? { apikey: clave }
+    : { authorization: `Bearer ${clave}`, apikey: clave };
+}
+
 /** Cliente HTTP mínimo de Supabase Storage (sin SDK). */
 export function crearAlmacenSupabase(opciones: OpcionesSupabaseStorage): AlmacenObjetos {
   const base = sinBarra(opciones.url);
@@ -36,10 +50,7 @@ export function crearAlmacenSupabase(opciones: OpcionesSupabaseStorage): Almacen
     throw new ErrorDominio('BUCKET_INVALIDO', 'El nombre del bucket de respaldos no es válido');
   }
   const fetchFn = opciones.fetchFn ?? ((...args) => fetch(...args));
-  const auth = {
-    authorization: `Bearer ${opciones.serviceKey}`,
-    apikey: opciones.serviceKey,
-  };
+  const auth = cabecerasAuth(opciones.serviceKey);
   const objeto = (ruta: string) => `${base}/storage/v1/object/${bucket}/${codificarRuta(ruta)}`;
 
   return {
