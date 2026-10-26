@@ -124,6 +124,11 @@ pnpm --filter @almacen/pos tauri build
 
 Sin esas variables la caja funciona offline, sin sincronización ni Open Food Facts.
 
+En GitHub Actions, el workflow `instalador-windows` toma `ALMACEN_CLOUD_URL` y
+`ALMACEN_CONTACTO` de las **variables del repositorio** (`vars.*`). El build `40354376643`
+(2026-10-26) se compiló con `ALMACEN_CLOUD_URL=https://almacen-pos-nube.fly.dev`; la URL quedó
+grabada en el `.exe` como valor inicial y se puede cambiar desde Configuración.
+
 ## Probar la app compilada
 
 1. Ábrela. En una base nueva debe mostrar **Configura la caja**: nombre del dueño, PIN y

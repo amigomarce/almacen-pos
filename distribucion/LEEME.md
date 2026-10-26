@@ -57,8 +57,14 @@ d845dc019e473a792ff3e380747c40a7fccce011b7c2144a53c6a7566f73465e
 
 Archivo: `instalables/Windows/Almacen-POS-0.1.0-Windows-x64.exe`
 
-Generado por el workflow **`instalador-windows`** de GitHub Actions (run `40298970706`, commit
-`9d154c5`). Es una instalación **por usuario** (no pide administrador).
+Generado por el workflow **`instalador-windows`** de GitHub Actions (run `40354376643`, commit
+`459283b`). Es una instalación **por usuario** (no pide administrador) y trae como valor inicial:
+
+```text
+ALMACEN_CLOUD_URL = https://almacen-pos-nube.fly.dev
+```
+
+Verifiqué que la URL está embebida en el binario `almacen-pos.exe` dentro del instalador.
 
 1. Ejecuta el `.exe`. SmartScreen puede advertir porque no está firmado: **Más información →
    Ejecutar de todas formas**.
@@ -69,7 +75,7 @@ Generado por el workflow **`instalador-windows`** de GitHub Actions (run `402989
 SHA-256 del `.exe`:
 
 ```text
-1b40a4369d6c92a703b5f16c98f116840490853d32ff4f80e3fed4bd722bacd6
+f5f8e59619b85d53fb9313c3136e275530ed50eee4261e5f6df9423072f63003
 ```
 
 Para regenerarlo: ejecutar el workflow o compilar en un PC Windows
