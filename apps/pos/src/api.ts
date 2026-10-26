@@ -96,6 +96,13 @@ export interface AcercaDe {
 
 export type TransporteImpresora = 'DESACTIVADA' | 'RED' | 'SISTEMA' | 'ARCHIVO';
 
+export interface ConfiguracionInicial {
+  local: { completo: boolean; faltan: string[] };
+  boleta: { confirmada: boolean; modalidad: ModalidadBoleta; siiListo: boolean };
+  impresora: { configurada: boolean; transporte: string; destino: string | null };
+  vinculacion: { installationId: string; deviceToken: string; caja: string };
+}
+
 export interface RespaldoLocal {
   nombre: string;
   creadoEn: string;
@@ -463,6 +470,10 @@ export class ClienteApi {
 
   configuracion(): Promise<ConfiguracionLocal> {
     return this.pedir<ConfiguracionLocal>('/settings');
+  }
+
+  configuracionInicial(): Promise<ConfiguracionInicial> {
+    return this.pedir<ConfiguracionInicial>('/setup');
   }
 
   respaldos(): Promise<{ respaldos: RespaldoLocal[] }> {

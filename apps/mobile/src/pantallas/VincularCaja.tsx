@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { api } from '../cliente';
 import { estilos } from '../estilos';
+import { parsearQrVinculacion } from '../vinculacion';
 
 /**
- * Vincula esta caja a la cuenta del dueño. En la caja se corre
- * `pnpm --filter @almacen/server device:info` y se pegan los datos acá.
- * (El escaneo de QR es la versión "de verdad"; esto sirve para configurar sin cámara.)
+ * Vincula esta caja a la cuenta del dueño. El camino normal es escanear el QR de
+ * Configuración → Primera configuración en la caja. La carga manual queda como respaldo.
  */
 export function VincularCaja() {
   const [installationId, setInstallationId] = useState('');
@@ -15,6 +16,8 @@ export function VincularCaja() {
   const [cargando, setCargando] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [escaneando, setEscaneando] = useState(false);
+  const [permiso, pedirPermiso] = useCameraPermissions();
 
   const vincular = async () => {
     if (!installationId.trim() || !deviceToken.trim() || !nombre.trim()) {
@@ -34,12 +37,58 @@ export function VincularCaja() {
     }
   };
 
+  const interpretarQr = (data: string) => {
+    const datos = parsearQrVinculacion(data);
+    if (!datos) {
+      setError('Ese código no es de una caja de Almacén POS');
+      return;
+    }
+    setInstallationId(datos.installationId);
+    setDeviceToken(datos.deviceToken);
+    setNombre(datos.caja);
+    setError(null);
+    setMensaje('Código leído. Revisa los datos y confirma.');
+  };
+
+  const escanear = async () => {
+    if (!permiso?.granted) await pedirPermiso();
+    setEscaneando(true);
+  };
+
+  if (escaneando) {
+    return (
+      <View style={{ flex: 1 }}>
+        <CameraView
+          style={{ flex: 1 }}
+          barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+          onBarcodeScanned={({ data }) => {
+            setEscaneando(false);
+            interpretarQr(data);
+          }}
+        />
+        <Pressable
+          style={estilos.botonSecundario}
+          onPress={() => {
+            setEscaneando(false);
+          }}
+        >
+          <Text style={estilos.botonTextoSecundario}>Cancelar</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={estilos.contenedor}>
       <Text style={estilos.titulo}>Vincular caja</Text>
       <Text style={estilos.subtitulo}>
-        En la caja, corre `pnpm --filter @almacen/server device:info` y pega acá los datos.
+        En la caja, abre Configuración → Primera configuración y escanea el QR con esta cámara.
+        También puedes pegar los datos a mano.
       </Text>
+      <Pressable style={estilos.boton} onPress={() => void escanear()}>
+        <Text style={estilos.botonTexto}>Escanear QR de la caja</Text>
+      </Pressable>
+      <View style={{ height: 8 }} />
       <Text style={estilos.etiqueta}>Instalación</Text>
       <TextInput
         style={estilos.campo}

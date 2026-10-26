@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { toQR } from 'toqr';
 import {
   ErrorApi,
   type CambiosConfiguracion,
   type ClienteApi,
   type ConfigImpresora,
+  type ConfiguracionInicial,
   type ConfiguracionLocal,
   type ModalidadBoleta,
   type RespaldoLocal,
@@ -109,6 +111,7 @@ function SeccionLocal({ api }: { api: ClienteApi }) {
     try {
       aplicar(await api.guardarConfiguracion(cambios));
       setAviso('Configuración guardada.');
+      window.dispatchEvent(new Event('almacen:configuracion'));
       setError(null);
     } catch (e) {
       setError(e instanceof ErrorApi ? e.message : 'No se pudo guardar');
@@ -135,7 +138,7 @@ function SeccionLocal({ api }: { api: ClienteApi }) {
 
   return (
     <>
-      <div className="tarjeta">
+      <div className="tarjeta" id="datos-local">
         <h2>Datos del local</h2>
         <p className="suave">Aparecen en el comprobante impreso.</p>
         <div className="formulario">
@@ -147,7 +150,7 @@ function SeccionLocal({ api }: { api: ClienteApi }) {
         </div>
       </div>
 
-      <div className="tarjeta">
+      <div className="tarjeta" id="boleta">
         <h2>Boleta</h2>
         <fieldset className="opciones">
           <legend>¿Cómo emites la boleta?</legend>
@@ -302,6 +305,7 @@ function SeccionImpresora({ api }: { api: ClienteApi }) {
       const r = await api.guardarImpresora(cfg);
       setColumnasEfectivas(r.columnasEfectivas);
       setMensaje({ tipo: 'aviso', texto: 'Impresora guardada.' });
+      window.dispatchEvent(new Event('almacen:configuracion'));
     } catch (e) {
       error(e, 'No se pudo guardar la impresora');
     }
@@ -340,7 +344,7 @@ function SeccionImpresora({ api }: { api: ClienteApi }) {
   };
 
   return (
-    <div className="tarjeta">
+    <div className="tarjeta" id="impresora">
       <h2>Impresora</h2>
       <p className="suave">Guarda los cambios antes de imprimir la prueba.</p>
       <div className="formulario">
@@ -566,10 +570,246 @@ function SeccionRespaldos({ api }: { api: ClienteApi }) {
   );
 }
 
+function payloadVinculacion(v: ConfiguracionInicial['vinculacion']): string {
+  const q = new URLSearchParams({
+    instalacion: v.installationId,
+    token: v.deviceToken,
+    caja: v.caja,
+  });
+  return `almacenpos://vincular?${q.toString()}`;
+}
+
+/** Matriz QR generada en el navegador; no requiere red ni servicio externo. */
+function MatrizQr({ texto }: { texto: string }) {
+  const matriz = useMemo(() => toQR(texto), [texto]);
+  const lado = Math.sqrt(matriz.length);
+  const borde = 4;
+  const total = lado + borde * 2;
+  return (
+    <svg
+      className="qr"
+      role="img"
+      aria-label="Código QR para vincular el celular"
+      viewBox={`0 0 ${total} ${total}`}
+    >
+      <rect width={total} height={total} fill="white" />
+      {Array.from(matriz).map((valor, i) =>
+        valor ? (
+          <rect
+            key={i}
+            x={borde + (i % lado)}
+            y={borde + Math.floor(i / lado)}
+            width="1"
+            height="1"
+            fill="black"
+          />
+        ) : null,
+      )}
+    </svg>
+  );
+}
+
+function Paso({
+  numero,
+  titulo,
+  detalle,
+  ok,
+  enlace,
+}: {
+  numero: number;
+  titulo: string;
+  detalle: string;
+  ok: boolean;
+  enlace?: string;
+}) {
+  return (
+    <li className={`paso ${ok ? 'paso-ok' : 'paso-pendiente'}`}>
+      <span className="paso-numero" aria-hidden>
+        {ok ? '✓' : numero}
+      </span>
+      <span className="paso-texto">
+        <strong>{titulo}</strong>
+        <span>{detalle}</span>
+      </span>
+      {!ok && enlace && <a href={enlace}>Completar</a>}
+    </li>
+  );
+}
+
+/** Guía de primera configuración: datos, boleta, impresora, escáner y celular. */
+function SeccionPrimeraConfiguracion({ api }: { api: ClienteApi }) {
+  const [setup, setSetup] = useState<ConfiguracionInicial | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [codigo, setCodigo] = useState('');
+  const [probando, setProbando] = useState(false);
+  const [escaneo, setEscaneo] = useState<{ ok: boolean; texto: string } | null>(null);
+
+  useEffect(() => {
+    let vigente = true;
+    const cargar = () => {
+      api
+        .configuracionInicial()
+        .then((s) => {
+          if (!vigente) return;
+          setSetup(s);
+          setError(null);
+        })
+        .catch((e: unknown) => {
+          if (vigente)
+            setError(e instanceof ErrorApi ? e.message : 'No se pudo leer la configuración');
+        });
+    };
+    cargar();
+    window.addEventListener('almacen:configuracion', cargar);
+    return () => {
+      vigente = false;
+      window.removeEventListener('almacen:configuracion', cargar);
+    };
+  }, [api]);
+
+  const probarCodigo = async () => {
+    const valor = codigo.trim();
+    if (valor === '') {
+      setEscaneo({ ok: false, texto: 'Escanea o escribe un código primero.' });
+      return;
+    }
+    setProbando(true);
+    setEscaneo(null);
+    try {
+      const r = await api.buscarCodigo(valor);
+      if ('error' in r) {
+        setEscaneo({ ok: false, texto: (r as unknown as { mensaje: string }).mensaje });
+      } else if (r.origen === 'NO_ENCONTRADO') {
+        setEscaneo({ ok: true, texto: 'El lector funciona: el código no está en la base.' });
+      } else {
+        setEscaneo({ ok: true, texto: `Lector OK: ${r.producto.name}` });
+      }
+    } catch (e) {
+      setEscaneo({
+        ok: false,
+        texto: e instanceof ErrorApi ? e.message : 'No se pudo consultar el código',
+      });
+    } finally {
+      setProbando(false);
+    }
+  };
+
+  const modalidad = setup ? MODALIDADES[setup.boleta.modalidad].titulo : '';
+
+  return (
+    <div className="tarjeta" id="primera-configuracion">
+      <h2>Primera configuración</h2>
+      <p className="suave">
+        Deja la caja lista para vender. Puedes volver a esta guía cuando quieras.
+      </p>
+      {error && (
+        <p className="mensaje-error" role="alert">
+          {error}
+        </p>
+      )}
+      {setup && (
+        <>
+          <ol className="pasos">
+            <Paso
+              numero={1}
+              titulo="Datos del local"
+              ok={setup.local.completo}
+              detalle={
+                setup.local.completo
+                  ? 'RUT, razón social, giro, dirección y comuna completos.'
+                  : `Faltan: ${setup.local.faltan.join(', ')}.`
+              }
+              enlace="#datos-local"
+            />
+            <Paso
+              numero={2}
+              titulo="Forma de emitir la boleta"
+              ok={setup.boleta.confirmada}
+              detalle={
+                setup.boleta.confirmada
+                  ? `Modalidad: ${modalidad}.`
+                  : 'Elige con la app del SII o desde esta caja.'
+              }
+              enlace="#boleta"
+            />
+            <Paso
+              numero={3}
+              titulo="Impresora"
+              ok={setup.impresora.configurada}
+              detalle={
+                setup.impresora.configurada
+                  ? `Configurada (${setup.impresora.transporte}).`
+                  : 'Sin impresora configurada; revisa la sección de abajo.'
+              }
+              enlace="#impresora"
+            />
+          </ol>
+
+          <div className="prueba-escaner">
+            <h3>Prueba el lector</h3>
+            <p className="suave">
+              Escanea cualquier producto para comprobar que el lector y la búsqueda funcionan.
+            </p>
+            <div className="fila fila-izquierda">
+              <label className="etiqueta-campo">
+                Código de barras
+                <input
+                  className="campo"
+                  value={codigo}
+                  onChange={(e) => {
+                    setCodigo(e.target.value);
+                    setEscaneo(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') void probarCodigo();
+                  }}
+                  placeholder="Escanea o escribe un código"
+                />
+              </label>
+              <button
+                type="button"
+                className="boton"
+                disabled={probando}
+                onClick={() => void probarCodigo()}
+              >
+                {probando ? 'Probando…' : 'Probar código'}
+              </button>
+            </div>
+            {escaneo && (
+              <p
+                className={escaneo.ok ? 'mensaje-aviso' : 'mensaje-error'}
+                role={escaneo.ok ? 'status' : 'alert'}
+              >
+                {escaneo.texto}
+              </p>
+            )}
+          </div>
+
+          <div className="vinculacion">
+            <h3>Vincula el celular del dueño</h3>
+            <p className="suave">
+              En la app del dueño entra a Caja → Vincular y escanea este código. También puedes
+              escribir la instalación y el token a mano.
+            </p>
+            <MatrizQr texto={payloadVinculacion(setup.vinculacion)} />
+            <p className="suave">
+              Caja: {setup.vinculacion.caja} · Instalación: {setup.vinculacion.installationId}
+            </p>
+            <p className="aviso-privado">
+              No compartas este código: permite vincular la caja a una cuenta.
+            </p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /** Configuración del local (solo el dueño). */
 export function PantallaConfiguracion({ api }: { api: ClienteApi }) {
   return (
     <section className="pantalla-caja">
+      <SeccionPrimeraConfiguracion api={api} />
       <SeccionLocal api={api} />
       <SeccionImpresora api={api} />
       <SeccionRespaldos api={api} />

@@ -90,6 +90,24 @@ describe('configuración del local', () => {
   });
 });
 
+describe('primera configuración', () => {
+  it('muestra los pasos, prueba el lector y el QR de vinculación', async () => {
+    const { u } = montar();
+    expect(
+      await screen.findByRole('heading', { name: 'Primera configuración' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Faltan: RUT/)).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'Código QR para vincular el celular' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Instalación: inst-1/)).toBeInTheDocument();
+
+    await u.type(screen.getByLabelText('Código de barras'), '7801');
+    await u.click(screen.getByRole('button', { name: 'Probar código' }));
+    expect(await screen.findByText('Lector OK: Bebida cola 1,5 L')).toBeInTheDocument();
+  });
+});
+
 describe('respaldos', () => {
   it('muestra el último respaldo y crea uno nuevo', async () => {
     const s = servidorConSesion();

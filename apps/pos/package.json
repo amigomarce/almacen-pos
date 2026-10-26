@@ -26,6 +26,7 @@
   "dependencies": {
     "@almacen/core": "workspace:*",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "toqr": "0.1.1"
   }
 }

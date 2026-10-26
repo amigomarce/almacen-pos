@@ -363,6 +363,33 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
           built_at: '2026-10-25T11:35:19.120Z',
           product_count: 11027,
         });
+      case 'GET /setup': {
+        if (!usuario) return sinSesion();
+        const faltan: string[] = [];
+        if (!estado.local['rut']) faltan.push('RUT');
+        if (!estado.local['razonSocial']) faltan.push('razón social');
+        if (!estado.local['giro']) faltan.push('giro');
+        if (!estado.local['direccion']) faltan.push('dirección');
+        if (!estado.local['comuna']) faltan.push('comuna');
+        return json(200, {
+          local: { completo: faltan.length === 0, faltan },
+          boleta: {
+            confirmada: estado.boletaConfirmada,
+            modalidad: estado.dteProvider,
+            siiListo: estado.siiListo,
+          },
+          impresora: {
+            configurada: estado.impresoraCfg['transporte'] !== 'DESACTIVADA',
+            transporte: estado.impresoraCfg['transporte'],
+            destino: estado.impresoraCfg['destino'] ?? null,
+          },
+          vinculacion: {
+            installationId: 'inst-1',
+            deviceToken: 'tok-1',
+            caja: 'Caja 1',
+          },
+        });
+      }
       case 'GET /backups':
         if (!usuario) return sinSesion();
         if (usuario.role !== 'DUENO') {

@@ -875,3 +875,86 @@ body {
 .pestanas {
   flex-wrap: wrap;
 }
+
+/* --- Asistente de primera configuración --- */
+.pasos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.paso {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+}
+
+.paso-numero {
+  flex: 0 0 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  color: var(--texto-suave);
+}
+
+.paso-ok .paso-numero {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+
+.paso-pendiente .paso-numero {
+  background: #fff4e5;
+  border-color: #e8c38b;
+  color: #8a5a00;
+}
+
+.paso-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.paso-texto span {
+  color: var(--texto-suave);
+}
+
+.paso a {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.prueba-escaner,
+.vinculacion {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--borde);
+}
+
+.prueba-escaner h3,
+.vinculacion h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+}
+
+.qr {
+  display: block;
+  width: 200px;
+  height: 200px;
+  margin: 0.75rem 0;
+  background: #fff;
+}
+
+.aviso-privado {
+  color: var(--error);
+  font-size: 0.9rem;
+  font-weight: 600;
+}

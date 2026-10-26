@@ -83,8 +83,13 @@ describe('entrar con PIN', () => {
     expect(screen.queryByLabelText('Escanea o escribe un código')).not.toBeInTheDocument();
 
     await u.click(screen.getByRole('button', { name: 'Confirmar y vender' }));
-    expect(await screen.findByRole('heading', { name: 'Abrir Caja 1' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Primera configuración' }),
+    ).toBeInTheDocument();
     expect(s.estado.configGuardada.at(-1)).toEqual({ dteProvider: 'PUENTE_MANUAL' });
+
+    await u.click(screen.getByRole('tab', { name: 'Venta' }));
+    expect(await screen.findByRole('heading', { name: 'Abrir Caja 1' })).toBeInTheDocument();
   });
 
   it('funciona con el teclado físico', async () => {

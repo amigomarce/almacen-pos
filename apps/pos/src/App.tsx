@@ -191,6 +191,7 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
               usuario={fase.usuario}
               alConfirmar={(actualizada) => {
                 setConfig({ usuarioId: fase.usuario.id, valor: actualizada });
+                setVista('CONFIGURACION');
               }}
               alSalir={() => void salir()}
             />

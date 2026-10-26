@@ -4,6 +4,7 @@ import { ErrorDominio, type ConfigBalanza } from '@almacen/core';
 import { LICENCIA, TEXTO_ATRIBUCION, URL_LICENCIA } from '@almacen/data';
 import pkg from '../package.json' with { type: 'json' };
 import { LimitadorIntentos } from './auth/intentos.js';
+import { registrarAsistente } from './asistente/rutas.js';
 import { registrarAuth } from './auth/rutas.js';
 import { Sesiones } from './auth/sesiones.js';
 import { registrarCaja } from './caja/rutas.js';
@@ -108,6 +109,7 @@ export function crearApp({
     });
   });
 
+  registrarAsistente(app, { db, sesiones });
   registrarAuth(app, { db, sesiones, intentos });
   registrarCaja(app, { db, sesiones });
   registrarConfiguracion(app, { db, sesiones, permitirModoPrueba });

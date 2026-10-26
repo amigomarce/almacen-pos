@@ -124,9 +124,19 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
 - API de respaldos (dueño) y sección **Configuración → Respaldos** con "Respaldar ahora".
 - Guía en [`RESPALDOS.md`](RESPALDOS.md).
 
+### Estado al 2026-10-25 — asistente de primera configuración
+
+**Hecho (ADR-013):**
+- Tarjeta **Configuración → Primera configuración** con pasos: datos del local, forma de
+  emitir, impresora, prueba del lector y vinculación del celular.
+- `GET /setup` (solo dueño) resume faltantes, modalidad, impresora e identidad de la caja.
+- QR de vinculación generado en el navegador (`toqr`), sin servicio externo.
+- Al confirmar la modalidad en el primer arranque, la caja lleva directo a esta guía.
+- La app móvil lee el QR con `expo-camera` y completa instalación, token y nombre; la carga
+  manual sigue como respaldo.
+
 **Pendiente de la Fase 6:** instalador Windows/Tauri con el servidor Node como sidecar,
-asistente de primera configuración (datos, impresora, escáner, QR), manual de 1 página y
-respaldo automático a un bucket de nube.
+manual de 1 página y respaldo automático a un bucket de nube.
 
 ## Mejoras futuras (backlog)
 
