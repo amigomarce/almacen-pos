@@ -1,0 +1,29 @@
+# Nube del almacén en Fly.io (docs/NUBE.md). Desplegar desde la raíz del repo:
+#   pnpm deploy:cloud
+# Los secretos (CLOUD_DATABASE_URL, SUPABASE_*) van con `fly secrets set`, nunca aquí.
+app = "almacen-pos-nube"
+primary_region = "scl"
+
+[env]
+  NODE_ENV = "production"
+  CLOUD_HOST = "0.0.0.0"
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Siempre encendida: la app del dueño y la caja deben poder conectarse en cualquier momento.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

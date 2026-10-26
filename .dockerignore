@@ -1,0 +1,17 @@
+# Contexto de Docker para apps/cloud (Fly.io): solo el código fuente del monorepo.
+**/node_modules
+**/dist
+**/coverage
+**/.expo
+.git
+.env
+.env.*
+!.env.example
+secrets
+data/raw
+data/out
+apps/server/var
+apps/pos/src-tauri/target
+apps/pos/src-tauri/binaries
+apps/pos/src-tauri/resources
+docs/*.pdf

@@ -20,7 +20,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r --parallel typecheck",
-    "db:seed": "node scripts/verificar-node.mjs && pnpm --filter @almacen/server db:seed"
+    "db:seed": "node scripts/verificar-node.mjs && pnpm --filter @almacen/server db:seed",
+    "deploy:cloud": "fly deploy . --config apps/cloud/fly.toml --dockerfile apps/cloud/Dockerfile"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

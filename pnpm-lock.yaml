@@ -233,6 +233,9 @@ importers:
       drizzle-kit:
         specifier: ^0.31.11
         version: 0.31.11
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       pg-mem:
         specifier: ^3.0.14
         version: 3.0.14
