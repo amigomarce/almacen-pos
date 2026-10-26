@@ -64,6 +64,28 @@ describe('sincronizar', () => {
     expect(pendientes[0]?.syncedAt).not.toBeNull();
   });
 
+  it('cada ciclo poda los eventos subidos hace más de 30 días', async () => {
+    const identidad = obtenerIdentidad(c.db);
+    c.db.delete(t.outbox).run();
+    c.db
+      .insert(t.outbox)
+      .values({
+        entity: 'products',
+        entityId: 'p-viejo',
+        op: 'UPDATE',
+        payload: {},
+        syncedAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
+      })
+      .run();
+    const { fn } = fetchFalsa();
+    await sincronizar(c.db, {
+      cloudUrl: 'http://nube.test',
+      deviceToken: identidad.deviceToken,
+      fetchFn: fn,
+    });
+    expect(c.db.select().from(t.outbox).all()).toHaveLength(0);
+  });
+
   it('acepta una URL dinámica y falla si no hay nube configurada', async () => {
     const identidad = obtenerIdentidad(c.db);
     const { fn } = fetchFalsa();

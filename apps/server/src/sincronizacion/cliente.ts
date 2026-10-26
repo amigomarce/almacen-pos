@@ -4,6 +4,7 @@ import { eq, isNull } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { outbox } from '../db/schema.js';
 import { aplicarEventos } from './aplicar.js';
+import { podarOutbox } from './outbox.js';
 
 type Fetch = typeof fetch;
 
@@ -63,6 +64,8 @@ export async function sincronizar(db: Db, deps: DepsSincronizar): Promise<Result
       db.update(outbox).set({ syncedAt: ahora }).where(eq(outbox.id, e.id)).run();
     }
   }
+  // Sin esto la base de la caja crece sin fin (un evento por venta, ítem y movimiento).
+  podarOutbox(db);
 
   const resPull = await fetchFn(`${base}/sync/pull`, { headers: auth });
   if (!resPull.ok) throw new Error(`pull falló (${resPull.status})`);

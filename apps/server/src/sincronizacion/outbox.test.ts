@@ -6,6 +6,7 @@ import { abrirCaja, cerrarCaja } from '../caja/servicio.js';
 import { cargarTaxonomiaPorDefecto, crearProducto } from '../productos/alta.js';
 import { editarProducto } from '../productos/gestion.js';
 import { anularVenta, registrarVenta } from '../ventas/servicio.js';
+import { podarOutbox, RETENCION_OUTBOX_DIAS } from './outbox.js';
 import { prepararApp, type CtxPrueba } from '../test/sesion.js';
 
 let c: CtxPrueba;
@@ -103,5 +104,36 @@ describe('encolado de eventos en el outbox local', () => {
       expectedCashClp: 10000,
       differenceClp: 0,
     });
+  });
+});
+
+describe('poda del outbox', () => {
+  const DIA = 24 * 60 * 60 * 1000;
+  const ahora = new Date('2026-10-26T12:00:00Z');
+  const insertar = (syncedAt: Date | null) =>
+    c.db
+      .insert(t.outbox)
+      .values({ entity: 'products', entityId: randomUUID(), op: 'UPDATE', payload: {}, syncedAt })
+      .returning()
+      .get().id;
+
+  it('borra solo lo ya subido hace más de 30 días; nunca los pendientes', () => {
+    c.db.delete(t.outbox).run();
+    const viejo = insertar(new Date(ahora.getTime() - (RETENCION_OUTBOX_DIAS + 1) * DIA));
+    const reciente = insertar(new Date(ahora.getTime() - 5 * DIA));
+    const pendiente = insertar(null);
+
+    expect(podarOutbox(c.db, ahora)).toBe(1);
+    const quedan = eventos().map((e) => e.id);
+    expect(quedan).not.toContain(viejo);
+    expect(quedan).toEqual(expect.arrayContaining([reciente, pendiente]));
+    expect(podarOutbox(c.db, ahora)).toBe(0);
+  });
+
+  it('acepta otra retención', () => {
+    c.db.delete(t.outbox).run();
+    insertar(new Date(ahora.getTime() - 2 * DIA));
+    expect(podarOutbox(c.db, ahora, 1)).toBe(1);
+    expect(eventos()).toHaveLength(0);
   });
 });
