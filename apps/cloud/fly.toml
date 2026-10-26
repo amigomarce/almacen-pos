@@ -2,7 +2,7 @@
 #   pnpm deploy:cloud
 # Los secretos (CLOUD_DATABASE_URL, SUPABASE_*) van con `fly secrets set`, nunca aquí.
 app = "almacen-pos-nube"
-primary_region = "scl"
+primary_region = "gru"
 
 [env]
   NODE_ENV = "production"
