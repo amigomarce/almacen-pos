@@ -1,5 +1,9 @@
 # Instalador de la caja (Tauri + servidor Node)
 
+> **Estado (2026-10-26):** la app de macOS está compilada y probada. El instalador de Windows
+> queda **pendiente hasta contar con una máquina Windows**; el workflow existe pero no se ha
+> ejecutado.
+
 La app instalada es una sola ventana de escritorio que arranca el servidor local como
 **sidecar** de Node 22. No requiere que el dueño abra una terminal ni instale Node.
 
@@ -121,7 +125,9 @@ guardar como PDF es [`manual-1-pagina.html`](manual-1-pagina.html) /
 
 ## Limitaciones actuales
 
-- El `.exe` no está firmado: Windows SmartScreen puede advertir. Falta firma/notarización.
+- El `.exe` no se ha generado ni probado: falta una máquina Windows (o ejecutar el workflow
+  cuando haya una). Tampoco está firmado: Windows SmartScreen puede advertir. Falta
+  firma/notarización.
 - No hay autoactualización.
 - El puerto es fijo (`3001`); si otra app lo ocupa, el sidecar no arranca. En pruebas se puede
   cambiar con `ALMACEN_PORT`, pero la interfaz compilada apunta a 3001.

@@ -154,8 +154,9 @@ HTML/PDF ([`manual-1-pagina.html`](manual-1-pagina.html) y
 [`manual-1-pagina.pdf`](manual-1-pagina.pdf)). Cubre primer arranque, venta, cierre, anulación,
 productos nuevos, boleta electrónica, respaldos y todas las pestañas de la app del dueño.
 
-**Pendiente de la Fase 6:** generar y probar el `.exe` en Windows/CI, respaldo automático a un
-bucket de nube, firma/notarización y URL de nube configurable desde la app.
+**Pendiente de la Fase 6:** el instalador de Windows queda **en pausa hasta tener una máquina
+Windows** (el workflow manual está escrito pero sin ejecutar); además faltan el respaldo
+automático a un bucket de nube, firma/notarización y URL de nube configurable desde la app.
 
 ## Mejoras futuras (backlog)
 
