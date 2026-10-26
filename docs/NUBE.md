@@ -34,6 +34,9 @@ fly secrets set --app almacen-pos-nube SUPABASE_SECRET_KEY=sb_secret_...   # rei
 La secret key nueva **no es un JWT**: se envía solo en el header `apikey` (el adaptador de
 Storage ya lo hace). Nunca va en la caja ni en la app móvil.
 
+El procedimiento completo (bucket privado, secreto, despliegue y verificación de la primera
+subida y restauración) está en [`ACTIVAR_RESPALDO_NUBE.md`](ACTIVAR_RESPALDO_NUBE.md).
+
 ## Desplegar
 
 Desde la raíz del repo, con `fly auth login` hecho:

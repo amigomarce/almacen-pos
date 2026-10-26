@@ -183,7 +183,8 @@ con los cambios de ADR-017 y la poda del outbox. Detalle en [`INSTALADOR.md`](IN
 - Instalar y probar el `.exe` en un PC Windows real (sidecar, semilla, impresora USB).
 - Firma del instalador (Windows) y notarización (macOS).
 - Activar el respaldo cifrado en producción: bucket privado `respaldos` y
-  `SUPABASE_SECRET_KEY` en Fly; después probar una subida y una restauración reales.
+  `SUPABASE_SECRET_KEY` en Fly; después probar una subida y una restauración reales. Paso a
+  paso en [`ACTIVAR_RESPALDO_NUBE.md`](ACTIVAR_RESPALDO_NUBE.md).
 
 ## Mejoras futuras (backlog)
 

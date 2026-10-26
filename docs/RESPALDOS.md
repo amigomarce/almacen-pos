@@ -82,6 +82,9 @@ Qué viaja a la nube:
 3. Despliega `apps/cloud` con HTTPS y pon esa URL en Configuración → Nube.
 4. Activa el respaldo y descarga la clave de respaldo.
 
+El paso a paso exacto, con verificación de la subida y de una restauración real, está en
+[`ACTIVAR_RESPALDO_NUBE.md`](ACTIVAR_RESPALDO_NUBE.md).
+
 ### Restaurar desde la nube
 
 **Detén la caja primero.** Lista los respaldos y restaura por id:
