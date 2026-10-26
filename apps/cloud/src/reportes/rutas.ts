@@ -1,3 +1,4 @@
+import { inicioDelDia } from '@almacen/core';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { requiereDueno } from '../auth/requerir.js';
 import type { VerificadorJwt } from '../auth/supabase.js';
@@ -14,19 +15,17 @@ function duenoDe(req: FastifyRequest, reply: FastifyReply): string | null {
   return null;
 }
 
-const DIA_MS = 24 * 60 * 60 * 1000;
-
 export function registrarReportes(
   app: FastifyInstance,
   { repo, verificarJwt }: DependenciasReportes,
 ): void {
   const conDueno = requiereDueno(verificarJwt);
 
-  // TODO: "hoy" según la hora del local (Chile); por ahora las últimas 24 h.
+  // "Hoy" según el reloj de Chile (desde las 00:00 locales), aunque la nube corra en UTC.
   app.get('/report/sales/today', { onRequest: conDueno }, async (req, reply) => {
     const ownerId = duenoDe(req, reply);
     if (!ownerId) return;
-    return repo.resumenVentas(ownerId, new Date(Date.now() - DIA_MS));
+    return repo.resumenVentas(ownerId, inicioDelDia(new Date()));
   });
 
   app.get('/report/stock-bajo', { onRequest: conDueno }, async (req, reply) => {
