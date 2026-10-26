@@ -66,8 +66,9 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
   (nube), `CLOUD_URL` (caja), `EXPO_PUBLIC_*` (móvil).
 - Fiado / cuenta corriente (opcional) no se hizo.
 
-**TODOs menores:** el `outbox` local no se poda; el saldo de stock de la nube se agrega en
-memoria. (Resuelto 2026-10-26: `GET /report/sales/today` cuenta desde las 00:00 de Chile.)
+**TODOs menores (resueltos 2026-10-26):** `GET /report/sales/today` cuenta desde las 00:00 de
+Chile; el `outbox` local borra lo ya subido hace más de 30 días (los pendientes nunca); el stock
+bajo de la nube suma los movimientos en Postgres (`GROUP BY`), no en memoria.
 
 ## Fase 5 — Boleta electrónica real
 - **Estado del código (2026-10-25):** Etapas 1 (núcleo DTE, ADR-008), 2 (envío + cliente de

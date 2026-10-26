@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNotNull, isNull } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { cashCloses, products, sales, stockMovements } from '../db/schema.js';
 import { calcularStockBajo, resumirVentas, type RepoReportes } from './servicio.js';
@@ -31,11 +31,28 @@ export function crearRepoReportes(db: Db): RepoReportes {
             isNotNull(products.stockMinMilli),
           ),
         );
-      const movimientos = await db
-        .select({ productId: stockMovements.productId, qty: stockMovements.qtyMilli })
+      if (conMinimo.length === 0) return [];
+      // Postgres suma los movimientos: una fila por producto, no todo el historial en memoria.
+      const saldos = await db
+        .select({
+          productId: stockMovements.productId,
+          total: sql<string>`coalesce(sum(${stockMovements.qtyMilli}), 0)`,
+        })
         .from(stockMovements)
-        .where(eq(stockMovements.ownerId, ownerId));
-      return calcularStockBajo(conMinimo, movimientos);
+        .where(
+          and(
+            eq(stockMovements.ownerId, ownerId),
+            inArray(
+              stockMovements.productId,
+              conMinimo.map((p) => p.id),
+            ),
+          ),
+        )
+        .groupBy(stockMovements.productId);
+      return calcularStockBajo(
+        conMinimo,
+        saldos.map((s) => ({ productId: s.productId, qty: Number(s.total) })),
+      );
     },
     async ultimoCierre(ownerId) {
       const [fila] = await db
