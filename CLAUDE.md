@@ -23,6 +23,7 @@ Arquitectura y stack: `docs/ARQUITECTURA.md`.
 Base de productos: `docs/BASE_PRODUCTOS.md`.
 SII y boleta electrónica: `docs/SII_BOLETA_ELECTRONICA.md`.
 Plan por fases: `docs/PLAN_FASES.md`.
+Builds de la app del dueño (EAS, APK y TestFlight): `docs/APP_DUENO.md`.
 
 ## 2. Regla de oro: boleta electrónica — dos modalidades (Fase 0 aprobada)
 
@@ -136,6 +137,7 @@ pnpm --filter @almacen/server respaldo:restaurar --respaldo var/respaldos/<carpe
 pnpm --filter @almacen/server respaldo:listar-nube
 pnpm --filter @almacen/server respaldo:restaurar-nube --id <id> --si
 pnpm --filter @almacen/pos tauri build   # app/instalador (Node 22 oficial y seed; ver docs/INSTALADOR.md)
+(cd apps/mobile && npx eas-cli build -p android --profile preview)   # APK del dueño (docs/APP_DUENO.md)
 ```
 Requiere **Node 22** (`.nvmrc`). Con Node 20 los tests se caen (`better-sqlite3` con SIGSEGV
 y workers de la caja que no arrancan) y la cobertura del servidor sale en 0 %. Si `node -v` no
