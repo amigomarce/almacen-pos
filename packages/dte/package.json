@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Documentos tributarios: interfaz DocumentoTributarioProvider e implementaciones.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./test": "./src/sii/test/ayudas.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"

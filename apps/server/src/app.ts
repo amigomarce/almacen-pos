@@ -29,6 +29,7 @@ import { registrarRecepciones } from './recepciones/rutas.js';
 import { buscarProducto, type DependenciasLookup } from './productos/lookup.js';
 import { requiereSesion } from './auth/rutas.js';
 import type { Semilla } from './productos/semilla.js';
+import { estadoColaSii } from './sii/cola.js';
 
 export interface OpcionesApp {
   db: Db;
@@ -48,6 +49,13 @@ export interface OpcionesApp {
   /** Categorías de la semilla (`data/categorias.csv`). */
   taxonomia?: Taxonomia;
   logger?: boolean;
+  /**
+   * Clave local para descifrar certificado/CAF cuando el local usa `SII_DIRECTO`. Se resuelve
+   * solo si hace falta: una instalación con `PUENTE_MANUAL` nunca la toca.
+   */
+  claveSii?: () => Buffer;
+  /** `fetch` inyectable para el cliente del SII (tests de la cola de envío). */
+  fetchSii?: typeof fetch;
 }
 
 export function crearApp({
@@ -62,6 +70,8 @@ export function crearApp({
   ejecutar,
   taxonomia = cargarTaxonomiaPorDefecto(),
   logger = false,
+  claveSii,
+  fetchSii,
 }: OpcionesApp): FastifyInstance {
   const app = Fastify({
     logger,
@@ -97,7 +107,12 @@ export function crearApp({
   registrarAuth(app, { db, sesiones, intentos });
   registrarCaja(app, { db, sesiones });
   registrarConfiguracion(app, { db, sesiones, permitirModoPrueba });
-  registrarVentas(app, { db, sesiones, intentos });
+  registrarVentas(app, {
+    db,
+    sesiones,
+    intentos,
+    ...(claveSii ? { sii: { clave: claveSii, ...(fetchSii ? { fetchFn: fetchSii } : {}) } } : {}),
+  });
   registrarBotones(app, { db, sesiones });
   registrarGestionProductos(app, { db, sesiones });
   registrarRecepciones(app, { db, sesiones });
@@ -117,6 +132,12 @@ export function crearApp({
     } catch {
       // Base sin migrar o caída: se informa como null.
     }
+    let sii: ReturnType<typeof estadoColaSii> | null = null;
+    try {
+      sii = estadoColaSii(db);
+    } catch {
+      // Si la base no responde, el estado `db` ya lo informa.
+    }
     return {
       status: estadoDb === 'ok' ? 'ok' : 'degradado',
       version: pkg.version,
@@ -124,6 +145,7 @@ export function crearApp({
       semilla: semilla !== null,
       modalidadBoleta,
       modoPrueba: modalidadBoleta === 'MOCK',
+      sii,
       hora: new Date().toISOString(),
     };
   });

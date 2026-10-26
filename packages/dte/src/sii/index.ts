@@ -9,3 +9,4 @@ export * from './folios.js';
 export * from './documento.js';
 export * from './envio.js';
 export * from './cliente.js';
+export * from './provider.js';

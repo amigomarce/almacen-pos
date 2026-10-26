@@ -43,6 +43,13 @@
       "when": 1792954646876,
       "tag": "0005_identidad_instalacion",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1792978061564,
+      "tag": "0006_sii_directo",
+      "breakpoints": true
     }
   ]
 }

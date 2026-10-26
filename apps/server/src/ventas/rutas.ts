@@ -7,6 +7,7 @@ import type { Sesiones } from '../auth/sesiones.js';
 import { buscarCaja } from '../caja/servicio.js';
 import type { Db } from '../db/client.js';
 import { ErrorHttp } from '../errores.js';
+import type { DependenciasSii } from '../sii/proveedor.js';
 import {
   anularVenta,
   cotizarVenta,
@@ -60,7 +61,17 @@ const ESQUEMA_VENTA = {
 
 export function registrarVentas(
   app: FastifyInstance,
-  { db, sesiones, intentos }: { db: Db; sesiones: Sesiones; intentos: LimitadorIntentos },
+  {
+    db,
+    sesiones,
+    intentos,
+    sii,
+  }: {
+    db: Db;
+    sesiones: Sesiones;
+    intentos: LimitadorIntentos;
+    sii?: DependenciasSii;
+  },
 ): void {
   const conSesion = requiereSesion(sesiones);
 
@@ -80,6 +91,7 @@ export function registrarVentas(
         db,
         { pedido, registerId: caja.id, cajeroId: req.sesion?.usuario.id ?? '' },
         req.log,
+        sii,
       );
       return reply.code(r.repetida ? 200 : 201).send(r.venta);
     },

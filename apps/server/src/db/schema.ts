@@ -83,6 +83,14 @@ export const storeSettings = sqliteTable(
     /** Identidad de la instalación para sincronizar con la nube (Fase 4): se genera una vez. */
     installationId: text('installation_id'),
     deviceToken: text('device_token'),
+    /** Emisión directa al SII (Fase 5): ambiente, resolución y credenciales cifradas. */
+    siiAmbiente: text('sii_ambiente', { enum: ['certificacion', 'produccion'] }),
+    siiRutEnvia: text('sii_rut_envia'),
+    siiFchResol: text('sii_fch_resol'),
+    siiNroResol: integer('sii_nro_resol'),
+    /** JSON cifrado con el certificado X.509 y su clave privada (PEM). Nunca se loguea. */
+    siiCredenciales: text('sii_credenciales'),
+    siiCertificadoHasta: integer('sii_certificado_hasta', { mode: 'timestamp_ms' }),
     updatedAt: ahora('updated_at'),
     version: integer('version').notNull().default(1),
   },
@@ -355,6 +363,8 @@ export const taxDocuments = sqliteTable(
     siiStatus: text('sii_status', { enum: ESTADOS_SII }).notNull().default('NO_APLICA'),
     sentAt: integer('sent_at', { mode: 'timestamp_ms' }),
     attempts: integer('attempts').notNull().default(0),
+    /** Último intento de envío al SII (para la espera entre reintentos). */
+    lastAttemptAt: integer('last_attempt_at', { mode: 'timestamp_ms' }),
     lastError: text('last_error'),
     createdAt: ahora('created_at'),
   },
@@ -367,6 +377,7 @@ export const taxDocuments = sqliteTable(
     check('tax_documents_cuadre', sql`${t.netoClp} + ${t.ivaClp} + ${t.exentoClp} = ${t.totalClp}`),
     index('tax_documents_venta_idx').on(t.saleId),
     index('tax_documents_estado_idx').on(t.siiStatus),
+    index('tax_documents_pendientes_idx').on(t.provider, t.siiStatus, t.lastAttemptAt),
   ],
 );
 

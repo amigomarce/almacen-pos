@@ -146,7 +146,7 @@ function validarDocumentos(documentos: readonly DocumentoGenerado[]): void {
   }
 }
 
-function validarFechaResolucion(valor: string): string {
+export function validarFechaResolucion(valor: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor);
   const anio = m?.[1];
   const mes = m?.[2];
@@ -168,7 +168,7 @@ function validarFechaResolucion(valor: string): string {
   return valor;
 }
 
-function validarNroResol(valor: number): number {
+export function validarNroResol(valor: number): number {
   if (!Number.isInteger(valor) || valor < 0 || valor > 999_999) {
     throw new ErrorDominio(
       'NRO_RESOL_INVALIDO',

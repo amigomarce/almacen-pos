@@ -1,11 +1,14 @@
 import { RUTA_SEMILLA, cargarNormalizacion } from '@almacen/data';
 import pkg from '../package.json' with { type: 'json' };
 import { crearApp } from './app.js';
+import { leerConfiguracion } from './configuracion/servicio.js';
 import { abrirDb } from './db/client.js';
 import { migrar } from './db/migrar.js';
 import { RUTA_ENV, cargarEnvLocal, variable } from './env.js';
 import { ClienteOff } from './productos/off.js';
 import { Semilla } from './productos/semilla.js';
+import { leerClaveSii } from './sii/cifrado.js';
+import { iniciarEnvioSii } from './sii/envio.js';
 import { iniciarSincronizacion } from './sincronizacion/cliente.js';
 import { obtenerIdentidad } from './sincronizacion/identidad.js';
 
@@ -32,7 +35,14 @@ const off =
 // En producción (instalador, Fase 6) no se puede elegir la modalidad MOCK.
 const permitirModoPrueba = variable('NODE_ENV') !== 'production';
 
-const app = crearApp({ db, semilla, off, permitirModoPrueba, logger: true });
+const app = crearApp({
+  db,
+  semilla,
+  off,
+  permitirModoPrueba,
+  logger: true,
+  claveSii: () => leerClaveSii(),
+});
 
 if (conEnv) app.log.info(`Variables cargadas de ${RUTA_ENV}`);
 
@@ -66,6 +76,26 @@ if (cloudUrl) {
   );
 } else {
   app.log.warn('CLOUD_URL sin definir: la caja no sincroniza con la nube.');
+}
+
+// Cola de boletas al SII (Fase 5): solo si el local emite directo. En `PUENTE_MANUAL` no hay
+// nada que enviar y la clave local ni se toca.
+if (leerConfiguracion(db).dteProvider === 'SII_DIRECTO') {
+  iniciarEnvioSii(db, {
+    clave: () => leerClaveSii(),
+    log: {
+      info: (obj, msg) => {
+        app.log.info(obj, msg);
+      },
+      warn: (obj, msg) => {
+        app.log.warn(obj, msg);
+      },
+      error: (obj, msg) => {
+        app.log.error(obj, msg);
+      },
+    },
+  });
+  app.log.info('Envío de boletas al SII activo (cada 2 minutos).');
 }
 
 try {

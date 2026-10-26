@@ -433,3 +433,14 @@ Normativa pendiente de confirmar (`TODO(SII)`):
   semántica de `X-Retry-After` cuando la API responde 405.
 - Lote de boletas: confirmar si el máximo recomendado sigue siendo 50 (el schema admite 500)
   y qué hacer con el lote ante un `RPT` (envío repetido).
+- Cola local (ADR-010): definir la idempotencia si la caja se cae justo después de que el SII
+  acepta el envío y antes de guardar el `track_id` (hoy se reintentaría y podría dar `RPT`).
+- Certificado real: los emisores chilenos suelen entregar `.pfx`; confirmar el comando
+  `openssl pkcs12` y si la clave viaja en el mismo archivo. Hoy el cargador interno usa PEM.
+- Activación de `SII_DIRECTO`: no se habilita en Configuración hasta completar la
+  representación impresa y la certificación (Etapa 4). Confirmar el checklist de la boleta
+  impresa y si se exige PDF417 en el set de pruebas.
+- CAF agotado: definir el aviso en la caja (hoy la venta queda sin documento y solo se
+  registra en el log) y el procedimiento para cargar un CAF nuevo sin reiniciar.
+- Alerta de cola: mostrar en la pantalla del dueño cuando `/health` informe
+  `sii.atrasadas > 0` (boletas con más de 45 minutos sin enviar).

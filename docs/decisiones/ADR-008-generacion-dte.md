@@ -100,8 +100,8 @@ con etiquetas pares (C14N expande las autocerradas). Ver ADR-009.
   cerca de medianoche.
 - Los datos legales del emisor se validan contra los largos del schema y **fallan** si no caben
   (razón social 100, giro 80, dirección 70, comuna 20). El nombre del ítem se recorta a 80.
-- El control de folios (`EstadoFolios`) es en memoria; la persistencia del "último folio usado"
-  queda para la Etapa 3 (proveedor).
+- El control de folios (`EstadoFolios`) es en memoria; la Etapa 3 agregó la persistencia real
+  en `caf_ranges.next_folio` (ADR-010).
 
 ## `TODO(SII)` pendiente de validar en el ambiente de certificación
 

@@ -14,10 +14,13 @@ import {
 } from '@almacen/core';
 import {
   crearProvider,
+  leyendasBoleta,
   normalizarFolioExterno,
   type DocumentoEmitido,
   type Entrega,
+  type EstadoSii,
   type NombreProvider,
+  type TipoDte,
   type VentaParaDte,
 } from '@almacen/dte';
 import { and, desc, eq, inArray, isNull, lte, or, gte, sql } from 'drizzle-orm';
@@ -37,6 +40,7 @@ import { leerConfiguracion } from '../configuracion/servicio.js';
 import { ErrorHttp } from '../errores.js';
 import { lineaAWire, movimientoAWire, ventaAWire } from '../sincronizacion/mapping.js';
 import { encolar } from '../sincronizacion/outbox.js';
+import { crearProviderDeVenta, type DependenciasSii } from '../sii/proveedor.js';
 
 // ---------- Tipos de entrada y salida ----------
 
@@ -81,9 +85,13 @@ export interface LineaDetalle {
 
 export interface DocumentoDetalle {
   provider: NombreProvider;
+  tipoDte: TipoDte | null;
+  folio: number | null;
   entrega: Entrega;
   folioExterno: string | null;
   validoComoBoleta: boolean;
+  estadoSii: EstadoSii;
+  trackId: string | null;
   leyendas: readonly string[];
   /** Lo que debe hacer el cajero (ej. emitir en e-Boleta). `null` si nada. */
   accionCajero: string | null;
@@ -151,22 +159,41 @@ function ventaParaDte(
   };
 }
 
-/** Rearma las leyendas del documento guardado (reimpresión). Los providers actuales son puros. */
+/** Rearma el documento guardado para mostrarlo o reimprimirlo. */
 async function vistaDocumento(
   doc: typeof taxDocuments.$inferSelect,
   dte: VentaParaDte,
 ): Promise<DocumentoDetalle> {
+  const base = {
+    provider: doc.provider,
+    tipoDte: doc.dteType as TipoDte | null,
+    folio: doc.folio,
+    entrega: doc.entrega,
+    folioExterno: doc.folioExterno,
+    estadoSii: doc.siiStatus,
+    trackId: doc.trackId,
+  };
+  if (doc.provider === 'SII_DIRECTO') {
+    // Se lee de la base: reemitir consumiría otro folio.
+    return {
+      ...base,
+      validoComoBoleta: true,
+      leyendas:
+        doc.dteType !== null && doc.folio !== null
+          ? leyendasBoleta(doc.dteType as TipoDte, doc.folio, doc.totalClp)
+          : [],
+      accionCajero: null,
+    };
+  }
   const provider = crearProvider(doc.provider, 'TODO_MEDIO_PAGO');
   const r = await provider.emitirBoleta(dte);
   /* v8 ignore next -- con TODO_MEDIO_PAGO y total > 0 siempre emite */
-  const base = r.emitido ? r.documento : null;
+  const emitido = r.emitido ? r.documento : null;
   return {
-    provider: doc.provider,
-    entrega: doc.entrega,
-    folioExterno: doc.folioExterno,
-    validoComoBoleta: base?.validoComoBoleta ?? false,
-    leyendas: base?.leyendas ?? [],
-    accionCajero: doc.folioExterno ? null : (base?.accionCajero ?? null),
+    ...base,
+    validoComoBoleta: emitido?.validoComoBoleta ?? false,
+    leyendas: emitido?.leyendas ?? [],
+    accionCajero: doc.folioExterno ? null : (emitido?.accionCajero ?? null),
   };
 }
 
@@ -378,6 +405,7 @@ export async function registrarVenta(
   db: Db,
   datos: { pedido: PedidoVenta; registerId: string; cajeroId: string; ahora?: Date },
   log?: { error: (obj: object, msg: string) => void },
+  dependenciasSii?: DependenciasSii,
 ): Promise<ResultadoRegistro> {
   const { pedido, registerId, cajeroId } = datos;
   const ahora = datos.ahora ?? new Date();
@@ -509,13 +537,15 @@ export async function registrarVenta(
     totalLineaClp: l.totalLineaClp,
   }));
   try {
-    const provider = crearProvider(config.dteProvider, config.modeloEmision);
+    const provider = crearProviderDeVenta(db, config, dependenciasSii);
     const r = await provider.emitirBoleta(
       ventaParaDte(venta, lineasDetalle, calculo.totales, entrega),
     );
-    if (r.emitido) guardarDocumento(db, venta.id, r.documento);
+    // `SII_DIRECTO` ya guardó el DTE en su cola al emitir; los demás providers son efímeros.
+    if (r.emitido && config.dteProvider !== 'SII_DIRECTO') {
+      guardarDocumento(db, venta.id, r.documento);
+    }
   } catch (error) {
-    /* v8 ignore next 3 -- los providers actuales no fallan con una venta ya validada */
     log?.error({ err: error, ventaId: venta.id }, 'No se pudo emitir el documento de la venta');
   }
 
@@ -644,6 +674,9 @@ export async function anularVenta(
 // TODO(SII): confirmar el procedimiento de nota de crédito para boletas de e-Boleta (ADR-001 §5).
 function recordatorioAnulacion(v: VentaDetalle): string | null {
   const total = formatearClp(v.totalClp);
+  if (v.documento?.provider === 'SII_DIRECTO') {
+    return `Anula la boleta folio ${v.documento.folio ?? '?'} (${total}) con una nota de crédito electrónica en el SII`;
+  }
   if (v.documento?.provider === 'PUENTE_MANUAL') {
     return v.documento.folioExterno
       ? `Anula la boleta folio ${v.documento.folioExterno} (${total}) en sii.cl con una nota de crédito`
