@@ -14,6 +14,9 @@ export default tseslint.config(
       // Artefactos de la envoltura Tauri (compilación y esquemas generados).
       '**/src-tauri/target/**',
       '**/src-tauri/gen/**',
+      // Recursos y binarios generados por el sidecar del instalador.
+      '**/src-tauri/resources/**',
+      '**/src-tauri/binaries/**',
     ],
   },
   js.configs.recommended,

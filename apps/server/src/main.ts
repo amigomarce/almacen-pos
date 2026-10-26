@@ -39,6 +39,19 @@ const off =
 // En producción (instalador, Fase 6) no se puede elegir la modalidad MOCK.
 const permitirModoPrueba = variable('NODE_ENV') !== 'production';
 
+// Sidecar del instalador: si la app de escritorio muere sin cerrar el servidor, este se apaga
+// solo al detectar que el proceso padre ya no existe.
+const padre = Number(variable('ALMACEN_PADRE_PID') ?? '');
+if (Number.isInteger(padre) && padre > 0) {
+  setInterval(() => {
+    try {
+      process.kill(padre, 0);
+    } catch {
+      process.exit(0);
+    }
+  }, 5_000).unref();
+}
+
 const app = crearApp({
   db,
   semilla,

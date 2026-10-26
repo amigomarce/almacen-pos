@@ -22,6 +22,11 @@ data/out/
 # Datos locales de la caja (SQLite, respaldos y la clave del SII)
 apps/server/var/
 
+# Artefactos del instalador (sidecar de Node, recursos y build del servidor)
+apps/server/dist/
+apps/pos/src-tauri/binaries/
+apps/pos/src-tauri/resources/
+
 # Configuración pública de la caja en Tauri (sin secretos)
 !apps/pos/.env.tauri
 

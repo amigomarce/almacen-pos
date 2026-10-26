@@ -13,6 +13,7 @@ import { PantallaApertura } from './pantallas/PantallaApertura.js';
 import { PantallaPin } from './pantallas/PantallaPin.js';
 import { ModalAcercaDe } from './componentes/ModalAcercaDe.js';
 import { PantallaCaja } from './pantallas/PantallaCaja.js';
+import { PantallaInstalacion } from './pantallas/PantallaInstalacion.js';
 import { PantallaConfiguracion } from './pantallas/PantallaConfiguracion.js';
 import { PantallaProductos } from './pantallas/PantallaProductos.js';
 import { PantallaRecepcion } from './pantallas/PantallaRecepcion.js';
@@ -32,6 +33,7 @@ const VISTAS: { vista: Vista; etiqueta: string; soloDueno?: boolean }[] = [
 
 type Fase =
   | { tipo: 'CARGANDO' }
+  | { tipo: 'INSTALACION' }
   | { tipo: 'PIN' }
   | { tipo: 'CAJA'; usuario: Usuario; caja: EstadoCaja | null; error: string | null };
 
@@ -45,15 +47,22 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
     usuarioId: string;
     valor: ConfiguracionLocal | null;
   } | null>(null);
-  const [fase, setFase] = useState<Fase>(() =>
-    leerToken() ? { tipo: 'CARGANDO' } : { tipo: 'PIN' },
-  );
+  const [fase, setFase] = useState<Fase>({ tipo: 'CARGANDO' });
 
   const volverAlPin = useCallback(() => {
     guardarToken(null);
     api.usarToken(null);
     setConfig(null);
-    setFase({ tipo: 'PIN' });
+    // Si la base quedó sin usuarios (restauración, instalación a medias), vuelve a pedir la
+    // configuración inicial en vez de mostrar una pantalla de PIN vacía.
+    api
+      .estadoInicial()
+      .then((estado) => {
+        setFase({ tipo: estado.requiereConfiguracion ? 'INSTALACION' : 'PIN' });
+      })
+      .catch(() => {
+        setFase({ tipo: 'PIN' });
+      });
   }, [api]);
 
   const cargarCaja = useCallback(
@@ -97,15 +106,29 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
     };
   }, [api, usuarioId, vista]);
 
-  // Al iniciar: si hay un token guardado y sigue vigente, se retoma la sesión.
+  // Al iniciar: se retoma la sesión guardada o se decide entre instalar y pedir PIN.
   useEffect(() => {
     const token = leerToken();
-    if (!token) return;
-    api.usarToken(token);
+    if (token) {
+      api.usarToken(token);
+      api
+        .sesion()
+        .then((r) => cargarCaja(r.usuario))
+        .catch(volverAlPin);
+      return;
+    }
+    let vigente = true;
     api
-      .sesion()
-      .then((r) => cargarCaja(r.usuario))
-      .catch(volverAlPin);
+      .estadoInicial()
+      .then((estado) => {
+        if (vigente) setFase({ tipo: estado.requiereConfiguracion ? 'INSTALACION' : 'PIN' });
+      })
+      .catch(() => {
+        if (vigente) setFase({ tipo: 'PIN' });
+      });
+    return () => {
+      vigente = false;
+    };
   }, [api, volverAlPin, cargarCaja]);
 
   const alEntrar = (token: string, usuario: Usuario) => {
@@ -180,6 +203,7 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
       )}
       <div className="contenido">
         {fase.tipo === 'CARGANDO' && <p className="pantalla-centrada">Cargando…</p>}
+        {fase.tipo === 'INSTALACION' && <PantallaInstalacion api={api} alEntrar={alEntrar} />}
         {fase.tipo === 'PIN' && <PantallaPin api={api} alEntrar={alEntrar} />}
         {fase.tipo === 'CAJA' &&
           (configPendiente ? (

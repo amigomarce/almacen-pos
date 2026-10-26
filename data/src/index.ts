@@ -24,8 +24,12 @@ export { CatalogoMarcas } from './marcas.js';
 export { normalizarProducto, type ProductoNormalizado } from './nombre.js';
 export { VERSION_ESQUEMA, escribirSemilla, type ContenidoSemilla } from './sqlite.js';
 
-/** Carpeta `data/` del repo (CSV editables y `out/`). */
-export const DIR_DATA = join(dirname(fileURLToPath(import.meta.url)), '..');
+/**
+ * Carpeta `data/` (CSV editables y `out/`). En el instalador se apunta con
+ * `ALMACEN_DATA_DIR` a los recursos empaquetados; en el repo se usa la ubicación del paquete.
+ */
+const DIR_DATA_POR_DEFECTO = join(dirname(fileURLToPath(import.meta.url)), '..');
+export const DIR_DATA = process.env['ALMACEN_DATA_DIR']?.trim() || DIR_DATA_POR_DEFECTO;
 
 /** Ruta por defecto de la semilla generada por `pnpm data:build`. */
 export const RUTA_SEMILLA = join(DIR_DATA, 'out', 'seed.sqlite');

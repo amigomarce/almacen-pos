@@ -43,6 +43,96 @@ async function entrar(c: Ctx, usuarioId: string, pin: string): Promise<string> {
 
 const conToken = (token: string) => ({ authorization: `Bearer ${token}` });
 
+describe('instalación inicial', () => {
+  function vacia() {
+    const db = abrirDb(':memory:');
+    migrar(db);
+    return { db, app: crearApp({ db }) };
+  }
+
+  it('crea el dueño, la caja y el cajero, y deja la sesión abierta', async () => {
+    const { db, app } = vacia();
+    const estado = await app.inject({ method: 'GET', url: '/auth/inicial' });
+    expect(estado.json()).toEqual({ requiereConfiguracion: true });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/auth/inicial',
+      payload: {
+        dueno: { nombre: 'Rosa', pin: '1234' },
+        caja: { nombre: 'Caja principal' },
+        cajero: { nombre: 'Sofía', pin: '0000' },
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const { token, usuario } = res.json<{
+      token: string;
+      usuario: { name: string; role: string };
+    }>();
+    expect(usuario).toMatchObject({ name: 'Rosa', role: 'DUENO' });
+    expect(
+      (await app.inject({ method: 'GET', url: '/auth/sesion', headers: conToken(token) })).json(),
+    ).toEqual({ usuario });
+    expect(
+      db
+        .select()
+        .from(t.registers)
+        .all()
+        .map((r) => r.name),
+    ).toEqual(['Caja principal']);
+    expect(
+      db
+        .select()
+        .from(t.users)
+        .all()
+        .map((u) => u.role)
+        .sort(),
+    ).toEqual(['CAJERO', 'DUENO']);
+    expect((await app.inject({ method: 'GET', url: '/auth/inicial' })).json()).toEqual({
+      requiereConfiguracion: false,
+    });
+  });
+
+  it('no permite instalar dos veces', async () => {
+    const { app } = vacia();
+    await app.inject({
+      method: 'POST',
+      url: '/auth/inicial',
+      payload: { dueno: { nombre: 'Rosa', pin: '1234' }, caja: { nombre: 'Caja 1' } },
+    });
+    const otra = await app.inject({
+      method: 'POST',
+      url: '/auth/inicial',
+      payload: { dueno: { nombre: 'Otro', pin: '9999' }, caja: { nombre: 'Caja 2' } },
+    });
+    expect(otra.statusCode).toBe(409);
+    expect(otra.json()).toMatchObject({ error: 'YA_CONFIGURADO' });
+  });
+
+  it('con datos sembrados no pide instalación', async () => {
+    const c = preparar();
+    expect((await c.app.inject({ method: 'GET', url: '/auth/inicial' })).json()).toEqual({
+      requiereConfiguracion: false,
+    });
+  });
+
+  it('valida el PIN y los nombres', async () => {
+    const { app } = vacia();
+    const corto = await app.inject({
+      method: 'POST',
+      url: '/auth/inicial',
+      payload: { dueno: { nombre: 'Rosa', pin: '12' }, caja: { nombre: 'Caja 1' } },
+    });
+    expect(corto.statusCode).toBe(400);
+    const sinNombre = await app.inject({
+      method: 'POST',
+      url: '/auth/inicial',
+      payload: { dueno: { nombre: '  ', pin: '1234' }, caja: { nombre: 'Caja 1' } },
+    });
+    expect(sinNombre.statusCode).toBe(400);
+  });
+});
+
 describe('auth', () => {
   let c: Ctx;
   beforeEach(() => {

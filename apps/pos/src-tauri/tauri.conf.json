@@ -4,7 +4,10 @@
   "version": "0.1.0",
   "identifier": "cl.almacenpos.caja",
   "build": {
-    "beforeDevCommand": { "script": "pnpm dev:pos", "cwd": "../.." },
+    "beforeDevCommand": {
+      "script": "pnpm dev:pos",
+      "cwd": "../.."
+    },
     "devUrl": "http://127.0.0.1:5173",
     "beforeBuildCommand": "pnpm build:tauri",
     "frontendDist": "../dist"
@@ -37,6 +40,10 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "externalBin": ["binaries/node"],
+    "resources": {
+      "resources/server/": "server/"
+    }
   }
 }

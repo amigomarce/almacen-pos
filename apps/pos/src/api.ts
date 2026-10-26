@@ -96,6 +96,16 @@ export interface AcercaDe {
 
 export type TransporteImpresora = 'DESACTIVADA' | 'RED' | 'SISTEMA' | 'ARCHIVO';
 
+export interface EstadoInicial {
+  requiereConfiguracion: boolean;
+}
+
+export interface DatosInstalacion {
+  dueno: { nombre: string; pin: string };
+  caja: { nombre: string };
+  cajero?: { nombre: string; pin: string };
+}
+
 export interface ConfiguracionInicial {
   local: { completo: boolean; faltan: string[] };
   boleta: { confirmada: boolean; modalidad: ModalidadBoleta; siiListo: boolean };
@@ -379,6 +389,14 @@ export class ClienteApi {
 
   usuarios(): Promise<Usuario[]> {
     return this.pedir<Usuario[]>('/auth/usuarios');
+  }
+
+  estadoInicial(): Promise<EstadoInicial> {
+    return this.pedir<EstadoInicial>('/auth/inicial');
+  }
+
+  instalarLocal(datos: DatosInstalacion): Promise<{ token: string; usuario: Usuario }> {
+    return this.pedir('/auth/inicial', { metodo: 'POST', cuerpo: datos });
   }
 
   entrar(usuarioId: string, pin: string): Promise<{ token: string; usuario: Usuario }> {

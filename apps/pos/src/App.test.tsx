@@ -39,13 +39,34 @@ describe('conexión y modo prueba', () => {
     expect(await screen.findByRole('note', { name: 'Modo prueba' })).toHaveTextContent(
       'MODO PRUEBA – no emite boletas',
     );
-    expect(screen.getByText('¿Quién atiende?')).toBeInTheDocument();
+    expect(await screen.findByText('¿Quién atiende?')).toBeInTheDocument();
   });
 
   it('con PUENTE_MANUAL no muestra el aviso', async () => {
     render(<App api={servidorFalso().api} />);
     await screen.findByRole('status');
     expect(screen.queryByRole('note', { name: 'Modo prueba' })).not.toBeInTheDocument();
+  });
+});
+
+describe('primera instalación', () => {
+  it('crea dueño, caja y cajero antes de pedir PIN', async () => {
+    const u = userEvent.setup();
+    const s = servidorFalso({ requiereInstalacion: true });
+    render(<App api={s.api} />);
+
+    expect(await screen.findByRole('heading', { name: 'Configura la caja' })).toBeInTheDocument();
+    await u.type(screen.getByLabelText('Nombre del dueño'), 'Rosa');
+    await u.type(screen.getByLabelText('PIN del dueño (4 a 8 dígitos)'), '1234');
+    await u.type(screen.getByLabelText('Repite el PIN del dueño'), '1234');
+    await u.click(screen.getByRole('checkbox', { name: /Agregar un cajero/ }));
+    await u.type(screen.getByLabelText('Nombre del cajero'), 'Sofía');
+    await u.type(screen.getByLabelText('PIN del cajero (4 a 8 dígitos)'), '0000');
+    await u.click(screen.getByRole('button', { name: 'Empezar a vender' }));
+
+    expect(await screen.findByRole('heading', { name: 'Abrir Caja 1' })).toBeInTheDocument();
+    expect(s.estado.requiereInstalacion).toBe(false);
+    expect(s.estado.usuarios.map((x) => x.name)).toContain('Rosa');
   });
 });
 
@@ -148,7 +169,7 @@ describe('entrar con PIN', () => {
     await u.click(await screen.findByRole('button', { name: /Dueño/ }));
     expect(screen.getByRole('heading', { name: 'Hola, Dueño' })).toBeInTheDocument();
     await u.keyboard('{Escape}');
-    expect(screen.getByText('¿Quién atiende?')).toBeInTheDocument();
+    expect(await screen.findByText('¿Quién atiende?')).toBeInTheDocument();
   });
 
   it('con un solo usuario va directo al PIN', async () => {

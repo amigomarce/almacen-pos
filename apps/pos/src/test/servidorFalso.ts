@@ -68,6 +68,7 @@ export interface EstadoFalso {
   dteProvider: 'MOCK' | 'PUENTE_MANUAL' | 'SII_DIRECTO';
   boletaConfirmada: boolean;
   siiListo: boolean;
+  requiereInstalacion: boolean;
   redondeo: boolean;
   /** `true` = hay impresora (imprime); `false` = sin impresora configurada. */
   impresora: boolean;
@@ -132,6 +133,7 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
     respaldos: [],
     boletaConfirmada: true,
     siiListo: false,
+    requiereInstalacion: false,
     impresoraCfg: {
       transporte: 'DESACTIVADA',
       destino: null,
@@ -272,6 +274,30 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
           modalidadBoleta: estado.modoPrueba ? 'MOCK' : 'PUENTE_MANUAL',
           modoPrueba: estado.modoPrueba,
         });
+      case 'GET /auth/inicial':
+        return json(200, { requiereConfiguracion: estado.requiereInstalacion });
+      case 'POST /auth/inicial': {
+        if (!estado.requiereInstalacion) {
+          return json(409, { error: 'YA_CONFIGURADO', mensaje: 'La caja ya está configurada' });
+        }
+        const dueno = cuerpo['dueno'] as { nombre?: string; pin?: string } | undefined;
+        if (!dueno?.nombre || !dueno.pin) {
+          return json(400, { error: 'DATOS_INVALIDOS', mensaje: 'Faltan datos del dueño' });
+        }
+        const usuario = {
+          id: 'u-inst',
+          name: dueno.nombre,
+          role: 'DUENO' as const,
+          pin: dueno.pin,
+        };
+        estado.usuarios.push(usuario);
+        estado.tokens.set('t-inst', usuario);
+        estado.requiereInstalacion = false;
+        return json(201, {
+          token: 't-inst',
+          usuario: { id: usuario.id, name: usuario.name, role: usuario.role },
+        });
+      }
       case 'GET /auth/usuarios':
         return json(
           200,

@@ -135,8 +135,21 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
 - La app móvil lee el QR con `expo-camera` y completa instalación, token y nombre; la carga
   manual sigue como respaldo.
 
-**Pendiente de la Fase 6:** instalador Windows/Tauri con el servidor Node como sidecar,
-manual de 1 página y respaldo automático a un bucket de nube.
+### Estado al 2026-10-26 — instalador (sidecar)
+
+**Hecho (ADR-014):**
+- El servidor se compila con esbuild y viaja como sidecar de Node 22 dentro de Tauri, con
+  `better-sqlite3`, migraciones, CSV y `seed.sqlite`.
+- Arranque y parada del sidecar desde Rust; base, respaldos y clave del SII en el directorio
+  de datos del usuario; log en `server.log` y watchdog si la app muere.
+- `pnpm --filter @almacen/pos tauri build` genera la app de macOS; se abrió y verificó el
+  arranque, migración, semilla, respaldo y `/health`.
+- Configuración NSIS para Windows y guía en [`INSTALADOR.md`](INSTALADOR.md).
+- Primer arranque de una base vacía: crea dueño, caja y cajero antes del PIN (ADR-015).
+
+**Pendiente de la Fase 6:** generar y probar el `.exe` en Windows/CI, manual de 1 página,
+respaldo automático a un bucket de nube, firma/notarización y URL de nube configurable desde
+la app.
 
 ## Mejoras futuras (backlog)
 

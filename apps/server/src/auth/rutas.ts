@@ -5,13 +5,14 @@ import type {
   onRequestAsyncHookHandler,
 } from 'fastify';
 import type { Db } from '../db/client.js';
-import { ROLES, type Rol } from '../db/schema.js';
+import { registers, ROLES, type Rol } from '../db/schema.js';
 import { autorizarDueno } from './autorizacion.js';
 import type { LimitadorIntentos } from './intentos.js';
 import type { Sesion, Sesiones } from './sesiones.js';
 import {
   autenticar,
   buscarUsuario,
+  contarDuenosActivos,
   crearUsuario,
   editarUsuario,
   listarUsuarios,
@@ -35,6 +36,27 @@ export interface DependenciasAuth {
 const PIN = { type: 'string', pattern: '^[0-9]{4,8}$' } as const;
 const NOMBRE = { type: 'string', minLength: 1, maxLength: 40, pattern: '\\S' } as const;
 const ROL = { type: 'string', enum: [...ROLES] } as const;
+const PERSONA = {
+  type: 'object',
+  required: ['nombre', 'pin'],
+  additionalProperties: false,
+  properties: { nombre: NOMBRE, pin: PIN },
+} as const;
+const INSTALACION = {
+  type: 'object',
+  required: ['dueno', 'caja'],
+  additionalProperties: false,
+  properties: {
+    dueno: PERSONA,
+    caja: {
+      type: 'object',
+      required: ['nombre'],
+      additionalProperties: false,
+      properties: { nombre: NOMBRE },
+    },
+    cajero: PERSONA,
+  },
+} as const;
 
 function tokenDe(req: FastifyRequest): string | null {
   const h = req.headers.authorization;
@@ -80,6 +102,53 @@ export function registrarAuth(
   app.decorateRequest('sesion', null);
   const conSesion = requiereSesion(sesiones);
   const soloDueno = requiereSesion(sesiones, ['DUENO']);
+
+  /**
+   * Primer arranque: una base recién instalada no tiene dueño. La caja pide estos datos una
+   * sola vez y crea el dueño, la caja y, opcionalmente, el cajero. Después queda cerrado.
+   */
+  app.get('/auth/inicial', () => ({ requiereConfiguracion: contarDuenosActivos(db) === 0 }));
+
+  app.post<{
+    Body: {
+      dueno: { nombre: string; pin: string };
+      caja: { nombre: string };
+      cajero?: { nombre: string; pin: string };
+    };
+  }>('/auth/inicial', { schema: { body: INSTALACION } }, (req, reply) => {
+    if (contarDuenosActivos(db) > 0) {
+      return reply.code(409).send({
+        error: 'YA_CONFIGURADO',
+        mensaje: 'La caja ya tiene un dueño; no se puede volver a instalar',
+      });
+    }
+    const { dueno, caja } = req.body;
+    const duenoCreado = db.transaction(() => {
+      const existeCaja = db.select({ id: registers.id }).from(registers).get();
+      if (!existeCaja) {
+        db.insert(registers).values({ name: caja.nombre.trim() }).run();
+      }
+      const creado = crearUsuario(db, {
+        name: dueno.nombre,
+        role: 'DUENO',
+        pin: dueno.pin,
+      });
+      if (req.body.cajero) {
+        crearUsuario(db, {
+          name: req.body.cajero.nombre,
+          role: 'CAJERO',
+          pin: req.body.cajero.pin,
+        });
+      }
+      return creado;
+    });
+    const sesion = sesiones.crear({
+      id: duenoCreado.id,
+      name: duenoCreado.name,
+      role: duenoCreado.role,
+    });
+    return reply.code(201).send({ token: sesion.token, usuario: sesion.usuario });
+  });
 
   /** Para la pantalla de PIN: quién puede entrar. No expone PIN ni datos sensibles. */
   app.get('/auth/usuarios', () =>

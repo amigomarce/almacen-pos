@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
-    "build:tauri": "vite build --mode tauri",
+    "build:tauri": "pnpm sidecar && vite build --mode tauri",
+    "sidecar": "pnpm --filter @almacen/server sidecar",
     "tauri": "tauri"
   },
   "devDependencies": {
