@@ -63,8 +63,10 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
 - Probar la app en un emulador o teléfono (no se ejecutó en el entorno de desarrollo) y
   pulir la UI; el escáner con cámara necesita un dispositivo real.
 - ~~Provisionar Supabase y publicar la nube~~: hecho 2026-10-26. La nube corre en Fly.io
-  (`https://almacen-pos-nube.fly.dev`, siempre encendida, ADR-018, [`NUBE.md`](NUBE.md)) sobre
-  Supabase `sa-east-1`. Falta `SUPABASE_SECRET_KEY` para el respaldo en Storage.
+  (`https://almacen-pos-nube.fly.dev`, ADR-018, [`NUBE.md`](NUBE.md)) sobre Supabase
+  `sa-east-1`. El respaldo en Storage está activo con la `service_role` legacy; la nube ya acepta
+  la secret key nueva (`SUPABASE_SECRET_KEY`, `sb_secret_…`). Mientras la cuenta de Fly siga en
+  *trial* (sin tarjeta), la máquina se detiene a los 5 min y no está siempre encendida.
 - App del dueño instalable: EAS Build configurado (APK `preview`, TestFlight `production`,
   [`APP_DUENO.md`](APP_DUENO.md)); falta instalar el APK y probar la vinculación con la caja.
 - Fiado / cuenta corriente (opcional) no se hizo.
