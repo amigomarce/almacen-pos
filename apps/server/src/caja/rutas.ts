@@ -6,6 +6,7 @@ import {
   abrirCaja,
   buscarCaja,
   cerrarCaja,
+  registrarMovimiento,
   sesionAbierta,
   sesionPorId,
   type Caja,
@@ -35,7 +36,12 @@ export function registrarCaja(
       const caja = cajaO404(reply, req.query.registerId);
       if (!caja) return reply;
       const abierta = sesionAbierta(db, caja.id);
-      return { caja, sesion: abierta?.sesion ?? null, resumen: abierta?.resumen ?? null };
+      return {
+        caja,
+        sesion: abierta?.sesion ?? null,
+        resumen: abierta?.resumen ?? null,
+        movimientos: abierta?.movimientos ?? [],
+      };
     },
   );
 
@@ -95,6 +101,44 @@ export function registrarCaja(
         return reply.code(409).send({ error: 'CAJA_CERRADA', mensaje: 'La caja no está abierta' });
       }
       return { caja, ...r.datos };
+    },
+  );
+
+  /** Retiro o ingreso de efectivo en el turno abierto (pago a proveedor, sencillo…). */
+  app.post<{
+    Body: { tipo: 'RETIRO' | 'INGRESO'; montoClp: number; motivo: string; registerId?: string };
+  }>(
+    '/cash/movements',
+    {
+      onRequest: conSesion,
+      schema: {
+        body: {
+          type: 'object',
+          required: ['tipo', 'montoClp', 'motivo'],
+          additionalProperties: false,
+          properties: {
+            tipo: { type: 'string', enum: ['RETIRO', 'INGRESO'] },
+            montoClp: { type: 'integer', minimum: 1, maximum: 1_000_000_000 },
+            motivo: { type: 'string', minLength: 1, maxLength: 80 },
+            registerId: { type: 'string' },
+          },
+        },
+      },
+    },
+    (req, reply) => {
+      const caja = cajaO404(reply, req.body.registerId);
+      if (!caja || !req.sesion) return reply;
+      const r = registrarMovimiento(db, {
+        registerId: caja.id,
+        usuarioId: req.sesion.usuario.id,
+        tipo: req.body.tipo,
+        montoClp: req.body.montoClp,
+        motivo: req.body.motivo,
+      });
+      if (!r.ok) {
+        return reply.code(409).send({ error: 'CAJA_CERRADA', mensaje: 'La caja no está abierta' });
+      }
+      return reply.code(201).send({ caja, movimiento: r.movimiento, ...r.datos });
     },
   );
 

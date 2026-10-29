@@ -9,6 +9,7 @@ import {
   type ResultadoImpresion,
   type VentaRegistrada,
 } from '../api.js';
+import { SeccionMovimientos } from '../caja/SeccionMovimientos.js';
 import { AvisoCierresInesperados } from '../componentes/AvisoCierresInesperados.js';
 
 const MEDIOS: { medio: MedioPago; etiqueta: string }[] = [
@@ -235,6 +236,18 @@ export function PantallaCaja({ api, esDueno, alCambiarCaja }: Props) {
                 <td className="numero">{formatearClp(r.anuladas.totalClp)}</td>
               </tr>
             )}
+            {(r.movimientos?.ingresosClp ?? 0) > 0 && (
+              <tr>
+                <td>+ Ingresos de efectivo</td>
+                <td className="numero">{formatearClp(r.movimientos?.ingresosClp ?? 0)}</td>
+              </tr>
+            )}
+            {(r.movimientos?.retirosClp ?? 0) > 0 && (
+              <tr>
+                <td>− Retiros de efectivo</td>
+                <td className="numero negativo">{formatearClp(r.movimientos?.retirosClp ?? 0)}</td>
+              </tr>
+            )}
             <tr>
               <td>
                 <strong>Efectivo esperado en caja</strong>
@@ -246,6 +259,14 @@ export function PantallaCaja({ api, esDueno, alCambiarCaja }: Props) {
           </tbody>
         </table>
       </div>
+
+      <SeccionMovimientos
+        api={api}
+        movimientos={estado.movimientos ?? []}
+        alRegistrar={(e) => {
+          setEstado(e);
+        }}
+      />
 
       <div className="tarjeta">
         <h2>Cerrar caja</h2>

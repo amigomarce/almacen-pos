@@ -1,8 +1,23 @@
-import { cuadrarCaja, diferenciaCaja, type CuadraturaCaja, type MedioPago } from '@almacen/core';
+import {
+  cuadrarCaja,
+  diferenciaCaja,
+  ErrorDominio,
+  validarMovimientoEfectivo,
+  type CuadraturaCaja,
+  type MedioPago,
+  type TipoMovimientoEfectivo,
+} from '@almacen/core';
 import type { CierreCajaWire } from '@almacen/sync';
 import { and, asc, count, eq, isNull, max } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { cashSessions, registers, sales, unexpectedShutdowns, users } from '../db/schema.js';
+import {
+  cashMovements,
+  cashSessions,
+  registers,
+  sales,
+  unexpectedShutdowns,
+  users,
+} from '../db/schema.js';
 import { encolar } from '../sincronizacion/outbox.js';
 
 export interface Caja {
@@ -29,9 +44,21 @@ export interface SesionCaja {
   cierresInesperados: { cantidad: number; ultimo: string | null };
 }
 
+/** Retiro o ingreso de efectivo del turno (no es una venta). */
+export interface MovimientoCaja {
+  id: string;
+  tipo: TipoMovimientoEfectivo;
+  montoClp: number;
+  motivo: string;
+  usuario: { id: string; name: string };
+  creadoEn: string;
+}
+
 export interface SesionConResumen {
   sesion: SesionCaja;
   resumen: CuadraturaCaja;
+  /** Retiros e ingresos del turno, en orden. */
+  movimientos: MovimientoCaja[];
 }
 
 type FilaSesion = typeof cashSessions.$inferSelect;
@@ -125,7 +152,30 @@ function filaAbierta(db: Db, registerId: string): FilaSesion | undefined {
     .get();
 }
 
-function resumir(db: Db, f: FilaSesion): CuadraturaCaja {
+function movimientosDe(db: Db, sesionId: string): MovimientoCaja[] {
+  return db
+    .select()
+    .from(cashMovements)
+    .where(eq(cashMovements.cashSessionId, sesionId))
+    .orderBy(asc(cashMovements.createdAt))
+    .all()
+    .map((m) => ({
+      id: m.id,
+      tipo: m.type,
+      montoClp: m.amountClp,
+      motivo: m.reason,
+      usuario: nombreUsuario(db, m.userId),
+      creadoEn: m.createdAt.toISOString(),
+    }));
+}
+
+/** Sesión con su resumen y sus movimientos de efectivo. */
+function completa(db: Db, f: FilaSesion): SesionConResumen {
+  const movimientos = movimientosDe(db, f.id);
+  return { sesion: aSesion(db, f), resumen: resumir(db, f, movimientos), movimientos };
+}
+
+function resumir(db: Db, f: FilaSesion, movimientos = movimientosDe(db, f.id)): CuadraturaCaja {
   const ventas = db
     .select({
       medioPago: sales.paymentMethod,
@@ -145,17 +195,18 @@ function resumir(db: Db, f: FilaSesion): CuadraturaCaja {
       redondeoClp: v.redondeoClp,
       anulada: v.status === 'ANULADA',
     })),
+    movimientos.map((m) => ({ tipo: m.tipo, montoClp: m.montoClp })),
   );
 }
 
 export function sesionAbierta(db: Db, registerId: string): SesionConResumen | null {
   const f = filaAbierta(db, registerId);
-  return f ? { sesion: aSesion(db, f), resumen: resumir(db, f) } : null;
+  return f ? completa(db, f) : null;
 }
 
 export function sesionPorId(db: Db, id: string): SesionConResumen | null {
   const f = db.select().from(cashSessions).where(eq(cashSessions.id, id)).get();
-  return f ? { sesion: aSesion(db, f), resumen: resumir(db, f) } : null;
+  return f ? completa(db, f) : null;
 }
 
 export type ResultadoApertura =
@@ -178,7 +229,7 @@ export function abrirCaja(
       })
       .returning()
       .get();
-    return { ok: true, datos: { sesion: aSesion(db, f), resumen: resumir(db, f) } };
+    return { ok: true, datos: completa(db, f) };
   });
 }
 
@@ -230,6 +281,54 @@ export function cerrarCaja(
         cantidadVentas: resumen.cantidadVentas,
       } satisfies CierreCajaWire,
     });
-    return { ok: true, datos: { sesion: aSesion(db, cerrada), resumen } };
+    return {
+      ok: true,
+      datos: { sesion: aSesion(db, cerrada), resumen, movimientos: movimientosDe(db, f.id) },
+    };
+  });
+}
+
+export type ResultadoMovimiento =
+  | { ok: true; movimiento: MovimientoCaja; datos: SesionConResumen }
+  | { ok: false; error: 'CAJA_CERRADA' };
+
+/**
+ * Registra un retiro o ingreso de efectivo en el turno abierto. Ajusta el efectivo esperado del
+ * cierre y queda a nombre de quien lo hizo.
+ */
+export function registrarMovimiento(
+  db: Db,
+  datos: {
+    registerId: string;
+    usuarioId: string;
+    tipo: TipoMovimientoEfectivo;
+    montoClp: number;
+    motivo: string;
+  },
+): ResultadoMovimiento {
+  const motivo = datos.motivo.trim();
+  if (motivo.length < 2) {
+    throw new ErrorDominio('MOTIVO_REQUERIDO', 'Escribe el motivo del movimiento');
+  }
+  validarMovimientoEfectivo({ tipo: datos.tipo, montoClp: datos.montoClp });
+  return db.transaction(() => {
+    const f = filaAbierta(db, datos.registerId);
+    if (!f) return { ok: false, error: 'CAJA_CERRADA' };
+    const fila = db
+      .insert(cashMovements)
+      .values({
+        cashSessionId: f.id,
+        type: datos.tipo,
+        amountClp: datos.montoClp,
+        reason: motivo,
+        userId: datos.usuarioId,
+      })
+      .returning()
+      .get();
+    const resultado = completa(db, f);
+    const movimiento = resultado.movimientos.find((m) => m.id === fila.id);
+    /* v8 ignore next -- recién insertado en la misma transacción */
+    if (!movimiento) throw new Error('movimiento no encontrado');
+    return { ok: true, movimiento, datos: resultado };
   });
 }

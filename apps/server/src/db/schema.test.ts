@@ -40,6 +40,7 @@ describe('migraciones', () => {
     expect(tablas()).toEqual(
       [
         'caf_ranges',
+        'cash_movements',
         'cash_sessions',
         'categories',
         'outbox',

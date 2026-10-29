@@ -91,6 +91,57 @@ describe('caja', () => {
     expect(c.db.select().from(t.unexpectedShutdowns).all()).toHaveLength(2);
   });
 
+  it('retiros e ingresos de efectivo: quedan a nombre de quien los hizo y ajustan el esperado', async () => {
+    const mover = (payload: object) =>
+      c.app.inject({ method: 'POST', url: '/cash/movements', headers, payload });
+
+    // Con la caja cerrada no se puede.
+    const cerrada = await mover({ tipo: 'RETIRO', montoClp: 1000, motivo: 'Pan' });
+    expect(cerrada.statusCode).toBe(409);
+    expect(cerrada.json()).toMatchObject({ error: 'CAJA_CERRADA' });
+
+    expect((await abrir(20000)).statusCode).toBe(201);
+    const retiro = await mover({ tipo: 'RETIRO', montoClp: 8000, motivo: '  Pan Ideal  ' });
+    expect(retiro.statusCode).toBe(201);
+    expect(retiro.json()).toMatchObject({
+      movimiento: {
+        tipo: 'RETIRO',
+        montoClp: 8000,
+        motivo: 'Pan Ideal',
+        usuario: { id: c.cajeroId, name: 'Cajero' },
+      },
+      resumen: {
+        movimientos: { retirosClp: 8000, ingresosClp: 0, cantidad: 1 },
+        efectivoEsperadoClp: 12000,
+      },
+    });
+    expect((await mover({ tipo: 'INGRESO', montoClp: 5000, motivo: 'Sencillo' })).statusCode).toBe(
+      201,
+    );
+
+    const estado = (await actual()).json<{
+      resumen: { efectivoEsperadoClp: number };
+      movimientos: { motivo: string }[];
+    }>();
+    expect(estado.resumen.efectivoEsperadoClp).toBe(17000);
+    expect(estado.movimientos.map((m) => m.motivo)).toEqual(['Pan Ideal', 'Sencillo']);
+
+    // Validaciones: monto positivo, motivo con texto y tipo conocido.
+    expect((await mover({ tipo: 'RETIRO', montoClp: 0, motivo: 'x' })).statusCode).toBe(400);
+    expect((await mover({ tipo: 'RETIRO', montoClp: 100, motivo: ' ' })).json()).toMatchObject({
+      error: 'MOTIVO_REQUERIDO',
+    });
+    expect((await mover({ tipo: 'OTRO', montoClp: 100, motivo: 'xx' })).statusCode).toBe(400);
+
+    // El cierre congela el esperado con los movimientos y los devuelve.
+    const cierre = (await cerrar(17000)).json<{
+      sesion: { efectivoEsperadoClp: number; diferenciaClp: number };
+      movimientos: unknown[];
+    }>();
+    expect(cierre.sesion).toMatchObject({ efectivoEsperadoClp: 17000, diferenciaClp: 0 });
+    expect(cierre.movimientos).toHaveLength(2);
+  });
+
   it('abre con el efectivo inicial y queda registrada a nombre de quien abrió', async () => {
     const res = await abrir(20000);
     expect(res.statusCode).toBe(201);

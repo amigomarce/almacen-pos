@@ -50,6 +50,8 @@ export interface EstadoFalso {
   tokens: Map<string, UsuarioFalso>;
   fallos: Map<string, number>;
   sesionCaja: SesionCaja | null;
+  /** Retiros e ingresos del turno abierto (POST /cash/movements). */
+  movimientos: { id: string; tipo: 'RETIRO' | 'INGRESO'; montoClp: number; motivo: string }[];
   productos: ProductoLocal[];
   /** Cuerpos recibidos en POST /products. */
   creados: Record<string, unknown>[];
@@ -118,6 +120,7 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
     tokens: new Map(),
     fallos: new Map(),
     sesionCaja: null,
+    movimientos: [],
     productos: [...PRODUCTOS_FALSOS],
     creados: [],
     extra: {},
@@ -226,6 +229,10 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
     ) as Record<string, { cantidad: number; cobradoClp: number }>;
     const anuladas = ventas.filter((v) => v.estado === 'ANULADA');
     const inicial = estado.sesionCaja?.efectivoInicialClp ?? 0;
+    const suma = (tipo: 'RETIRO' | 'INGRESO') =>
+      estado.movimientos.filter((m) => m.tipo === tipo).reduce((a, m) => a + m.montoClp, 0);
+    const retiros = suma('RETIRO');
+    const ingresos = suma('INGRESO');
     return {
       porMedio,
       cantidadVentas: validas.length,
@@ -237,9 +244,20 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
         totalClp: anuladas.reduce((a, v) => a + v.totalClp, 0),
       },
       efectivoInicialClp: inicial,
-      efectivoEsperadoClp: inicial + (porMedio['EFECTIVO']?.cobradoClp ?? 0),
+      movimientos: {
+        retirosClp: retiros,
+        ingresosClp: ingresos,
+        cantidad: estado.movimientos.length,
+      },
+      efectivoEsperadoClp: inicial + (porMedio['EFECTIVO']?.cobradoClp ?? 0) + ingresos - retiros,
     };
   };
+  const movimientosCaja = () =>
+    estado.movimientos.map((m) => ({
+      ...m,
+      usuario: { id: 'u2', name: 'Cajero' },
+      creadoEn: '2026-10-25T15:00:00.000Z',
+    }));
   const configuracion = () => ({
     ...estado.local,
     dteProvider: estado.dteProvider,
@@ -350,7 +368,27 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
           caja: { id: 'c1', name: 'Caja 1' },
           sesion: estado.sesionCaja,
           resumen: estado.sesionCaja ? resumen() : null,
+          movimientos: movimientosCaja(),
         });
+      case 'POST /cash/movements': {
+        if (!usuario) return sinSesion();
+        if (!estado.sesionCaja)
+          return json(409, { error: 'CAJA_CERRADA', mensaje: 'La caja no está abierta' });
+        const movimiento = {
+          id: `m${estado.movimientos.length + 1}`,
+          tipo: cuerpo['tipo'] as 'RETIRO' | 'INGRESO',
+          montoClp: Number(cuerpo['montoClp']),
+          motivo: String(cuerpo['motivo']).trim(),
+        };
+        estado.movimientos.push(movimiento);
+        return json(201, {
+          caja: { id: 'c1', name: 'Caja 1' },
+          sesion: estado.sesionCaja,
+          resumen: resumen(),
+          movimientos: movimientosCaja(),
+          movimiento: movimientosCaja().at(-1),
+        });
+      }
       case 'POST /cash/close': {
         if (!usuario) return sinSesion();
         if (!estado.sesionCaja)
@@ -367,6 +405,7 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
           diferenciaClp: contado - r.efectivoEsperadoClp,
         };
         estado.sesionCaja = null;
+        estado.movimientos = [];
         return json(200, { caja: { id: 'c1', name: 'Caja 1' }, sesion, resumen: r });
       }
       case 'GET /sales/last': {

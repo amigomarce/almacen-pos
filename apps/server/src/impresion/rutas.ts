@@ -247,6 +247,11 @@ export function registrarImpresion(app: FastifyInstance, deps: DependenciasImpre
           },
           efectivoContadoClp: sesion.efectivoContadoClp,
           diferenciaClp: sesion.diferenciaClp,
+          movimientos: r.movimientos.map(({ tipo, montoClp, motivo }) => ({
+            tipo,
+            montoClp,
+            motivo,
+          })),
         },
         columnasEfectivas(config),
       );

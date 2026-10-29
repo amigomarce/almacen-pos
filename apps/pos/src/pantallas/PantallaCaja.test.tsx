@@ -161,3 +161,44 @@ describe('pantalla de caja', () => {
     expect(within(screen.getByLabelText('Última venta')).getByText(/ANULADA/)).toBeInTheDocument();
   });
 });
+
+describe('retiros e ingresos de efectivo', () => {
+  it('registra un retiro y un ingreso y el esperado se ajusta', async () => {
+    const { u } = montar(false, { sesionCaja: { ...sesion } });
+    await screen.findByRole('heading', { name: 'Retiros e ingresos de efectivo' });
+
+    await u.type(screen.getByLabelText('Monto del movimiento'), '8000');
+    await u.type(screen.getByLabelText('Motivo del movimiento'), 'Pan Ideal');
+    await u.click(screen.getByRole('button', { name: 'Registrar retiro' }));
+    const tabla = await screen.findByRole('table', { name: 'Movimientos del turno' });
+    expect(within(tabla).getByText(/Pan Ideal/)).toBeInTheDocument();
+    expect(within(tabla).getByText('−$8.000')).toBeInTheDocument();
+
+    await u.click(screen.getByRole('radio', { name: /Ingreso/ }));
+    await u.type(screen.getByLabelText('Monto del movimiento'), '5000');
+    await u.type(screen.getByLabelText('Motivo del movimiento'), 'Sencillo');
+    await u.click(screen.getByRole('button', { name: 'Registrar ingreso' }));
+    await waitFor(() => {
+      expect(within(tabla).getByText('+$5.000')).toBeInTheDocument();
+    });
+
+    const resumen = screen.getByRole('table', { name: 'Ventas del turno' });
+    expect(within(resumen).getByText('− Retiros de efectivo')).toBeInTheDocument();
+    expect(within(resumen).getByText('+ Ingresos de efectivo')).toBeInTheDocument();
+    // 10.000 inicial − 8.000 + 5.000
+    expect(within(resumen).getByText('$7.000')).toBeInTheDocument();
+  });
+
+  it('pide monto y motivo', async () => {
+    const { u } = montar(false, { sesionCaja: { ...sesion } });
+    await u.click(await screen.findByRole('button', { name: 'Registrar retiro' }));
+    expect(screen.getAllByRole('alert').some((a) => a.textContent === 'Escribe el monto')).toBe(
+      true,
+    );
+    await u.type(screen.getByLabelText('Monto del movimiento'), '100');
+    await u.click(screen.getByRole('button', { name: 'Registrar retiro' }));
+    expect(
+      screen.getAllByRole('alert').some((a) => a.textContent.startsWith('Escribe el motivo')),
+    ).toBe(true);
+  });
+});

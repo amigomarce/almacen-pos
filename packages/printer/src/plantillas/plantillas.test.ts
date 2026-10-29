@@ -306,6 +306,38 @@ describe('ticketCierre', () => {
     `);
   });
 
+  it('suma los ingresos, resta los retiros y lista cada movimiento con su motivo', () => {
+    const conMovimientos = cuadrarCaja(
+      10000,
+      [{ medioPago: 'EFECTIVO', totalClp: 5000, redondeoClp: 0, anulada: false }],
+      [
+        { tipo: 'RETIRO', montoClp: 8000 },
+        { tipo: 'INGRESO', montoClp: 2000 },
+      ],
+    );
+    const texto = aTexto(
+      ticketCierre(
+        {
+          ...datos,
+          resumen: conMovimientos,
+          efectivoContadoClp: 9000,
+          diferenciaClp: 0,
+          movimientos: [
+            { tipo: 'RETIRO', montoClp: 8000, motivo: 'Pan Ideal' },
+            { tipo: 'INGRESO', montoClp: 2000, motivo: 'Sencillo' },
+          ],
+        },
+        32,
+      ),
+    );
+    expect(texto).toContain('+ Ingresos de efectivo    $2.000');
+    expect(texto).toContain('- Retiros de efectivo     $8.000');
+    expect(texto).toContain('= Esperado en caja        $9.000');
+    expect(texto).toContain('Retiros e ingresos');
+    expect(texto).toMatch(/Pan Ideal\s+-\$8\.000/);
+    expect(texto).toMatch(/Sencillo\s+\+\$2\.000/);
+  });
+
   it('sin anuladas ni redondeo no muestra esas líneas', () => {
     const limpio = cuadrarCaja(0, [
       { medioPago: 'DEBITO', totalClp: 1000, redondeoClp: 0, anulada: false },

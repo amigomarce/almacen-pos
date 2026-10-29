@@ -14,6 +14,8 @@ export interface DatosTicketCierre {
   efectivoContadoClp: number;
   /** Contado − esperado. */
   diferenciaClp: number;
+  /** Retiros e ingresos de efectivo del turno, con su motivo (detalle para el dueño). */
+  movimientos?: { tipo: 'RETIRO' | 'INGRESO'; montoClp: number; motivo: string }[];
 }
 
 export function textoDiferencia(diferenciaClp: number): string {
@@ -50,6 +52,12 @@ export function ticketCierre(datos: DatosTicketCierre, columnas: number): Docume
 
   doc.columnas2('Efectivo inicial', formatearClp(r.efectivoInicialClp));
   doc.columnas2('+ Cobrado en efectivo', formatearClp(r.porMedio.EFECTIVO.cobradoClp));
+  if (r.movimientos.ingresosClp > 0) {
+    doc.columnas2('+ Ingresos de efectivo', formatearClp(r.movimientos.ingresosClp));
+  }
+  if (r.movimientos.retirosClp > 0) {
+    doc.columnas2('- Retiros de efectivo', formatearClp(r.movimientos.retirosClp));
+  }
   doc.columnas2('= Esperado en caja', formatearClp(r.efectivoEsperadoClp), { negrita: true });
   doc.columnas2('Contado', formatearClp(datos.efectivoContadoClp));
   doc.texto(textoDiferencia(datos.diferenciaClp), {
@@ -57,6 +65,15 @@ export function ticketCierre(datos: DatosTicketCierre, columnas: number): Docume
     negrita: true,
     grande: true,
   });
+
+  if (datos.movimientos && datos.movimientos.length > 0) {
+    doc.separador();
+    doc.texto('Retiros e ingresos', { negrita: true });
+    for (const m of datos.movimientos) {
+      const signo = m.tipo === 'RETIRO' ? '-' : '+';
+      doc.columnas2(m.motivo, `${signo}${formatearClp(m.montoClp)}`);
+    }
+  }
 
   if (r.anuladas.cantidad > 0) {
     doc.separador();

@@ -282,6 +282,33 @@ export const cashSessions = sqliteTable(
 );
 
 /**
+ * Retiros e ingresos de efectivo del turno que no son ventas: pago a un proveedor desde la caja,
+ * plata que se saca a mitad del día, sencillo que trae el dueño. Ajustan el efectivo esperado
+ * del cierre. Nunca se borran ni se editan.
+ */
+export const cashMovements = sqliteTable(
+  'cash_movements',
+  {
+    id: id(),
+    cashSessionId: text('cash_session_id')
+      .notNull()
+      .references(() => cashSessions.id),
+    type: text('type', { enum: ['RETIRO', 'INGRESO'] }).notNull(),
+    amountClp: integer('amount_clp').notNull(),
+    reason: text('reason').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: ahora('created_at'),
+  },
+  (t) => [
+    check('cash_movements_tipo', sql`${t.type} in ('RETIRO', 'INGRESO')`),
+    check('cash_movements_monto', sql`${t.amountClp} > 0`),
+    index('cash_movements_sesion_idx').on(t.cashSessionId),
+  ],
+);
+
+/**
  * La app de caja terminó sin salida limpia (cierre forzado, corte de luz) con este turno abierto.
  * Solo auditoría para el dueño (ADR-019): nunca se borra.
  */

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { cuadrarCaja, diferenciaCaja, type VentaParaCuadratura } from './caja.js';
+import {
+  cuadrarCaja,
+  diferenciaCaja,
+  validarMovimientoEfectivo,
+  type VentaParaCuadratura,
+} from './caja.js';
 import { ErrorDominio } from './errores.js';
 
 const venta = (v: Partial<VentaParaCuadratura>): VentaParaCuadratura => ({
@@ -71,6 +76,51 @@ describe('cuadrarCaja', () => {
     } catch (e) {
       expect((e as ErrorDominio).codigo).toBe(codigo);
     }
+  });
+});
+
+describe('movimientos de efectivo', () => {
+  it('los retiros restan y los ingresos suman al efectivo esperado', () => {
+    const c = cuadrarCaja(
+      20000,
+      [venta({ totalClp: 1293, redondeoClp: -3 }), venta({ medioPago: 'DEBITO', totalClp: 5000 })],
+      [
+        { tipo: 'RETIRO', montoClp: 8000 }, // pago al proveedor del pan
+        { tipo: 'INGRESO', montoClp: 5000 }, // sencillo que trajo el dueño
+        { tipo: 'RETIRO', montoClp: 1500 },
+      ],
+    );
+    expect(c.movimientos).toEqual({ retirosClp: 9500, ingresosClp: 5000, cantidad: 3 });
+    // 20.000 + 1.290 cobrado en efectivo + 5.000 − 9.500 (el débito no cuenta)
+    expect(c.efectivoEsperadoClp).toBe(16790);
+    expect(c.totalVentasClp).toBe(6293);
+  });
+
+  it('sin movimientos informa ceros', () => {
+    expect(cuadrarCaja(1000, []).movimientos).toEqual({
+      retirosClp: 0,
+      ingresosClp: 0,
+      cantidad: 0,
+    });
+  });
+
+  it('el esperado puede quedar negativo si se retira más de lo que hay (se informa, no se bloquea)', () => {
+    expect(cuadrarCaja(1000, [], [{ tipo: 'RETIRO', montoClp: 3000 }]).efectivoEsperadoClp).toBe(
+      -2000,
+    );
+  });
+
+  it.each([0, -100, 10.5])('rechaza un monto inválido (%s)', (montoClp) => {
+    expect(() => {
+      validarMovimientoEfectivo({ tipo: 'RETIRO', montoClp });
+    }).toThrow(ErrorDominio);
+    expect(() => cuadrarCaja(0, [], [{ tipo: 'INGRESO', montoClp }])).toThrow(ErrorDominio);
+  });
+
+  it('rechaza un tipo desconocido', () => {
+    expect(() => {
+      validarMovimientoEfectivo({ tipo: 'OTRO' as 'RETIRO', montoClp: 100 });
+    }).toThrow('retiro o un ingreso');
   });
 });
 

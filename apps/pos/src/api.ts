@@ -58,9 +58,21 @@ export interface SesionCaja {
   cierresInesperados?: { cantidad: number; ultimo: string | null };
 }
 
+/** Retiro o ingreso de efectivo del turno (no es una venta). */
+export interface MovimientoCaja {
+  id: string;
+  tipo: 'RETIRO' | 'INGRESO';
+  montoClp: number;
+  motivo: string;
+  usuario: { id: string; name: string };
+  creadoEn: string;
+}
+
 export interface EstadoCaja {
   caja: Caja;
   sesion: SesionCaja | null;
+  /** Retiros e ingresos del turno abierto. */
+  movimientos?: MovimientoCaja[];
   /** Resumen del turno (solo con la caja abierta, o al cerrar). */
   resumen?: ResumenCaja | null;
 }
@@ -73,6 +85,8 @@ export interface ResumenCaja {
   totalCobradoClp: number;
   anuladas: { cantidad: number; totalClp: number };
   efectivoInicialClp: number;
+  /** Retiros e ingresos de efectivo del turno. */
+  movimientos?: { retirosClp: number; ingresosClp: number; cantidad: number };
   efectivoEsperadoClp: number;
 }
 
@@ -435,6 +449,14 @@ export class ClienteApi {
 
   estadoCaja(): Promise<EstadoCaja> {
     return this.pedir<EstadoCaja>('/cash/current');
+  }
+
+  registrarMovimiento(datos: {
+    tipo: MovimientoCaja['tipo'];
+    montoClp: number;
+    motivo: string;
+  }): Promise<EstadoCaja & { movimiento: MovimientoCaja }> {
+    return this.pedir('/cash/movements', { metodo: 'POST', cuerpo: datos });
   }
 
   cerrarCaja(efectivoContadoClp: number): Promise<CierreCaja> {
