@@ -353,8 +353,9 @@ describe('cobro fiado (tecla F)', () => {
   };
 
   it('elige al vecino y carga la venta a su cuenta', async () => {
-    const { s, u, escanear } = montar({ clientes: [{ ...rosa }] });
+    const { s, u, escanear, total } = montar({ clientes: [{ ...rosa }] });
     await escanear('7801');
+    await waitFor(() => expect(total()).toHaveTextContent('$1.890'));
     await u.keyboard('{F12}');
     const cobro = await screen.findByRole('dialog', { name: 'Cobrar' });
     await u.keyboard('f');
@@ -376,8 +377,9 @@ describe('cobro fiado (tecla F)', () => {
   });
 
   it('si pasa su límite pide la clave del dueño', async () => {
-    const { s, u, escanear } = montar({ clientes: [{ ...rosa, saldoClp: 4000 }] });
+    const { s, u, escanear, total } = montar({ clientes: [{ ...rosa, saldoClp: 4000 }] });
     await escanear('7801');
+    await waitFor(() => expect(total()).toHaveTextContent('$1.890'));
     await u.keyboard('{F12}');
     const cobro = await screen.findByRole('dialog', { name: 'Cobrar' });
     await u.click(within(cobro).getByRole('button', { name: /Fiado/ }));
@@ -392,8 +394,9 @@ describe('cobro fiado (tecla F)', () => {
   });
 
   it('sin vecinos con cuenta lo explica', async () => {
-    const { u, escanear } = montar();
+    const { u, escanear, total } = montar();
     await escanear('7801');
+    await waitFor(() => expect(total()).toHaveTextContent('$1.890'));
     await u.keyboard('{F12}');
     const cobro = await screen.findByRole('dialog', { name: 'Cobrar' });
     await u.keyboard('f');
