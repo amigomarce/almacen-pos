@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { servidorConSesion } from '../test/servidorFalso.js';
 import { PantallaVenta } from './PantallaVenta.js';
 
@@ -300,5 +300,42 @@ describe('pantalla de venta', () => {
     await u.type(within(otra).getByLabelText('Monto'), '1500{Enter}');
     expect(lineas()[1]).toBe('Varios1 x $1.500$1.500');
     await waitFor(() => expect(total()).toHaveTextContent('$1.550'));
+  });
+});
+
+describe('venta en espera (F8)', () => {
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('deja la venta en espera, atiende a otro cliente y la retoma', async () => {
+    const { u, escanear, lineas } = montar();
+    await escanear('7801');
+    await u.keyboard('{F8}');
+    expect(await screen.findByText(/Venta en espera \(1\)/)).toBeInTheDocument();
+    expect(lineas()).toEqual([]);
+    expect(screen.getByRole('button', { name: 'Retomar en espera (1) (F8)' })).toBeEnabled();
+
+    // Otro cliente: queda en curso y la primera se retoma desde la lista.
+    await escanear('3*78040000');
+    await u.keyboard('{F8}');
+    await u.keyboard('{F8}');
+    const lista = await screen.findByRole('dialog', { name: 'Ventas en espera' });
+    expect(within(lista).getAllByRole('button', { name: /^\d\./ })).toHaveLength(2);
+    await u.keyboard('1');
+    expect(lineas()[0]).toContain('Bebida cola 1,5 L');
+    expect(await screen.findByText('Venta retomada.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Poner en espera (F8)' })).toBeEnabled();
+  });
+
+  it('sin ventas en espera lo avisa y sobrevive a cerrar la pantalla', async () => {
+    const { u, escanear } = montar();
+    await u.keyboard('{F8}');
+    expect(await screen.findByText('No hay ventas en espera.')).toBeInTheDocument();
+    await escanear('7801');
+    await u.keyboard('{F8}');
+    expect(JSON.parse(localStorage.getItem('almacen-pos.ventas-en-espera') ?? '[]')).toHaveLength(
+      1,
+    );
   });
 });

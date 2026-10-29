@@ -202,3 +202,32 @@ describe('retiros e ingresos de efectivo', () => {
     ).toBe(true);
   });
 });
+
+describe('cierre con ventas en espera', () => {
+  it('avisa que hay ventas en espera sin cobrar', async () => {
+    localStorage.setItem(
+      'almacen-pos.ventas-en-espera',
+      JSON.stringify([
+        {
+          id: 'e1',
+          guardadaEn: '2026-10-29T15:00:00.000Z',
+          lineas: [
+            {
+              clave: 'a',
+              productoId: 'p1',
+              nombre: 'Leche',
+              unidad: 'UN',
+              cantidadMilli: 1000,
+              precioUnitarioClp: 1100,
+            },
+          ],
+        },
+      ]),
+    );
+    montar(false, { sesionCaja: { ...sesion } });
+    expect(await screen.findByRole('note', { name: 'Ventas en espera' })).toHaveTextContent(
+      'Hay 1 venta en espera sin cobrar',
+    );
+    localStorage.clear();
+  });
+});

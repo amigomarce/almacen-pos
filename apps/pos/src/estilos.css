@@ -1000,3 +1000,21 @@ body {
 .opciones-fila .opcion {
   flex: 1 1 14rem;
 }
+
+/* Ventas en espera (F8). */
+.lista-espera {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.boton-espera {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+}

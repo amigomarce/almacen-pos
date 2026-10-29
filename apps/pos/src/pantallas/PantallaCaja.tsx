@@ -11,6 +11,7 @@ import {
 } from '../api.js';
 import { SeccionMovimientos } from '../caja/SeccionMovimientos.js';
 import { AvisoCierresInesperados } from '../componentes/AvisoCierresInesperados.js';
+import { leerEnEspera } from '../venta/espera.js';
 
 const MEDIOS: { medio: MedioPago; etiqueta: string }[] = [
   { medio: 'EFECTIVO', etiqueta: 'Efectivo' },
@@ -195,6 +196,7 @@ export function PantallaCaja({ api, esDueno, alCambiarCaja }: Props) {
 
   const r = estado.resumen;
   const esperado = r.efectivoEsperadoClp;
+  const enEspera = leerEnEspera().length;
   const diferencia = Number(contado || '0') - esperado;
 
   return (
@@ -270,6 +272,12 @@ export function PantallaCaja({ api, esDueno, alCambiarCaja }: Props) {
 
       <div className="tarjeta">
         <h2>Cerrar caja</h2>
+        {enEspera > 0 && (
+          <p className="accion-cajero" role="note" aria-label="Ventas en espera">
+            Hay {enEspera === 1 ? '1 venta' : `${enEspera} ventas`} en espera sin cobrar (Venta →
+            F8). No cuentan en el cierre.
+          </p>
+        )}
         <label className="etiqueta-campo">
           Efectivo contado
           <input

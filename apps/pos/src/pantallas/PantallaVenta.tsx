@@ -38,6 +38,15 @@ import { ModalCobro } from '../venta/ModalCobro.js';
 import { ModalVentaLista, type EstadoImpresion } from '../venta/ModalVentaLista.js';
 import { ModalMontoLibre } from '../venta/ModalMontoLibre.js';
 import { ModalPesoMonto, type ResultadoPesoMonto } from '../venta/ModalPesoMonto.js';
+import { ModalEnEspera } from '../venta/ModalEnEspera.js';
+import {
+  guardarEnEspera,
+  leerEnEspera,
+  MAXIMO_EN_ESPERA,
+  ponerEnEspera,
+  retomar,
+  type VentaEnEspera,
+} from '../venta/espera.js';
 
 type Mensaje = { tipo: 'error' | 'aviso'; texto: string } | null;
 type Ventana =
@@ -53,6 +62,8 @@ type Ventana =
   /** El id de la venta se genera al abrir el cobro: reintentar no duplica la venta. */
   | { tipo: 'COBRO'; id: string }
   | { tipo: 'LISTA'; venta: VentaRegistrada; impresion: EstadoImpresion }
+  /** F8 con varias ventas en espera: elegir cuál retomar. */
+  | { tipo: 'ESPERA' }
   | null;
 
 /** Esc dos veces dentro de este tiempo cancela la venta (sin ventana de confirmación). */
@@ -77,6 +88,10 @@ export function PantallaVenta({ api, activa = true }: Props) {
   const [mensaje, setMensaje] = useState<Mensaje>(null);
   const [ventana, setVentana] = useState<Ventana>(null);
   const [confirmarCancelar, setConfirmarCancelar] = useState(false);
+  const [enEspera, setEnEspera] = useState<VentaEnEspera[]>(() => leerEnEspera());
+  useEffect(() => {
+    guardarEnEspera(enEspera);
+  }, [enEspera]);
   const [botones, setBotones] = useState<BotonRapido[]>([]);
   const [config, setConfig] = useState<ConfiguracionLocal | null>(null);
   const [cobrando, setCobrando] = useState(false);
@@ -287,6 +302,46 @@ export function PantallaVenta({ api, activa = true }: Props) {
     enfocar();
   };
 
+  /** Retoma una venta en espera; la que estaba en curso (si había) queda en espera. */
+  const retomarVenta = (id: string) => {
+    const r = retomar(enEspera, carrito, id, nuevaClave());
+    setVentana(null);
+    if (!r) return;
+    setEnEspera(r.enEspera);
+    setCarrito(r.carrito);
+    setCotizacion(null);
+    setConfirmarCancelar(false);
+    setMensaje({ tipo: 'aviso', texto: 'Venta retomada.' });
+    enfocar();
+  };
+
+  /** F8: con venta en curso la deja en espera; sin venta, retoma (o deja elegir cuál). */
+  const alternarEspera = () => {
+    if (carrito.lineas.length > 0) {
+      const r = ponerEnEspera(enEspera, carrito, nuevaClave());
+      if (!r.ok) {
+        setMensaje({
+          tipo: 'error',
+          texto: `Ya hay ${MAXIMO_EN_ESPERA} ventas en espera: retoma o cancela alguna.`,
+        });
+        return;
+      }
+      setEnEspera(r.enEspera);
+      setCarrito(r.carrito);
+      setCotizacion(null);
+      setConfirmarCancelar(false);
+      setMensaje({
+        tipo: 'aviso',
+        texto: `Venta en espera (${r.enEspera.length}). Atiende al siguiente cliente; F8 la retoma.`,
+      });
+      return;
+    }
+    const [unica] = enEspera;
+    if (enEspera.length === 1 && unica) retomarVenta(unica.id);
+    else if (enEspera.length > 1) setVentana({ tipo: 'ESPERA' });
+    else setMensaje({ tipo: 'aviso', texto: 'No hay ventas en espera.' });
+  };
+
   const cancelarVenta = () => {
     setCarrito(CARRITO_VACIO);
     setCotizacion(null);
@@ -414,6 +469,10 @@ export function PantallaVenta({ api, activa = true }: Props) {
       case 'F4':
         e.preventDefault();
         abrirCantidad();
+        return;
+      case 'F8':
+        e.preventDefault();
+        alternarEspera();
         return;
       case 'F12':
         e.preventDefault();
@@ -601,6 +660,16 @@ export function PantallaVenta({ api, activa = true }: Props) {
           </button>
           <button
             type="button"
+            className="boton"
+            disabled={carrito.lineas.length === 0 && enEspera.length === 0}
+            onClick={alternarEspera}
+          >
+            {carrito.lineas.length > 0
+              ? 'Poner en espera (F8)'
+              : `Retomar en espera${enEspera.length > 0 ? ` (${enEspera.length})` : ''} (F8)`}
+          </button>
+          <button
+            type="button"
             className="boton boton-peligro"
             disabled={carrito.lineas.length === 0}
             onClick={() => {
@@ -613,6 +682,14 @@ export function PantallaVenta({ api, activa = true }: Props) {
         </div>
       </aside>
 
+      {ventana?.tipo === 'ESPERA' && (
+        <ModalEnEspera
+          ventas={enEspera}
+          hayVentaEnCurso={carrito.lineas.length > 0}
+          alRetomar={retomarVenta}
+          alCerrar={cerrarVentana}
+        />
+      )}
       {ventana?.tipo === 'BUSCAR' && (
         <ModalBuscar
           api={api}
