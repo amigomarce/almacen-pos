@@ -213,6 +213,41 @@ export const saleItems = pgTable(
 );
 
 /**
+ * Devolución parcial que hizo la caja (ADR-021). Espejo append-only: los ítems viajan en JSON
+ * para restar lo devuelto en los reportes del dueño.
+ */
+export const saleReturns = pgTable(
+  'sale_returns',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('owner_id').notNull(),
+    saleId: text('sale_id').notNull(),
+    registerId: text('register_id').notNull(),
+    refundClp: integer('refund_clp').notNull(),
+    roundingClp: integer('rounding_clp').notNull().default(0),
+    paymentMethod: text('payment_method').notNull(),
+    reason: text('reason').notNull(),
+    items: jsonb('items')
+      .$type<
+        {
+          saleItemId: string;
+          productId: string | null;
+          nameSnapshot: string;
+          qtyMilli: number;
+          amountClp: number;
+        }[]
+      >()
+      .notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    check('sale_returns_monto', sql`${t.refundClp} >= 0`),
+    check('sale_returns_medio_pago', enEnum(t.paymentMethod, MEDIOS)),
+    index('sale_returns_owner_fecha_idx').on(t.ownerId, t.createdAt),
+  ],
+);
+
+/**
  * Cola de eventos de la nube hacia cada caja (cambios del dueño: precios, productos, …).
  * La caja hace pull y marca `synced_at`; espejo de la `outbox` local (que va al revés).
  */

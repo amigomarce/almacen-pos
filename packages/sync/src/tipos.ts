@@ -9,7 +9,13 @@ import type { MedioPago, TipoImpuesto, Unidad } from '@almacen/core';
  */
 
 export type EntidadSync =
-  'products' | 'categories' | 'sales' | 'sale_items' | 'stock_movements' | 'cash_closes';
+  | 'products'
+  | 'categories'
+  | 'sales'
+  | 'sale_items'
+  | 'stock_movements'
+  | 'cash_closes'
+  | 'sale_returns';
 export type OperacionSync = 'INSERT' | 'UPDATE' | 'DELETE';
 
 export const ENTIDADES_SYNC: readonly EntidadSync[] = [
@@ -19,6 +25,7 @@ export const ENTIDADES_SYNC: readonly EntidadSync[] = [
   'sale_items',
   'stock_movements',
   'cash_closes',
+  'sale_returns',
 ];
 
 export interface ProductoWire {
@@ -91,6 +98,28 @@ export interface MovimientoStockWire {
   refId: string | null;
   userId: string | null;
   at: string;
+}
+
+/**
+ * Devolución parcial de una venta (ADR-021). Viaja completa (con sus ítems) para que los
+ * reportes del dueño muestren ventas netas. El stock devuelto viaja aparte, como movimientos.
+ */
+export interface DevolucionWire {
+  id: string;
+  saleId: string;
+  registerId: string;
+  refundClp: number;
+  roundingClp: number;
+  paymentMethod: MedioPago;
+  reason: string;
+  createdAt: string;
+  items: {
+    saleItemId: string;
+    productId: string | null;
+    nameSnapshot: string;
+    qtyMilli: number;
+    amountClp: number;
+  }[];
 }
 
 /** Cierre de caja que la caja sube para que el dueño lo vea en el móvil. */

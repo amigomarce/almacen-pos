@@ -12,11 +12,33 @@ describe('resumirVentas', () => {
       totalClp: 3500,
       cantidad: 3,
       porMedio: { EFECTIVO: 1500, DEBITO: 2000 },
+      devolucionesClp: 0,
+    });
+  });
+
+  it('resta las devoluciones (ventas netas)', () => {
+    const r = resumirVentas(
+      [
+        { totalClp: 3000, paymentMethod: 'EFECTIVO' },
+        { totalClp: 2000, paymentMethod: 'DEBITO' },
+      ],
+      [{ refundClp: 1890, paymentMethod: 'EFECTIVO' }],
+    );
+    expect(r).toEqual({
+      totalClp: 3110,
+      cantidad: 2,
+      porMedio: { EFECTIVO: 1110, DEBITO: 2000 },
+      devolucionesClp: 1890,
     });
   });
 
   it('devuelve cero con ventas vacías', () => {
-    expect(resumirVentas([])).toEqual({ totalClp: 0, cantidad: 0, porMedio: {} });
+    expect(resumirVentas([])).toEqual({
+      totalClp: 0,
+      cantidad: 0,
+      porMedio: {},
+      devolucionesClp: 0,
+    });
   });
 });
 

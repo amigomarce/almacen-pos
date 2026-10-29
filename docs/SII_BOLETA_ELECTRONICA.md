@@ -411,6 +411,11 @@ Normativa pendiente de confirmar (`TODO(SII)`):
   se anula en la caja? ¿Nota de crédito en el sitio del SII, en la misma app, o basta otra vía?
   Hoy la caja muestra "anúlala en sii.cl con una nota de crédito" (`TODO(SII)` en
   `apps/server/src/ventas/servicio.ts`).
+- Devolución parcial (ADR-021): ¿cómo se emite la nota de crédito por una parte de la boleta
+  (e-Boleta en sii.cl y DTE 61 desde la caja)? Hoy la caja solo muestra el recordatorio con el
+  monto y el folio (`TODO(SII)` en `apps/server/src/ventas/devoluciones.ts`).
+- Devolución en efectivo: ¿se aplica el redondeo de la Ley 20.956 a lo que se entrega al
+  cliente? Hoy se redondea igual que al cobrar (`TODO(SII)` en `packages/core/src/devolucion.ts`).
 - Venta por monto / etiqueta de balanza con precio (ADR-006): la línea cobra un monto exacto
   con un peso estimado, así que `QtyItem × PrcItem` puede diferir en $1 de `MontoItem`. ¿El
   validador del SII lo acepta, o hay que informar "1 × monto" con unidad kg?

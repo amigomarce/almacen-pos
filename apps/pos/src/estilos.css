@@ -1018,3 +1018,14 @@ body {
   width: 100%;
   text-align: left;
 }
+
+/* Ventas del turno y devoluciones. */
+.tachado {
+  text-decoration: line-through;
+  color: var(--texto-suave);
+}
+
+.celda-devolver {
+  text-align: right;
+  white-space: nowrap;
+}

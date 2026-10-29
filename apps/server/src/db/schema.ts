@@ -389,6 +389,65 @@ export const saleItems = sqliteTable(
   ],
 );
 
+/**
+ * Devolución parcial de una venta (ADR-021): algunos productos vuelven, el stock se repone y se
+ * devuelve lo proporcional a lo pagado. Se registra en el turno donde se hace (si fue en
+ * efectivo, baja el esperado de ese cierre). Nunca se borra.
+ */
+export const saleReturns = sqliteTable(
+  'sale_returns',
+  {
+    id: id(),
+    saleId: text('sale_id')
+      .notNull()
+      .references(() => sales.id),
+    cashSessionId: text('cash_session_id')
+      .notNull()
+      .references(() => cashSessions.id),
+    /** Total devuelto según los documentos (suma de los ítems). */
+    refundClp: integer('refund_clp').notNull(),
+    /** Ajuste Ley 20.956 si se devolvió en efectivo. */
+    roundingClp: integer('rounding_clp').notNull().default(0),
+    /** El mismo medio de la venta original. */
+    paymentMethod: text('payment_method').notNull(),
+    reason: text('reason').notNull(),
+    authorizedBy: text('authorized_by')
+      .notNull()
+      .references(() => users.id),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: ahora('created_at'),
+  },
+  (t) => [
+    check('sale_returns_monto', sql`${t.refundClp} >= 0`),
+    check('sale_returns_medio_pago', enEnum(t.paymentMethod, MEDIOS)),
+    index('sale_returns_venta_idx').on(t.saleId),
+    index('sale_returns_sesion_idx').on(t.cashSessionId),
+  ],
+);
+
+export const saleReturnItems = sqliteTable(
+  'sale_return_items',
+  {
+    id: id(),
+    returnId: text('return_id')
+      .notNull()
+      .references(() => saleReturns.id),
+    saleItemId: text('sale_item_id')
+      .notNull()
+      .references(() => saleItems.id),
+    qtyMilli: integer('qty_milli').notNull(),
+    amountClp: integer('amount_clp').notNull(),
+  },
+  (t) => [
+    check('sale_return_items_cantidad', sql`${t.qtyMilli} > 0`),
+    check('sale_return_items_monto', sql`${t.amountClp} >= 0`),
+    index('sale_return_items_devolucion_idx').on(t.returnId),
+    index('sale_return_items_linea_idx').on(t.saleItemId),
+  ],
+);
+
 export const taxDocuments = sqliteTable(
   'tax_documents',
   {

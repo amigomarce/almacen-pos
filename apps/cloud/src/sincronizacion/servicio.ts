@@ -1,6 +1,7 @@
 import type {
   CategoriaWire,
   CierreCajaWire,
+  DevolucionWire,
   EntidadSync,
   EventoSync,
   LineaVentaWire,
@@ -12,6 +13,7 @@ import type {
 import {
   categoriaDeWire,
   cierreDeWire,
+  devolucionDeWire,
   lineaDeWire,
   movimientoDeWire,
   productoDeWire,
@@ -22,6 +24,7 @@ import type {
   categories,
   products,
   saleItems,
+  saleReturns,
   sales,
   stockMovements,
 } from '../db/schema.js';
@@ -47,6 +50,7 @@ export interface RepoSyncNube {
   insertarLinea(l: typeof saleItems.$inferInsert): Promise<void>;
   insertarMovimiento(m: typeof stockMovements.$inferInsert): Promise<void>;
   upsertCierre(c: typeof cashCloses.$inferInsert): Promise<void>;
+  insertarDevolucion(d: typeof saleReturns.$inferInsert): Promise<void>;
   eventosPendientes(ownerId: string): Promise<EventoSaliente[]>;
   marcarSincronizados(ownerId: string, ids: readonly string[]): Promise<void>;
 }
@@ -79,6 +83,8 @@ export async function ingestarEventos(
       await repo.insertarMovimiento(movimientoDeWire(e.payload as MovimientoStockWire, ownerId));
     } else if (e.entity === 'cash_closes' && e.op === 'INSERT') {
       await repo.upsertCierre(cierreDeWire(e.payload as CierreCajaWire, ownerId));
+    } else if (e.entity === 'sale_returns' && e.op === 'INSERT') {
+      await repo.insertarDevolucion(devolucionDeWire(e.payload as DevolucionWire, ownerId));
     }
     // Cualquier otro (UPDATE/DELETE de append-only) se ignora: esas entidades solo se insertan.
   }

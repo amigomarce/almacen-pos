@@ -9,6 +9,7 @@ import type {
   cashCloses,
   products,
   saleItems,
+  saleReturns,
   sales,
   stockMovements,
 } from '../db/schema.js';
@@ -79,6 +80,7 @@ export interface RepoSyncFalso extends RepoSyncNube {
   lineas: (typeof saleItems.$inferInsert)[];
   movimientos: (typeof stockMovements.$inferInsert)[];
   cierres: (typeof cashCloses.$inferInsert)[];
+  devoluciones: (typeof saleReturns.$inferInsert)[];
   pendientes: EventoSaliente[];
   sincronizados: string[];
 }
@@ -95,6 +97,7 @@ export function repoSyncFalso(pendientes: EventoSaliente[] = []): RepoSyncFalso 
     lineas: [],
     movimientos: [],
     cierres: [],
+    devoluciones: [],
     pendientes: [...pendientes],
     sincronizados: [],
     upsertProducto(p) {
@@ -131,6 +134,10 @@ export function repoSyncFalso(pendientes: EventoSaliente[] = []): RepoSyncFalso 
     },
     upsertCierre(c) {
       f.cierres.push(c);
+      return Promise.resolve();
+    },
+    insertarDevolucion(d) {
+      f.devoluciones.push(d);
       return Promise.resolve();
     },
     eventosPendientes() {

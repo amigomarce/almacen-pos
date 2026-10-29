@@ -338,6 +338,24 @@ describe('ticketCierre', () => {
     expect(texto).toMatch(/Sencillo\s+\+\$2\.000/);
   });
 
+  it('las devoluciones se informan y las de efectivo bajan el esperado', () => {
+    const conDevolucion = cuadrarCaja(
+      10000,
+      [{ medioPago: 'EFECTIVO', totalClp: 5000, redondeoClp: 0, anulada: false }],
+      [],
+      [{ medioPago: 'EFECTIVO', totalClp: 1293, redondeoClp: -3 }],
+    );
+    const texto = aTexto(
+      ticketCierre(
+        { ...datos, resumen: conDevolucion, efectivoContadoClp: 13710, diferenciaClp: 0 },
+        32,
+      ),
+    );
+    expect(texto).toMatch(/Devoluciones \(1\)\s+\$1\.293/);
+    expect(texto).toMatch(/- Devoluciones efectivo\s+\$1\.290/);
+    expect(texto).toMatch(/= Esperado en caja\s+\$13\.710/);
+  });
+
   it('sin anuladas ni redondeo no muestra esas líneas', () => {
     const limpio = cuadrarCaja(0, [
       { medioPago: 'DEBITO', totalClp: 1000, redondeoClp: 0, anulada: false },

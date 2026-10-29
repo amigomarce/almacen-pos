@@ -1,6 +1,7 @@
 import type {
   CategoriaWire,
   CierreCajaWire,
+  DevolucionWire,
   LineaVentaWire,
   MovimientoStockWire,
   ProductoWire,
@@ -12,6 +13,7 @@ import type {
   categories,
   products,
   saleItems,
+  saleReturns,
   sales,
   stockMovements,
 } from '../db/schema.js';
@@ -68,6 +70,13 @@ export function ventaDeWire(w: VentaWire, ownerId: string): typeof sales.$inferI
     voidedAt: fecha(w.voidedAt),
     createdAt: new Date(w.createdAt),
   };
+}
+
+export function devolucionDeWire(
+  w: DevolucionWire,
+  ownerId: string,
+): typeof saleReturns.$inferInsert {
+  return { ...w, ownerId, createdAt: new Date(w.createdAt) };
 }
 
 export function lineaDeWire(w: LineaVentaWire): typeof saleItems.$inferInsert {

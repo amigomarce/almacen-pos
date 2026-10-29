@@ -6,6 +6,7 @@ import {
   outbox,
   products,
   saleItems,
+  saleReturns,
   sales,
   stockMovements,
 } from '../db/schema.js';
@@ -40,6 +41,9 @@ export function crearRepoSyncNube(db: Db): RepoSyncNube {
     },
     async insertarMovimiento(m) {
       await db.insert(stockMovements).values(m).onConflictDoNothing();
+    },
+    async insertarDevolucion(d) {
+      await db.insert(saleReturns).values(d).onConflictDoNothing();
     },
     async upsertCierre(c) {
       const { id: _id, ...set } = c;

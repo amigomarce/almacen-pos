@@ -58,6 +58,7 @@ describe('migraciones', () => {
         'outbox',
         'products',
         'sale_items',
+        'sale_returns',
         'sales',
         'stock_movements',
       ].sort(),

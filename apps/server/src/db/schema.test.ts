@@ -51,6 +51,8 @@ describe('migraciones', () => {
         'quick_buttons',
         'registers',
         'sale_items',
+        'sale_return_items',
+        'sale_returns',
         'sales',
         'stock_movements',
         'store_settings',

@@ -159,6 +159,43 @@ describe('ingestarEventos', () => {
     expect(repo.cierres).toHaveLength(1);
     expect(repo.cierres[0]).toMatchObject({ id: 'c1', registerId: 'r1', differenceClp: 200 });
   });
+  it('ingesta una devolución parcial con sus ítems', async () => {
+    const repo = repoSyncFalso();
+    await ingestarEventos(repo, 'dueno-1', [
+      {
+        entity: 'sale_returns',
+        op: 'INSERT',
+        entityId: 'd1',
+        payload: {
+          id: 'd1',
+          saleId: 's1',
+          registerId: 'r1',
+          refundClp: 1890,
+          roundingClp: 0,
+          paymentMethod: 'EFECTIVO',
+          reason: 'Abollada',
+          createdAt: ISO,
+          items: [
+            {
+              saleItemId: 'i1',
+              productId: 'p1',
+              nameSnapshot: 'Bebida',
+              qtyMilli: 1000,
+              amountClp: 1890,
+            },
+          ],
+        },
+      },
+    ]);
+    expect(repo.devoluciones).toHaveLength(1);
+    expect(repo.devoluciones[0]).toMatchObject({
+      id: 'd1',
+      ownerId: 'dueno-1',
+      refundClp: 1890,
+      createdAt: new Date(ISO),
+    });
+  });
+
   it('UPDATE de producto actualiza (upsert)', async () => {
     const repo = repoSyncFalso();
     await ingestarEventos(repo, 'dueno-1', [

@@ -408,6 +408,23 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
         estado.movimientos = [];
         return json(200, { caja: { id: 'c1', name: 'Caja 1' }, sesion, resumen: r });
       }
+      case 'GET /sales/turno': {
+        if (!usuario) return sinSesion();
+        return json(
+          200,
+          [...estado.ventas.values()].reverse().map((v) => ({
+            id: v['id'],
+            numero: v['numero'],
+            creadaEn: v['creadaEn'],
+            estado: v['estado'],
+            medioPago: v['medioPago'],
+            totalClp: v['totalClp'],
+            totalCobradoClp: v['totalCobradoClp'],
+            cajero: (v['cajero'] as { name: string } | undefined)?.name ?? 'Cajero',
+            devueltoClp: v['devueltoClp'] ?? 0,
+          })),
+        );
+      }
       case 'GET /sales/last': {
         if (!usuario) return sinSesion();
         const ventas = [...estado.ventas.values()];
@@ -628,6 +645,17 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
               }
             : null,
           motivoSinDocumento: conDocumento ? null : 'VOUCHER_ES_BOLETA',
+          creadaEn: '2026-10-25T12:00:00.000Z',
+          cajero: { id: usuario.id, name: usuario.name },
+          lineas: q.lineas.map((l, i) => ({
+            ...l,
+            id: `${id}-l${i + 1}`,
+            devueltoMilli: 0,
+            devueltoClp: 0,
+          })),
+          devoluciones: [] as Record<string, unknown>[],
+          devueltoClp: 0,
+          anulacion: null,
         };
         estado.ventas.set(id, venta);
         return json(201, venta);
@@ -691,6 +719,57 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
             vistaPrevia: 'COMPROBANTE DE VENTA - NO VÁLIDO COMO BOLETA',
             motivo: estado.impresora ? null : 'SIN_IMPRESORA',
           });
+        }
+        const devolver = /^POST \/sales\/(.+)\/returns$/.exec(clave);
+        if (devolver) {
+          if (!usuario) return sinSesion();
+          if (usuario.role !== 'DUENO' && cuerpo['pinDueno'] !== '1234') {
+            return json(401, { error: 'PIN_INCORRECTO', mensaje: 'Clave del dueño incorrecta' });
+          }
+          const v = estado.ventas.get(devolver[1] ?? '');
+          if (!v) return json(404, { error: 'NO_ENCONTRADO', mensaje: 'Venta no encontrada' });
+          const lineas = v['lineas'] as {
+            id: string;
+            nombre: string;
+            cantidadMilli: number;
+            totalLineaClp: number;
+            devueltoMilli: number;
+            devueltoClp: number;
+          }[];
+          const items = (cuerpo['items'] as { lineaId: string; cantidadMilli: number }[]).map(
+            (it) => {
+              const l = lineas.find((x) => x.id === it.lineaId);
+              if (!l) throw new Error('línea inexistente');
+              const montoClp = Math.round((l.totalLineaClp * it.cantidadMilli) / l.cantidadMilli);
+              l.devueltoMilli += it.cantidadMilli;
+              l.devueltoClp += montoClp;
+              return { lineaId: l.id, nombre: l.nombre, cantidadMilli: it.cantidadMilli, montoClp };
+            },
+          );
+          const totalClp = items.reduce((a, i) => a + i.montoClp, 0);
+          const devolucion = {
+            id: `d${(v['devoluciones'] as unknown[]).length + 1}`,
+            creadaEn: '2026-10-25T13:00:00.000Z',
+            totalClp,
+            aEntregarClp: totalClp,
+            medioPago: v['medioPago'],
+            motivo: cuerpo['motivo'],
+            autorizadaPor: { id: 'u1', name: 'Dueño' },
+            items,
+          };
+          (v['devoluciones'] as unknown[]).push(devolucion);
+          v['devueltoClp'] = Number(v['devueltoClp']) + totalClp;
+          return json(201, {
+            devolucion,
+            recordatorio: `Entrega $${totalClp.toLocaleString('es-CL')} en efectivo.`,
+          });
+        }
+        const detalleVenta = /^GET \/sales\/([^/]+)$/.exec(clave);
+        if (detalleVenta && detalleVenta[1] !== 'turno' && detalleVenta[1] !== 'last') {
+          if (!usuario) return sinSesion();
+          const v = estado.ventas.get(detalleVenta[1] ?? '');
+          if (!v) return json(404, { error: 'NO_ENCONTRADO', mensaje: 'Venta no encontrada' });
+          return json(200, v);
         }
         const anular = /^POST \/sales\/(.+)\/void$/.exec(clave);
         if (anular) {

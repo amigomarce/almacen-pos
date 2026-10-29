@@ -12,7 +12,12 @@ function dbFalsa(): Db {
 function repoReportesFalso(): RepoReportes {
   return {
     resumenVentas: () =>
-      Promise.resolve({ totalClp: 3500, cantidad: 3, porMedio: { EFECTIVO: 1500, DEBITO: 2000 } }),
+      Promise.resolve({
+        totalClp: 3500,
+        cantidad: 3,
+        porMedio: { EFECTIVO: 1500, DEBITO: 2000 },
+        devolucionesClp: 0,
+      }),
     stockBajo: () =>
       Promise.resolve([
         { id: 'a', name: 'Leche', unit: 'UN', stockQtyMilli: 100, stockMinMilli: 1000 },

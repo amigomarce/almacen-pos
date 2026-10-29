@@ -10,6 +10,7 @@ import {
   type VentaRegistrada,
 } from '../api.js';
 import { SeccionMovimientos } from '../caja/SeccionMovimientos.js';
+import { SeccionVentasTurno } from '../caja/SeccionVentasTurno.js';
 import { AvisoCierresInesperados } from '../componentes/AvisoCierresInesperados.js';
 import { leerEnEspera } from '../venta/espera.js';
 
@@ -261,6 +262,8 @@ export function PantallaCaja({ api, esDueno, alCambiarCaja }: Props) {
           </tbody>
         </table>
       </div>
+
+      <SeccionVentasTurno api={api} esDueno={esDueno} version={version} alCambiar={cargar} />
 
       <SeccionMovimientos
         api={api}

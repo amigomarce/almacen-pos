@@ -19,6 +19,7 @@ import {
   users,
 } from '../db/schema.js';
 import { encolar } from '../sincronizacion/outbox.js';
+import { devolucionesDeSesion } from '../ventas/devoluciones.js';
 
 export interface Caja {
   id: string;
@@ -196,6 +197,7 @@ function resumir(db: Db, f: FilaSesion, movimientos = movimientosDe(db, f.id)): 
       anulada: v.status === 'ANULADA',
     })),
     movimientos.map((m) => ({ tipo: m.tipo, montoClp: m.montoClp })),
+    devolucionesDeSesion(db, f.id),
   );
 }
 

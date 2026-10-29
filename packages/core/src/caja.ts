@@ -22,6 +22,15 @@ export interface MovimientoEfectivo {
   montoClp: Clp;
 }
 
+/** Una devolución parcial hecha en el turno. */
+export interface DevolucionParaCuadratura {
+  medioPago: MedioPago;
+  /** Lo devuelto según el documento. */
+  totalClp: Clp;
+  /** Ajuste de redondeo si se devolvió en efectivo. Lo entregado = total + redondeo. */
+  redondeoClp: Clp;
+}
+
 export interface TotalMedio {
   cantidad: number;
   /** Lo que realmente se cobró por este medio (incluye el redondeo en efectivo). */
@@ -42,7 +51,13 @@ export interface CuadraturaCaja {
   /** Retiros e ingresos de efectivo del turno (no son ventas). */
   movimientos: { retirosClp: Clp; ingresosClp: Clp; cantidad: number };
   /**
-   * Efectivo que debería haber en el cajón: inicial + cobrado en efectivo + ingresos − retiros.
+   * Devoluciones parciales hechas en el turno. `totalClp` es lo devuelto según los documentos;
+   * `efectivoClp`, lo entregado en efectivo (con redondeo), que sale del cajón.
+   */
+  devoluciones: { cantidad: number; totalClp: Clp; efectivoClp: Clp };
+  /**
+   * Efectivo que debería haber en el cajón: inicial + cobrado en efectivo + ingresos − retiros
+   * − devoluciones en efectivo.
    */
   efectivoEsperadoClp: Clp;
 }
@@ -65,6 +80,7 @@ export function cuadrarCaja(
   efectivoInicialClp: Clp,
   ventas: readonly VentaParaCuadratura[],
   movimientos: readonly MovimientoEfectivo[] = [],
+  devoluciones: readonly DevolucionParaCuadratura[] = [],
 ): CuadraturaCaja {
   asegurarEntero(efectivoInicialClp, 'efectivoInicialClp');
   if (efectivoInicialClp < 0) {
@@ -108,6 +124,22 @@ export function cuadrarCaja(
     else ingresos += m.montoClp;
   }
 
+  const dev = { cantidad: 0, totalClp: 0, efectivoClp: 0 };
+  devoluciones.forEach((d, i) => {
+    asegurarEntero(d.totalClp, `devolución ${i + 1}: total`);
+    asegurarEntero(d.redondeoClp, `devolución ${i + 1}: redondeo`);
+    // $0 es válido: un producto que iba de regalo en una promoción solo vuelve al stock.
+    if (d.totalClp < 0) {
+      throw new ErrorDominio(
+        'MONTO_INVALIDO',
+        `devolución ${i + 1}: el total no puede ser negativo`,
+      );
+    }
+    dev.cantidad += 1;
+    dev.totalClp += d.totalClp;
+    if (d.medioPago === 'EFECTIVO') dev.efectivoClp += d.totalClp + d.redondeoClp;
+  });
+
   return {
     porMedio,
     cantidadVentas,
@@ -117,7 +149,9 @@ export function cuadrarCaja(
     anuladas,
     efectivoInicialClp,
     movimientos: { retirosClp: retiros, ingresosClp: ingresos, cantidad: movimientos.length },
-    efectivoEsperadoClp: efectivoInicialClp + porMedio.EFECTIVO.cobradoClp + ingresos - retiros,
+    devoluciones: dev,
+    efectivoEsperadoClp:
+      efectivoInicialClp + porMedio.EFECTIVO.cobradoClp + ingresos - retiros - dev.efectivoClp,
   };
 }
 

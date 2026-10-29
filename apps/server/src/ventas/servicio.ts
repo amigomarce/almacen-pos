@@ -40,6 +40,11 @@ import { leerConfiguracion } from '../configuracion/servicio.js';
 import { ErrorHttp } from '../errores.js';
 import { lineaAWire, movimientoAWire, ventaAWire } from '../sincronizacion/mapping.js';
 import { encolar } from '../sincronizacion/outbox.js';
+import {
+  devolucionesDeVenta,
+  devueltoPorLinea,
+  type DevolucionRegistrada,
+} from './devoluciones.js';
 import { crearProviderDeVenta, type DependenciasSii } from '../sii/proveedor.js';
 
 // ---------- Tipos de entrada y salida ----------
@@ -72,7 +77,8 @@ export interface PedidoVenta {
   totalEsperadoClp?: number;
 }
 
-export interface LineaDetalle {
+/** Una línea calculada (cotización, documento tributario). */
+export interface LineaVendida {
   productoId: string | null;
   nombre: string;
   unidad: Unidad;
@@ -81,6 +87,15 @@ export interface LineaDetalle {
   tipoImpuesto: TipoImpuesto;
   descuentoClp: number;
   totalLineaClp: number;
+}
+
+/** Una línea de una venta guardada, con lo ya devuelto. */
+export interface LineaDetalle extends LineaVendida {
+  /** Id de la línea (para devoluciones parciales). */
+  id: string;
+  /** Lo ya devuelto de esta línea en devoluciones parciales. */
+  devueltoMilli: number;
+  devueltoClp: number;
 }
 
 export interface DocumentoDetalle {
@@ -116,6 +131,10 @@ export interface VentaDetalle {
   totales: TotalesDocumento;
   lineas: LineaDetalle[];
   anulacion: { en: string; autorizadaPor: { id: string; name: string }; motivo: string } | null;
+  /** Devoluciones parciales (ADR-021). */
+  devoluciones: DevolucionRegistrada[];
+  /** Suma devuelta en devoluciones parciales. */
+  devueltoClp: number;
   documento: DocumentoDetalle | null;
   /** Por qué no hay documento: con tarjeta el voucher es la boleta, o el total es $0. */
   motivoSinDocumento: 'VOUCHER_ES_BOLETA' | 'TOTAL_CERO' | null;
@@ -137,7 +156,7 @@ function nombreRegistro(db: Db, id: string): string | null {
 
 function ventaParaDte(
   v: typeof sales.$inferSelect,
-  lineas: readonly LineaDetalle[],
+  lineas: readonly LineaVendida[],
   totales: TotalesDocumento,
   entrega: Entrega,
 ): VentaParaDte {
@@ -201,7 +220,9 @@ export async function obtenerVenta(db: Db, id: string): Promise<VentaDetalle | n
   const v = db.select().from(sales).where(eq(sales.id, id)).get();
   if (!v) return null;
   const items = db.select().from(saleItems).where(eq(saleItems.saleId, id)).all();
+  const devuelto = devueltoPorLinea(db, id);
   const lineas: LineaDetalle[] = items.map((i) => ({
+    id: i.id,
     productoId: i.productId,
     nombre: i.nameSnapshot,
     unidad: i.unit,
@@ -210,7 +231,10 @@ export async function obtenerVenta(db: Db, id: string): Promise<VentaDetalle | n
     tipoImpuesto: i.taxType,
     descuentoClp: i.discountClp,
     totalLineaClp: i.lineTotalClp,
+    devueltoMilli: devuelto.get(i.id)?.milli ?? 0,
+    devueltoClp: devuelto.get(i.id)?.clp ?? 0,
   }));
+  const devoluciones = devolucionesDeVenta(db, id);
   const totales = calcularTotalesDocumento(
     lineas.map((l) => ({ tipoImpuesto: l.tipoImpuesto, montoClp: l.totalLineaClp })),
   );
@@ -243,6 +267,8 @@ export async function obtenerVenta(db: Db, id: string): Promise<VentaDetalle | n
             motivo: v.voidReason ?? '',
           }
         : null,
+    devoluciones,
+    devueltoClp: devoluciones.reduce((s, d) => s + d.totalClp, 0),
     documento,
     motivoSinDocumento: doc ? null : v.totalClp === 0 ? 'TOTAL_CERO' : 'VOUCHER_ES_BOLETA',
   };
@@ -367,7 +393,7 @@ function armarLineas(db: Db, pedido: readonly LineaPedido[]): LineaVentaEntrada[
 export interface Cotizacion {
   totalClp: number;
   descuentoTotalClp: number;
-  lineas: LineaDetalle[];
+  lineas: LineaVendida[];
 }
 
 /** Calcula el carrito como lo cobrará el servidor (precios y promociones vigentes), sin guardar. */
@@ -526,7 +552,7 @@ export async function registrarVenta(
 
   // La venta ya quedó guardada: el documento va después (offline-first, ARQUITECTURA §5).
   const { venta, calculo } = guardada;
-  const lineasDetalle: LineaDetalle[] = calculo.lineas.map((l) => ({
+  const lineasDetalle: LineaVendida[] = calculo.lineas.map((l) => ({
     productoId: l.productoId,
     nombre: l.nombre,
     unidad: l.unidad,
@@ -607,6 +633,13 @@ export async function anularVenta(
       throw new ErrorHttp(
         'SESION_CERRADA',
         'Solo se pueden anular ventas del turno de caja abierto',
+        409,
+      );
+    }
+    if (devueltoPorLinea(db, v.id).size > 0) {
+      throw new ErrorHttp(
+        'TIENE_DEVOLUCIONES',
+        'La venta ya tiene devoluciones: devuelve el resto de los productos en vez de anularla',
         409,
       );
     }
@@ -720,4 +753,41 @@ export async function registrarFolioSii(
   /* v8 ignore next -- existe */
   if (!venta) throw new Error('Venta no encontrada');
   return venta;
+}
+
+/** Una venta en la lista del turno (Caja → Ventas del turno). */
+export interface VentaDelTurno {
+  id: string;
+  numero: number;
+  creadaEn: string;
+  estado: 'OK' | 'ANULADA';
+  medioPago: MedioPago;
+  totalClp: number;
+  totalCobradoClp: number;
+  cajero: string;
+  /** Suma devuelta en devoluciones parciales. */
+  devueltoClp: number;
+}
+
+/** Ventas del turno abierto, de la más nueva a la más antigua. */
+export function ventasDelTurno(db: Db, registerId: string): VentaDelTurno[] {
+  const sesion = sesionAbiertaId(db, registerId);
+  if (!sesion) return [];
+  const filas = db
+    .select()
+    .from(sales)
+    .where(eq(sales.cashSessionId, sesion))
+    .orderBy(desc(sales.number))
+    .all();
+  return filas.map((v) => ({
+    id: v.id,
+    numero: v.number,
+    creadaEn: v.createdAt.toISOString(),
+    estado: v.status,
+    medioPago: v.paymentMethod as MedioPago,
+    totalClp: v.totalClp,
+    totalCobradoClp: v.totalClp + v.roundingClp,
+    cajero: nombreUsuario(db, v.cashierId).name,
+    devueltoClp: [...devueltoPorLinea(db, v.id).values()].reduce((s, d) => s + d.clp, 0),
+  }));
 }

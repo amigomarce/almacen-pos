@@ -11,3 +11,4 @@ export * from './caja.js';
 export * from './cantidad.js';
 export * from './costo.js';
 export * from './fecha.js';
+export * from './devolucion.js';

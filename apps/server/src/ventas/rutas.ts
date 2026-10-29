@@ -16,7 +16,9 @@ import {
   registrarVenta,
   ultimaVentaId,
   type PedidoVenta,
+  ventasDelTurno,
 } from './servicio.js';
+import { registrarDevolucion } from './devoluciones.js';
 
 const ENTERO_POSITIVO = { type: 'integer', minimum: 1, maximum: 1_000_000_000 } as const;
 const MONTO = { type: 'integer', minimum: 0, maximum: 1_000_000_000 } as const;
@@ -114,6 +116,13 @@ export function registrarVentas(
     (req) => cotizarVenta(db, req.body.lineas),
   );
 
+  /** Ventas del turno abierto (Caja → Ventas del turno), de la más nueva a la más antigua. */
+  app.get<{ Querystring: { registerId?: string } }>(
+    '/sales/turno',
+    { onRequest: conSesion },
+    (req) => ventasDelTurno(db, cajaOError(req.query.registerId).id),
+  );
+
   /** Última venta del turno abierto (para reimprimir o anular). */
   app.get<{ Querystring: { registerId?: string } }>(
     '/sales/last',
@@ -187,6 +196,81 @@ export function registrarVentas(
         'Venta anulada',
       );
       return r;
+    },
+  );
+
+  /**
+   * Devolución parcial (ADR-021): algunos productos vuelven. Misma autorización que anular: el
+   * dueño con su sesión, o el cajero con la clave del dueño.
+   */
+  app.post<{
+    Params: { id: string };
+    Body: {
+      items: { lineaId: string; cantidadMilli: number }[];
+      motivo: string;
+      pinDueno?: string;
+      registerId?: string;
+    };
+  }>(
+    '/sales/:id/returns',
+    {
+      onRequest: conSesion,
+      schema: {
+        body: {
+          type: 'object',
+          required: ['items', 'motivo'],
+          additionalProperties: false,
+          properties: {
+            items: {
+              type: 'array',
+              minItems: 1,
+              maxItems: 200,
+              items: {
+                type: 'object',
+                required: ['lineaId', 'cantidadMilli'],
+                additionalProperties: false,
+                properties: {
+                  lineaId: { type: 'string', minLength: 1 },
+                  cantidadMilli: { type: 'integer', minimum: 1, maximum: 1_000_000_000 },
+                },
+              },
+            },
+            motivo: { type: 'string', minLength: 3, maxLength: 200, pattern: '\\S' },
+            pinDueno: { type: 'string', pattern: '^[0-9]{4,8}$' },
+            registerId: { type: 'string' },
+          },
+        },
+      },
+    },
+    (req, reply) => {
+      const usuario = req.sesion?.usuario;
+      /* v8 ignore next -- requiereSesion lo garantiza */
+      if (!usuario) return reply.code(401).send();
+      let autorizadaPorId = usuario.id;
+      if (usuario.role !== 'DUENO') {
+        if (!req.body.pinDueno) {
+          return reply.code(403).send({
+            error: 'FALTA_CLAVE_DUENO',
+            mensaje: 'Para devolver se necesita la clave del dueño',
+          });
+        }
+        const a = autorizarDueno(db, intentos, req.body.pinDueno);
+        if (!a.ok) return reply.code(a.estado).send(a.cuerpo);
+        autorizadaPorId = a.dueno.id;
+      }
+      const r = registrarDevolucion(db, {
+        ventaId: req.params.id,
+        registerId: cajaOError(req.body.registerId).id,
+        items: req.body.items,
+        motivo: req.body.motivo,
+        autorizadaPorId,
+        usuarioId: usuario.id,
+      });
+      req.log.warn(
+        { ventaId: req.params.id, devueltoClp: r.devolucion.totalClp, cajero: usuario.name },
+        'Devolución parcial',
+      );
+      return reply.code(201).send(r);
     },
   );
 

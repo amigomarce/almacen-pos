@@ -358,6 +358,52 @@ export interface VentaRegistrada {
   motivoSinDocumento: 'VOUCHER_ES_BOLETA' | 'TOTAL_CERO' | null;
 }
 
+/** Una venta en la lista del turno (Caja → Ventas del turno). */
+export interface VentaDelTurno {
+  id: string;
+  numero: number;
+  creadaEn: string;
+  estado: 'OK' | 'ANULADA';
+  medioPago: MedioPago;
+  totalClp: number;
+  totalCobradoClp: number;
+  cajero: string;
+  devueltoClp: number;
+}
+
+export interface LineaVentaDetalle {
+  id: string;
+  productoId: string | null;
+  nombre: string;
+  unidad: 'UN' | 'KG';
+  cantidadMilli: number;
+  precioUnitarioClp: number;
+  totalLineaClp: number;
+  devueltoMilli: number;
+  devueltoClp: number;
+}
+
+export interface Devolucion {
+  id: string;
+  creadaEn: string;
+  totalClp: number;
+  aEntregarClp: number;
+  medioPago: MedioPago;
+  motivo: string;
+  autorizadaPor: { id: string; name: string };
+  items: { lineaId: string; nombre: string; cantidadMilli: number; montoClp: number }[];
+}
+
+/** Detalle de una venta guardada, con sus líneas y devoluciones. */
+export type VentaDetalle = VentaRegistrada & {
+  creadaEn: string;
+  cajero: { id: string; name: string };
+  lineas: LineaVentaDetalle[];
+  devoluciones: Devolucion[];
+  devueltoClp: number;
+  anulacion: { en: string; autorizadaPor: { name: string }; motivo: string } | null;
+};
+
 export interface ResultadoImpresion {
   impreso: boolean;
   vistaPrevia: string;
@@ -484,6 +530,32 @@ export class ClienteApi {
     return this.pedir(`/sales/${encodeURIComponent(id)}/void`, {
       metodo: 'POST',
       cuerpo: { motivo, ...(pinDueno ? { pinDueno } : {}) },
+    });
+  }
+
+  ventasDelTurno(): Promise<VentaDelTurno[]> {
+    return this.pedir<VentaDelTurno[]>('/sales/turno');
+  }
+
+  venta(id: string): Promise<VentaDetalle> {
+    return this.pedir<VentaDetalle>(`/sales/${encodeURIComponent(id)}`);
+  }
+
+  devolver(
+    id: string,
+    datos: {
+      items: { lineaId: string; cantidadMilli: number }[];
+      motivo: string;
+      pinDueno?: string;
+    },
+  ): Promise<{ devolucion: Devolucion; recordatorio: string | null }> {
+    return this.pedir(`/sales/${encodeURIComponent(id)}/returns`, {
+      metodo: 'POST',
+      cuerpo: {
+        items: datos.items,
+        motivo: datos.motivo,
+        ...(datos.pinDueno ? { pinDueno: datos.pinDueno } : {}),
+      },
     });
   }
 

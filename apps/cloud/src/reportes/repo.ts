@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { cashCloses, products, sales, stockMovements } from '../db/schema.js';
+import { cashCloses, products, saleReturns, sales, stockMovements } from '../db/schema.js';
 import { calcularStockBajo, resumirVentas, type RepoReportes } from './servicio.js';
 
 /** Repositorio real de reportes sobre PostgreSQL (Drizzle). */
@@ -13,7 +13,11 @@ export function crearRepoReportes(db: Db): RepoReportes {
         .where(
           and(eq(sales.ownerId, ownerId), eq(sales.status, 'OK'), gte(sales.createdAt, desde)),
         );
-      return resumirVentas(filas);
+      const devoluciones = await db
+        .select({ refundClp: saleReturns.refundClp, paymentMethod: saleReturns.paymentMethod })
+        .from(saleReturns)
+        .where(and(eq(saleReturns.ownerId, ownerId), gte(saleReturns.createdAt, desde)));
+      return resumirVentas(filas, devoluciones);
     },
     async stockBajo(ownerId) {
       const conMinimo = await db

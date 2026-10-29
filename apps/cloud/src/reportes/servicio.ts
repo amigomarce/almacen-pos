@@ -1,7 +1,10 @@
 export interface ResumenVentas {
+  /** Ventas netas: lo vendido menos lo devuelto en el período. */
   totalClp: number;
   cantidad: number;
   porMedio: Record<string, number>;
+  /** Devoluciones parciales del período (ADR-021). */
+  devolucionesClp: number;
 }
 
 export interface ProductoStockBajo {
@@ -12,9 +15,13 @@ export interface ProductoStockBajo {
   stockMinMilli: number | null;
 }
 
-/** Agrega filas de ventas en total, cantidad y desglose por medio de pago. */
+/**
+ * Agrega filas de ventas en total, cantidad y desglose por medio de pago. Las devoluciones del
+ * período se restan del total y de su medio de pago (ventas netas).
+ */
 export function resumirVentas(
   filas: readonly { totalClp: number; paymentMethod: string }[],
+  devoluciones: readonly { refundClp: number; paymentMethod: string }[] = [],
 ): ResumenVentas {
   const porMedio: Record<string, number> = {};
   let totalClp = 0;
@@ -22,7 +29,13 @@ export function resumirVentas(
     totalClp += f.totalClp;
     porMedio[f.paymentMethod] = (porMedio[f.paymentMethod] ?? 0) + f.totalClp;
   }
-  return { totalClp, cantidad: filas.length, porMedio };
+  let devolucionesClp = 0;
+  for (const d of devoluciones) {
+    devolucionesClp += d.refundClp;
+    totalClp -= d.refundClp;
+    porMedio[d.paymentMethod] = (porMedio[d.paymentMethod] ?? 0) - d.refundClp;
+  }
+  return { totalClp, cantidad: filas.length, porMedio, devolucionesClp };
 }
 
 /** Calcula el saldo por producto y devuelve los que están bajo su mínimo (más crítico primero). */
