@@ -37,6 +37,11 @@
 **Caja → Cerrar caja**, cuenta el efectivo y confirma. La caja imprime el cierre con la
 diferencia entre lo contado y lo esperado. Ese cierre aparece en la app del dueño.
 
+La caja funciona en **pantalla completa** y, mientras haya una caja abierta, **el programa no
+se cierra**: primero el cierre de caja. Para salir de pantalla completa: **Configuración →
+Pantalla completa** (solo el dueño, con la caja cerrada). Si la caja se apagó sin cerrar (corte
+de luz o cierre forzado), el dueño lo ve anotado en **Caja**.
+
 ## Productos nuevos
 
 Si el código no está en la base, la caja ofrece crearlo: escribe nombre, precio, si se vende por

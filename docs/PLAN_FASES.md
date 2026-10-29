@@ -181,6 +181,19 @@ Windows). Se revisó su contenido: app, Node 22 oficial, servidor, migraciones, 
 para `win32-x64` y semilla de 11.039 productos con atribución ODbL. La app de macOS se recompiló
 con los cambios de ADR-017 y la poda del outbox. Detalle en [`INSTALADOR.md`](INSTALADOR.md).
 
+### Estado al 2026-10-29 — pantalla completa y cierre con caja abierta
+
+**Hecho (ADR-019):** la caja abre en pantalla completa bloqueada; en Windows, WebView2 sin
+atajos de navegador y un hook que anula la tecla Windows, Alt+Tab, Alt+Esc y Ctrl+(Mayús+)Esc.
+La única salida es **Configuración → Pantalla completa** (dueño). Con una caja abierta la app
+no se cierra de ninguna forma (`/health` → `cajaAbierta`). Los cierres que la app no puede
+impedir (Ctrl+Alt+Supr, *Finalizar tarea*, corte de luz) quedan anotados en el turno
+(`unexpected_shutdowns`) y el dueño los ve en Caja. Guía de cuenta de cajero en
+[`INSTALADOR.md`](INSTALADOR.md).
+
+- Probar en un PC Windows real: Alt+F4, tecla Windows, Alt+Tab, F5, Ctrl+P, el botón del dueño
+  y el registro tras *Finalizar tarea*.
+
 ### Estado al 2026-10-29 — caja en Linux (Zorin OS Lite)
 
 **Hecho (ADR-020):** `.deb` x86_64 compilado en Ubuntu 22.04 por el workflow

@@ -59,7 +59,17 @@ El resultado queda en `apps/pos/src-tauri/target/release/bundle/nsis/`.
 - [ ] La gaveta abre en efectivo y no abre con tarjeta.
 - [ ] El lector de código de barras funciona como teclado.
 - [ ] El respaldo local se crea y la app muestra “En la nube”.
+- [ ] Abre en **pantalla completa**; Alt+F4, la tecla Windows, Alt+Tab, F5 y Ctrl+P no la
+      sacan, y los atajos de la caja (F2, F4, F12, Esc) funcionan.
+- [ ] Con la **caja abierta** el programa no se cierra (aparece el aviso) y en Configuración →
+      Pantalla completa el botón está deshabilitado.
+- [ ] Con la caja cerrada, el dueño sale de pantalla completa y puede cerrar el programa.
+- [ ] Con la caja abierta, *Finalizar tarea* en el Administrador de tareas y volver a abrir:
+      en **Caja** aparece el aviso de cierre inesperado.
 - [ ] Cerrar y volver a abrir conserva los datos.
+
+> Para que el cajero tampoco pueda usar Ctrl+Alt+Supr ni el Administrador de tareas, deja el PC
+> con una **cuenta de cajero** (`docs/INSTALADOR.md`, "Pantalla completa y cierre de la caja").
 
 > La impresora por **red (IP:9100)** es la opción más predecible. La impresora USB por cola del
 > sistema ya está implementada, pero es justamente lo que falta validar en Windows.

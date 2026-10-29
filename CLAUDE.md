@@ -95,8 +95,10 @@ Reglas que no se negocian:
 ## 5. Stack (resumen — detalle en docs/ARQUITECTURA.md)
 
 - Monorepo con **pnpm workspaces** + TypeScript estricto en todo.
-- `apps/pos` — **React + Vite** envuelta en **Tauri 2**. El equipo de la caja usa **Zorin OS
-  Lite** (`.deb`, ADR-020); también hay instalador de Windows y el desarrollo es en macOS. Tauri no tiene lógica propia: lanza el servidor como sidecar
+- `apps/pos` — **React + Vite** envuelta en **Tauri 2**. **Windows es la plataforma
+  principal** del producto; el primer equipo (piloto) usa **Zorin OS Lite** (`.deb`, ADR-020);
+  el desarrollo es en macOS. Pantalla completa bloqueada y sin cierre con la caja abierta
+  (ADR-019). Tauri no tiene lógica propia: lanza el servidor como sidecar
   de Node 22 (ADR-005, ADR-014). La impresión ESC/POS la hace el servidor (`POST /print/...`).
 - `apps/server` — servidor local en la caja: **Node 22 + Fastify + SQLite (better-sqlite3)
   + Drizzle ORM**. Es la fuente de verdad del local.

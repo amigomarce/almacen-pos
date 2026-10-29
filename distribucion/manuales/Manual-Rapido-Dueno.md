@@ -2,7 +2,7 @@
 
 **Caja + app del dueño · versión 0.1 · octubre 2026**
 
-> Versión imprimible: [`manual-1-pagina.html`](manual-1-pagina.html) o [`manual-1-pagina.pdf`](manual-1-pagina.pdf).
+> Versión imprimible: [`Manual-Rapido-Dueno.html`](Manual-Rapido-Dueno.html) o [`Manual-Rapido-Dueno.pdf`](Manual-Rapido-Dueno.pdf).
 
 ## 1. Primer arranque (solo una vez)
 
@@ -36,6 +36,11 @@
 
 **Caja → Cerrar caja**, cuenta el efectivo y confirma. La caja imprime el cierre con la
 diferencia entre lo contado y lo esperado. Ese cierre aparece en la app del dueño.
+
+La caja funciona en **pantalla completa** y, mientras haya una caja abierta, **el programa no
+se cierra**: primero el cierre de caja. Para salir de pantalla completa: **Configuración →
+Pantalla completa** (solo el dueño, con la caja cerrada). Si la caja se apagó sin cerrar (corte
+de luz o cierre forzado), el dueño lo ve anotado en **Caja**.
 
 ## Productos nuevos
 

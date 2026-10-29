@@ -109,6 +109,43 @@ pnpm --filter @almacen/server sidecar \
 
 Aun así, el empaquetado NSIS debe ejecutarse en Windows.
 
+### Pantalla completa y cierre de la caja (ADR-019)
+
+La caja abre siempre en **pantalla completa bloqueada**: Alt+F4, la tecla Windows, Alt+Tab,
+F5, Ctrl+P y el resto de atajos del sistema y del navegador no sacan al cajero, y todas esas
+teclas quedan para la caja. La única salida es **Configuración → Pantalla completa** (solo el
+dueño). Con una **caja abierta** el programa no se cierra de ninguna forma: primero el cierre
+de caja.
+
+Lo que ninguna app puede impedir en Windows (Ctrl+Alt+Supr, *Finalizar tarea*, cortar la luz)
+queda **registrado** en el turno y el dueño lo ve en Caja. Para cerrar también esas puertas,
+deja el PC de la caja así:
+
+**Opción A — cuenta de cajero (cualquier Windows 10/11):**
+
+1. Crea una cuenta local **estándar** (sin administrador), por ejemplo "Caja", e instala ahí la
+   caja (la instalación es por usuario).
+2. Inicio automático de la caja: `Win+R` → `shell:startup` → crea un acceso directo a
+   "Almacén POS".
+3. Inicio de sesión automático en esa cuenta (opcional): `netplwiz` → desmarca "Los usuarios
+   deben escribir su nombre y contraseña".
+4. Quita el Administrador de tareas **solo a esa cuenta**:
+   - Windows Pro: `gpedit.msc` → Configuración de usuario → Plantillas administrativas →
+     Sistema → Opciones de Ctrl+Alt+Supr → **Quitar el Administrador de tareas** = Habilitada.
+     (Para que afecte solo a "Caja", usa `mmc` con el complemento de directivas para
+     "Usuarios que no son administradores".)
+   - Windows Home: en la sesión de "Caja", en una terminal:
+     ```powershell
+     reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System /v DisableTaskMgr /t REG_DWORD /d 1 /f
+     ```
+     Para deshacerlo: el mismo comando con `reg delete … /v DisableTaskMgr /f`.
+5. El dueño administra el equipo con **otra** cuenta (de administrador).
+
+**Opción B — Acceso asignado (Windows Pro/Enterprise):** Configuración → Cuentas → Otros
+usuarios → **Configurar una pantalla completa** (quiosco), con "Almacén POS" como única app.
+Es el bloqueo más fuerte, pero el quiosco de Windows está pensado para apps de la tienda o
+Edge; con una app de escritorio hay que probarlo en el equipo antes de dejarlo así.
+
 ## Linux (Zorin OS Lite)
 
 Paquete `.deb` x86_64 para el equipo de la caja (ADR-020). Se compila en **Ubuntu 22.04** para
@@ -216,6 +253,8 @@ guardar como PDF es [`manual-1-pagina.html`](manual-1-pagina.html) /
   notarizada. Falta firma/notarización en ambos.
 - El `.deb` de Linux no se ha probado en un equipo con Zorin OS Lite (RAM, escáner, impresora
   térmica, atajos de xfwm4). Solo hay x86_64.
+- Ctrl+Alt+Supr y *Finalizar tarea* no se pueden bloquear desde la app (Windows lo reserva):
+  se registran como cierre inesperado. Para impedirlos, ver la cuenta de cajero más arriba.
 - No hay autoactualización.
 - El puerto es fijo (`3001`); si otra app lo ocupa, el sidecar no arranca. En pruebas se puede
   cambiar con `ALMACEN_PORT`, pero la interfaz compilada apunta a 3001.
