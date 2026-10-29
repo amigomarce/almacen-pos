@@ -1,16 +1,18 @@
 import { calcularCobro, formatearClp } from '@almacen/core';
 import { useState } from 'react';
-import type { MedioPago } from '../api.js';
+import type { Cliente, ClienteApi, MedioPago } from '../api.js';
 import { Modal } from '../componentes/Modal.js';
 import { TecladoNumerico } from '../componentes/TecladoNumerico.js';
 import { useTeclado } from '../useTeclado.js';
 import { useValorRapido } from '../useValorRapido.js';
+import { excedeLimite, SelectorFiado } from './SelectorFiado.js';
 
 const MEDIOS: { medio: MedioPago; etiqueta: string; tecla: string }[] = [
   { medio: 'EFECTIVO', etiqueta: 'Efectivo', tecla: 'E' },
   { medio: 'DEBITO', etiqueta: 'Débito', tecla: 'D' },
   { medio: 'CREDITO', etiqueta: 'Crédito', tecla: 'C' },
   { medio: 'TRANSFERENCIA', etiqueta: 'Transferencia', tecla: 'T' },
+  { medio: 'FIADO', etiqueta: 'Fiado', tecla: 'F' },
 ];
 
 const BILLETES = [1000, 2000, 5000, 10000, 20000];
@@ -18,12 +20,19 @@ const BILLETES = [1000, 2000, 5000, 10000, 20000];
 const VUELTO_SOSPECHOSO = 100_000;
 const MAX_DIGITOS = 8;
 
+/** Para una venta fiada: el vecino y, si pasa su límite, la clave del dueño. */
+export interface DatosFiado {
+  clienteId: string;
+  pinDueno?: string;
+}
+
 interface Props {
+  api: ClienteApi;
   totalClp: number;
   redondeoHabilitado: boolean;
   enviando: boolean;
   error: string | null;
-  alCobrar: (medioPago: MedioPago, pagadoClp: number) => void;
+  alCobrar: (medioPago: MedioPago, pagadoClp: number, fiado?: DatosFiado) => void;
   alCerrar: () => void;
 }
 
@@ -32,6 +41,7 @@ interface Props {
  * Con tarjeta o transferencia se confirma cuando el pago está aprobado.
  */
 export function ModalCobro({
+  api,
   totalClp,
   redondeoHabilitado,
   enviando,
@@ -43,6 +53,8 @@ export function ModalCobro({
   const { valor, cambiar, leer } = useValorRapido('');
   const [aviso, setAviso] = useState<string | null>(null);
   const [confirmarVuelto, setConfirmarVuelto] = useState(false);
+  const [vecino, setVecino] = useState<Cliente | null>(null);
+  const [pin, setPin] = useState('');
 
   const cobro = calcularCobro(totalClp, medio, redondeoHabilitado);
   const aPagar = cobro.totalACobrarClp;
@@ -51,6 +63,18 @@ export function ModalCobro({
 
   const cobrar = (montoDirecto?: number) => {
     if (enviando) return;
+    if (medio === 'FIADO') {
+      if (!vecino) {
+        setAviso('Elige a qué vecino se le fía');
+        return;
+      }
+      if (excedeLimite(vecino, aPagar) && pin.length < 4) {
+        setAviso('Pasa su límite: escribe la clave del dueño');
+        return;
+      }
+      alCobrar('FIADO', 0, { clienteId: vecino.id, ...(pin ? { pinDueno: pin } : {}) });
+      return;
+    }
     if (medio !== 'EFECTIVO') {
       alCobrar(medio, aPagar);
       return;
@@ -79,6 +103,9 @@ export function ModalCobro({
   };
 
   useTeclado((e) => {
+    // Escribiendo en un campo (buscar vecino, clave): las letras no cambian el medio de pago.
+    const enCampo = e.target instanceof HTMLInputElement;
+    if (enCampo && e.key !== 'Enter') return;
     const letra = e.key.toUpperCase();
     const porTecla = MEDIOS.find((m) => m.tecla === letra);
     if (porTecla) {
@@ -175,6 +202,37 @@ export function ModalCobro({
             etiquetaAceptar={enviando ? 'Cobrando…' : 'Cobrar'}
             deshabilitado={enviando}
           />
+        </>
+      ) : medio === 'FIADO' ? (
+        <>
+          <SelectorFiado
+            api={api}
+            totalClp={aPagar}
+            elegido={vecino}
+            pin={pin}
+            alElegir={(c) => {
+              setVecino(c);
+              setPin('');
+              setAviso(null);
+            }}
+            alCambiarPin={(p) => {
+              setPin(p);
+              setAviso(null);
+            }}
+          />
+          <p className="mensaje-error" role="alert">
+            {aviso ?? error}
+          </p>
+          <button
+            type="button"
+            className="boton boton-cobrar"
+            disabled={enviando || !vecino}
+            onClick={() => {
+              cobrar();
+            }}
+          >
+            {enviando ? 'Guardando…' : 'Fiar (Enter)'}
+          </button>
         </>
       ) : (
         <>

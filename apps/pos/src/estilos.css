@@ -1029,3 +1029,20 @@ body {
   text-align: right;
   white-space: nowrap;
 }
+
+/* Fiado: elegir vecino en el cobro. */
+.lista-vecinos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fiado-elegido,
+.fiado-buscar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}

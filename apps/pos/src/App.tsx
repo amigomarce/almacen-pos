@@ -15,6 +15,7 @@ import { PantallaPin } from './pantallas/PantallaPin.js';
 import { ModalAcercaDe } from './componentes/ModalAcercaDe.js';
 import { PantallaCaja } from './pantallas/PantallaCaja.js';
 import { PantallaInstalacion } from './pantallas/PantallaInstalacion.js';
+import { PantallaFiado } from './pantallas/PantallaFiado.js';
 import { PantallaConfiguracion } from './pantallas/PantallaConfiguracion.js';
 import { PantallaProductos } from './pantallas/PantallaProductos.js';
 import { PantallaRecepcion } from './pantallas/PantallaRecepcion.js';
@@ -27,12 +28,13 @@ import {
 import { guardarToken, leerToken } from './sesion.js';
 import { useEstadoServidor, type Conexion } from './useEstadoServidor.js';
 
-type Vista = 'VENTA' | 'PRODUCTOS' | 'RECEPCION' | 'CAJA' | 'CONFIGURACION';
+type Vista = 'VENTA' | 'PRODUCTOS' | 'RECEPCION' | 'FIADO' | 'CAJA' | 'CONFIGURACION';
 
 const VISTAS: { vista: Vista; etiqueta: string; soloDueno?: boolean }[] = [
   { vista: 'VENTA', etiqueta: 'Venta' },
   { vista: 'PRODUCTOS', etiqueta: 'Productos' },
   { vista: 'RECEPCION', etiqueta: 'Recepción' },
+  { vista: 'FIADO', etiqueta: 'Fiado' },
   { vista: 'CAJA', etiqueta: 'Caja' },
   { vista: 'CONFIGURACION', etiqueta: 'Configuración', soloDueno: true },
 ];
@@ -322,6 +324,7 @@ function Caja({
       {vista === 'CAJA' && (
         <PantallaCaja api={api} esDueno={esDueno} alCambiarCaja={alCerrarCaja} />
       )}
+      {vista === 'FIADO' && <PantallaFiado api={api} esDueno={esDueno} />}
       {vista === 'CONFIGURACION' && esDueno && (
         <PantallaConfiguracion api={api} cajaAbierta={cajaAbierta || fase.caja.sesion !== null} />
       )}

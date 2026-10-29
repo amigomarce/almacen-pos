@@ -231,7 +231,7 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
     }[];
     const validas = ventas.filter((v) => v.estado === 'OK');
     const porMedio = Object.fromEntries(
-      (['EFECTIVO', 'DEBITO', 'CREDITO', 'TRANSFERENCIA'] as const).map((m) => {
+      (['EFECTIVO', 'DEBITO', 'CREDITO', 'TRANSFERENCIA', 'FIADO'] as const).map((m) => {
         const del = validas.filter((v) => v.medioPago === m);
         return [
           m,

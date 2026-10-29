@@ -87,6 +87,8 @@ export interface ResumenCaja {
   efectivoInicialClp: number;
   /** Retiros e ingresos de efectivo del turno. */
   movimientos?: { retirosClp: number; ingresosClp: number; cantidad: number };
+  /** Abonos al fiado recibidos en el turno. */
+  abonos?: { cantidad: number; totalClp: number; efectivoClp: number };
   efectivoEsperadoClp: number;
 }
 
@@ -287,7 +289,40 @@ export interface BotonRapido {
   producto: ProductoLocal | null;
 }
 
-export type MedioPago = 'EFECTIVO' | 'DEBITO' | 'CREDITO' | 'TRANSFERENCIA';
+export type MedioPago = 'EFECTIVO' | 'DEBITO' | 'CREDITO' | 'TRANSFERENCIA' | 'FIADO';
+export type MedioAbono = Exclude<MedioPago, 'FIADO'>;
+
+/** Vecino con cuenta corriente (fiado, ADR-022). */
+export interface Cliente {
+  id: string;
+  nombre: string;
+  telefono: string | null;
+  nota: string | null;
+  limiteClp: number | null;
+  activo: boolean;
+  /** Lo que debe. */
+  saldoClp: number;
+  ultimoMovimiento: string | null;
+}
+
+export interface MovimientoFiado {
+  id: string;
+  tipo: 'VENTA' | 'ABONO' | 'ANULACION' | 'DEVOLUCION' | 'AJUSTE';
+  montoClp: number;
+  ventaId: string | null;
+  medioPago: string | null;
+  motivo: string | null;
+  usuario: string;
+  creadoEn: string;
+}
+
+export interface DatosCliente {
+  nombre?: string;
+  telefono?: string | null;
+  nota?: string | null;
+  limiteClp?: number | null;
+  activo?: boolean;
+}
 
 export type ModalidadBoleta = 'MOCK' | 'PUENTE_MANUAL' | 'SII_DIRECTO' | 'PROVEEDOR_EXTERNO';
 
@@ -335,6 +370,10 @@ export interface PedidoVenta {
   medioPago: MedioPago;
   pagadoClp?: number;
   totalEsperadoClp?: number;
+  /** Solo `FIADO`: el vecino. */
+  clienteId?: string;
+  /** Fiado sobre el límite: clave del dueño. */
+  pinDueno?: string;
 }
 
 export interface VentaRegistrada {
@@ -356,6 +395,8 @@ export interface VentaRegistrada {
     accionCajero: string | null;
   } | null;
   motivoSinDocumento: 'VOUCHER_ES_BOLETA' | 'TOTAL_CERO' | null;
+  /** Venta fiada: el vecino y su saldo después de la venta. */
+  cliente?: { id: string; nombre: string; saldoClp: number } | null;
 }
 
 /** Una venta en la lista del turno (Caja → Ventas del turno). */
@@ -640,6 +681,61 @@ export class ClienteApi {
 
   claveRespaldo(): Promise<{ clave: string }> {
     return this.pedir<{ clave: string }>('/backups/clave');
+  }
+
+  clientes(
+    opciones: { buscar?: string; inactivos?: boolean; porDeuda?: boolean } = {},
+  ): Promise<Cliente[]> {
+    const q = new URLSearchParams();
+    if (opciones.buscar) q.set('buscar', opciones.buscar);
+    if (opciones.inactivos) q.set('inactivos', '1');
+    if (opciones.porDeuda) q.set('orden', 'deuda');
+    const texto = q.toString();
+    return this.pedir<Cliente[]>(`/customers${texto ? `?${texto}` : ''}`);
+  }
+
+  cliente(id: string): Promise<{ cliente: Cliente; movimientos: MovimientoFiado[] }> {
+    return this.pedir(`/customers/${encodeURIComponent(id)}`);
+  }
+
+  crearCliente(datos: DatosCliente): Promise<Cliente> {
+    return this.pedir<Cliente>('/customers', { metodo: 'POST', cuerpo: datos });
+  }
+
+  editarCliente(id: string, datos: DatosCliente): Promise<Cliente> {
+    return this.pedir<Cliente>(`/customers/${encodeURIComponent(id)}`, {
+      metodo: 'PATCH',
+      cuerpo: datos,
+    });
+  }
+
+  abonar(
+    id: string,
+    montoClp: number,
+    medioPago: MedioAbono,
+  ): Promise<{ movimiento: MovimientoFiado; cliente: Cliente }> {
+    return this.pedir(`/customers/${encodeURIComponent(id)}/payments`, {
+      metodo: 'POST',
+      cuerpo: { montoClp, medioPago },
+    });
+  }
+
+  ajustarCuenta(
+    id: string,
+    montoClp: number,
+    motivo: string,
+  ): Promise<{ movimiento: MovimientoFiado; cliente: Cliente }> {
+    return this.pedir(`/customers/${encodeURIComponent(id)}/adjustments`, {
+      metodo: 'POST',
+      cuerpo: { montoClp, motivo },
+    });
+  }
+
+  imprimirAbono(clienteId: string, abonoId: string): Promise<ResultadoImpresion> {
+    return this.pedir<ResultadoImpresion>(
+      `/customers/${encodeURIComponent(clienteId)}/payments/${encodeURIComponent(abonoId)}/print`,
+      { metodo: 'POST' },
+    );
   }
 
   registrarVenta(pedido: PedidoVenta): Promise<VentaRegistrada> {

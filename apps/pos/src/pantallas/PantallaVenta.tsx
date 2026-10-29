@@ -34,7 +34,7 @@ import { leerEntrada } from '../venta/entrada.js';
 import { ModalAltaProducto } from '../venta/ModalAltaProducto.js';
 import { ModalBuscar } from '../venta/ModalBuscar.js';
 import { ModalCantidad } from '../venta/ModalCantidad.js';
-import { ModalCobro } from '../venta/ModalCobro.js';
+import { ModalCobro, type DatosFiado } from '../venta/ModalCobro.js';
 import { ModalVentaLista, type EstadoImpresion } from '../venta/ModalVentaLista.js';
 import { ModalMontoLibre } from '../venta/ModalMontoLibre.js';
 import { ModalPesoMonto, type ResultadoPesoMonto } from '../venta/ModalPesoMonto.js';
@@ -403,7 +403,12 @@ export function PantallaVenta({ api, activa = true }: Props) {
     [api],
   );
 
-  const cobrar = async (id: string, medioPago: MedioPago, pagadoClp: number) => {
+  const cobrar = async (
+    id: string,
+    medioPago: MedioPago,
+    pagadoClp: number,
+    fiado?: DatosFiado,
+  ) => {
     if (!actualizada || cobrando) return;
     setCobrando(true);
     setErrorCobro(null);
@@ -413,6 +418,7 @@ export function PantallaVenta({ api, activa = true }: Props) {
         lineas: aPedido(carrito.lineas),
         medioPago,
         ...(medioPago === 'EFECTIVO' ? { pagadoClp } : {}),
+        ...(fiado ?? {}),
         totalEsperadoClp: actualizada.totalClp,
       });
       // Venta guardada: se limpia la pantalla y se muestra el vuelto mientras imprime.
@@ -740,12 +746,13 @@ export function PantallaVenta({ api, activa = true }: Props) {
       )}
       {ventana?.tipo === 'COBRO' && actualizada && (
         <ModalCobro
+          api={api}
           totalClp={actualizada.totalClp}
           redondeoHabilitado={config?.cashRoundingEnabled ?? true}
           enviando={cobrando}
           error={errorCobro}
           alCerrar={cerrarVentana}
-          alCobrar={(medio, pagado) => void cobrar(ventana.id, medio, pagado)}
+          alCobrar={(medio, pagado, fiado) => void cobrar(ventana.id, medio, pagado, fiado)}
         />
       )}
       {ventana?.tipo === 'LISTA' && (

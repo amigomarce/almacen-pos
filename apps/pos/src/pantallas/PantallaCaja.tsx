@@ -19,6 +19,7 @@ const MEDIOS: { medio: MedioPago; etiqueta: string }[] = [
   { medio: 'DEBITO', etiqueta: 'Débito' },
   { medio: 'CREDITO', etiqueta: 'Crédito' },
   { medio: 'TRANSFERENCIA', etiqueta: 'Transferencia' },
+  { medio: 'FIADO', etiqueta: 'Fiado' },
 ];
 
 export function textoDiferencia(d: number): string {
@@ -211,7 +212,10 @@ export function PantallaCaja({ api, esDueno, alCambiarCaja }: Props) {
         {esDueno && <AvisoCierresInesperados sesion={estado.sesion} />}
         <table className="tabla" aria-label="Ventas del turno">
           <tbody>
-            {MEDIOS.map((m) => (
+            {MEDIOS.filter(
+              // El fiado solo aparece si hubo ventas fiadas.
+              (m) => m.medio !== 'FIADO' || r.porMedio.FIADO.cantidad > 0,
+            ).map((m) => (
               <tr key={m.medio}>
                 <td>
                   {m.etiqueta} ({r.porMedio[m.medio].cantidad})
@@ -237,6 +241,12 @@ export function PantallaCaja({ api, esDueno, alCambiarCaja }: Props) {
               <tr>
                 <td>Anuladas ({r.anuladas.cantidad})</td>
                 <td className="numero">{formatearClp(r.anuladas.totalClp)}</td>
+              </tr>
+            )}
+            {(r.abonos?.efectivoClp ?? 0) > 0 && (
+              <tr>
+                <td>+ Abonos de fiado en efectivo</td>
+                <td className="numero">{formatearClp(r.abonos?.efectivoClp ?? 0)}</td>
               </tr>
             )}
             {(r.movimientos?.ingresosClp ?? 0) > 0 && (
