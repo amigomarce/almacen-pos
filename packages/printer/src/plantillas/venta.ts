@@ -47,6 +47,8 @@ export interface DatosTicketVenta {
   reimpresion?: boolean;
   /** Abrir el cajón al imprimir (solo tiene sentido en efectivo). */
   abrirCajon?: boolean;
+  /** Venta fiada (ADR-022): a cuenta de quién y su saldo después de la venta. */
+  fiado?: { cliente: string; saldoClp: number } | null;
 }
 
 /**
@@ -111,7 +113,10 @@ export function ticketVenta(datos: DatosTicketVenta, columnas: number): Document
     doc.columnas2('Redondeo efectivo', formatearClp(datos.redondeoClp));
     doc.columnas2('Total a pagar', formatearClp(datos.totalCobradoClp), { negrita: true });
   }
-  if (datos.medioPago === 'EFECTIVO') {
+  if (datos.medioPago === 'FIADO') {
+    doc.texto(`FIADO - a cuenta de ${datos.fiado?.cliente ?? '?'}`, { negrita: true });
+    if (datos.fiado) doc.columnas2('Saldo de la cuenta', formatearClp(datos.fiado.saldoClp));
+  } else if (datos.medioPago === 'EFECTIVO') {
     doc.columnas2('Efectivo', formatearClp(datos.pagadoClp));
     doc.columnas2('Vuelto', formatearClp(datos.vueltoClp), { negrita: true });
   } else {

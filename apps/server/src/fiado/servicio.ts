@@ -387,3 +387,51 @@ export function abonosDeSesion(
     .all()
     .map((a) => ({ medioPago: a.medioPago as MedioAbono, montoClp: -a.montoClp }));
 }
+
+/** Datos para imprimir (o reimprimir) el recibo de un abono, con el saldo que quedó. */
+export function datosReciboAbono(
+  db: Db,
+  clienteId: string,
+  abonoId: string,
+): {
+  cliente: string;
+  fecha: Date;
+  cajero: string;
+  montoClp: number;
+  medioPago: MedioAbono;
+  saldoClp: number;
+} {
+  const c = filaCliente(db, clienteId);
+  const m = db
+    .select({ m: customerLedger, cajero: users.name })
+    .from(customerLedger)
+    .innerJoin(users, eq(users.id, customerLedger.userId))
+    .where(
+      and(
+        eq(customerLedger.id, abonoId),
+        eq(customerLedger.customerId, clienteId),
+        eq(customerLedger.type, 'ABONO'),
+      ),
+    )
+    .get();
+  if (!m) throw new ErrorHttp('NO_ENCONTRADO', 'Abono no encontrado', 404);
+  const saldo =
+    db
+      .select({ s: sql<number>`coalesce(sum(${customerLedger.amountClp}), 0)` })
+      .from(customerLedger)
+      .where(
+        and(
+          eq(customerLedger.customerId, clienteId),
+          sql`${customerLedger.createdAt} <= ${m.m.createdAt.getTime()}`,
+        ),
+      )
+      .get()?.s ?? 0;
+  return {
+    cliente: c.name,
+    fecha: m.m.createdAt,
+    cajero: m.cajero,
+    montoClp: -m.m.amountClp,
+    medioPago: m.m.paymentMethod as MedioAbono,
+    saldoClp: saldo,
+  };
+}

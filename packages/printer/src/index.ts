@@ -6,3 +6,4 @@ export * from './plantillas/venta.js';
 export * from './plantillas/cierre.js';
 export * from './plantillas/prueba.js';
 export * from './plantillas/flejes.js';
+export * from './plantillas/abono.js';

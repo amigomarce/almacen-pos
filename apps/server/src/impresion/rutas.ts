@@ -1,6 +1,7 @@
 import {
   aTexto,
   ticketCierre,
+  reciboAbono,
   ticketFlejes,
   ticketPrueba,
   ticketVenta,
@@ -15,6 +16,7 @@ import type { Db } from '../db/client.js';
 import { TRANSPORTES_IMPRESORA } from '../db/schema.js';
 import { ErrorHttp } from '../errores.js';
 import { flejesPendientes, marcarFlejesAlDia } from '../flejes/servicio.js';
+import { datosReciboAbono } from '../fiado/servicio.js';
 import { obtenerVenta } from '../ventas/servicio.js';
 import {
   ANCHOS_PAPEL,
@@ -125,6 +127,21 @@ export function registrarImpresion(app: FastifyInstance, deps: DependenciasImpre
   app.get('/printer/system-queues', { onRequest: soloDueno }, async () => ({
     colas: await listarColasSistema(deps.ejecutar ? { ejecutar: deps.ejecutar } : {}),
   }));
+
+  /** Recibo de un abono al fiado (también para reimprimirlo). */
+  app.post<{ Params: { id: string; abonoId: string }; Body: { registerId?: string } | null }>(
+    '/customers/:id/payments/:abonoId/print',
+    { onRequest: conSesion },
+    async (req, reply) => {
+      const c = caja(req.body?.registerId);
+      const config = leerConfigImpresora(db, c.id);
+      const doc = reciboAbono(
+        { local: local(), ...datosReciboAbono(db, req.params.id, req.params.abonoId) },
+        columnasEfectivas(config),
+      );
+      return imprimir(reply, c.id, config, doc);
+    },
+  );
 
   /** Flejes de precio por cambiar: productos cuyo precio cambió desde que se imprimió su etiqueta. */
   app.get('/labels/pending', { onRequest: conSesion }, () => flejesPendientes(db));
@@ -263,6 +280,7 @@ export function registrarImpresion(app: FastifyInstance, deps: DependenciasImpre
           anulada: v.estado === 'ANULADA',
           reimpresion: req.body?.reimpresion ?? false,
           abrirCajon: config.abrirCajon,
+          fiado: v.cliente ? { cliente: v.cliente.nombre, saldoClp: v.cliente.saldoClp } : null,
         },
         columnasEfectivas(config),
       );

@@ -50,6 +50,9 @@ export function ticketCierre(datos: DatosTicketCierre, columnas: number): Docume
   if (r.anuladas.cantidad > 0) {
     doc.columnas2(`Anuladas (${r.anuladas.cantidad})`, formatearClp(r.anuladas.totalClp));
   }
+  if (r.abonos.cantidad > 0) {
+    doc.columnas2(`Abonos de fiado (${r.abonos.cantidad})`, formatearClp(r.abonos.totalClp));
+  }
   if (r.devoluciones.cantidad > 0) {
     doc.columnas2(
       `Devoluciones (${r.devoluciones.cantidad})`,
@@ -68,6 +71,9 @@ export function ticketCierre(datos: DatosTicketCierre, columnas: number): Docume
   }
   if (r.devoluciones.efectivoClp > 0) {
     doc.columnas2('- Devoluciones efectivo', formatearClp(r.devoluciones.efectivoClp));
+  }
+  if (r.abonos.efectivoClp > 0) {
+    doc.columnas2('+ Abonos fiado efectivo', formatearClp(r.abonos.efectivoClp));
   }
   doc.columnas2('= Esperado en caja', formatearClp(r.efectivoEsperadoClp), { negrita: true });
   doc.columnas2('Contado', formatearClp(datos.efectivoContadoClp));

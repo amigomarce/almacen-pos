@@ -267,3 +267,36 @@ describe('fiado', () => {
     ).toBe(404);
   });
 });
+
+describe('impresión del fiado', () => {
+  it('el recibo de abono muestra el saldo que quedó, aunque después haya más movimientos', async () => {
+    const rosa = await crear({ nombre: 'Rosa' });
+    await fiar(rosa.id, 2); // $3.780
+    const abono = (await abonar(rosa.id, 2000)).json<{ movimiento: { id: string } }>();
+    await fiar(rosa.id, 1); // después debe más
+    const r = await c.app.inject({
+      method: 'POST',
+      url: `/customers/${rosa.id}/payments/${abono.movimiento.id}/print`,
+      headers: cajero,
+    });
+    expect(r.statusCode).toBe(200);
+    const vista = r.json<{ vistaPrevia: string }>().vistaPrevia;
+    expect(vista).toContain('Rosa');
+    expect(vista).toMatch(/Saldo pendiente\s+\$1\.780/);
+    const no = await c.app.inject({
+      method: 'POST',
+      url: `/customers/${rosa.id}/payments/nada/print`,
+      headers: cajero,
+    });
+    expect(no.statusCode).toBe(404);
+  });
+
+  it('el comprobante de una venta fiada dice a cuenta de quién', async () => {
+    const rosa = await crear({ nombre: 'Rosa Pérez' });
+    const v = (await fiar(rosa.id, 1)).json<{ id: string }>();
+    const r = await c.app.inject({ method: 'POST', url: `/sales/${v.id}/print`, headers: cajero });
+    expect(r.json<{ vistaPrevia: string }>().vistaPrevia).toContain(
+      'FIADO - a cuenta de Rosa Pérez',
+    );
+  });
+});

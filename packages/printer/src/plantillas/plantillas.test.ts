@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { aEscPos, aTexto, CMD } from '../escpos.js';
 import { ticketCierre, textoDiferencia } from './cierre.js';
 import { ticketFlejes } from './flejes.js';
+import { reciboAbono } from './abono.js';
 import { ticketPrueba } from './prueba.js';
 import { ticketVenta, type DatosTicketVenta } from './venta.js';
 
@@ -456,3 +457,80 @@ describe('ticketFlejes', () => {
     expect(texto).toContain('- - - -');
   });
 });
+
+describe('fiado en los tickets', () => {
+  it('venta fiada: a cuenta de quién y su saldo, sin pago ni vuelto', () => {
+    const texto = aTexto(
+      ticketVenta(
+        {
+          ...venta,
+          medioPago: 'FIADO',
+          redondeoClp: 0,
+          totalCobradoClp: venta.totalClp,
+          pagadoClp: 0,
+          vueltoClp: 0,
+          fiado: { cliente: 'Rosa Pérez', saldoClp: 9370 },
+        },
+        32,
+      ),
+    );
+    expect(texto).toContain('FIADO - a cuenta de Rosa Pérez');
+    expect(texto).toMatch(/Saldo de la cuenta\s+\$9\.370/);
+    expect(texto).not.toContain('Vuelto');
+  });
+
+  it('recibo de abono con el saldo pendiente', () => {
+    const texto = aTexto(
+      reciboAbono(
+        {
+          local,
+          cliente: 'Rosa Pérez',
+          fecha: new Date('2026-10-29T15:00:00Z'),
+          cajero: 'Sofía',
+          montoClp: 2000,
+          medioPago: 'EFECTIVO',
+          saldoClp: 1780,
+        },
+        32,
+      ),
+    );
+    expect(texto).toContain('A B O N O');
+    expect(texto).toContain('Rosa Pérez');
+    expect(texto).toMatch(/Abono\s+\$2\.000/);
+    expect(texto).toMatch(/Pagado con\s+Efectivo/);
+    expect(texto).toMatch(/Saldo pendiente\s+\$1\.780/);
+    expect(texto).toContain('no es boleta');
+  });
+
+  it('el cierre informa los abonos y suma los de efectivo al esperado', () => {
+    const r = cuadrarCaja(
+      10000,
+      [{ medioPago: 'FIADO', totalClp: 3780, redondeoClp: 0, anulada: false }],
+      [],
+      [],
+      [
+        { medioPago: 'EFECTIVO', montoClp: 2000 },
+        { medioPago: 'DEBITO', montoClp: 500 },
+      ],
+    );
+    const texto = aTexto(
+      ticketCierre(
+        { ...datosCierreFiado, resumen: r, efectivoContadoClp: 12000, diferenciaClp: 0 },
+        32,
+      ),
+    );
+    expect(texto).toMatch(/Fiado \(1\)\s+\$3\.780/);
+    expect(texto).toMatch(/Abonos de fiado \(2\)\s+\$2\.500/);
+    expect(texto).toMatch(/\+ Abonos fiado efectivo\s+\$2\.000/);
+    expect(texto).toMatch(/= Esperado en caja\s+\$12\.000/);
+  });
+});
+
+const datosCierreFiado = {
+  local,
+  caja: 'Caja 1',
+  abiertaEn: new Date('2026-10-25T11:00:00Z'),
+  abiertaPor: 'Sofía',
+  cerradaEn: new Date('2026-10-25T23:30:00Z'),
+  cerradaPor: 'Dueño',
+};
