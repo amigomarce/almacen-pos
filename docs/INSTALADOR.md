@@ -1,8 +1,9 @@
 # Instalador de la caja (Tauri + servidor Node)
 
-> **Estado (2026-10-26):** la app de macOS está compilada y probada. El instalador de Windows
+> **Estado (2026-10-29):** la app de macOS está compilada y probada. El instalador de Windows
 > **se genera en GitHub Actions** (workflow manual, ~16 min) y su contenido está revisado, pero
-> **falta instalarlo y probarlo en un PC Windows** real.
+> **falta instalarlo y probarlo en un PC Windows** real. El **`.deb` para Zorin OS Lite**
+> (ADR-020) también se genera en GitHub Actions; falta probarlo en el equipo real.
 
 La app instalada es una sola ventana de escritorio que arranca el servidor local como
 **sidecar** de Node 22. No requiere que el dueño abra una terminal ni instale Node.
@@ -11,14 +12,16 @@ La app instalada es una sola ventana de escritorio que arranca el servidor local
 
 - Interfaz React compilada por Vite.
 - `server.mjs` (servidor Fastify + lógica de la caja) compilado con esbuild.
-- `better-sqlite3` con sus binarios nativos.
+- `better-sqlite3` con el binario nativo de la plataforma.
 - Migraciones de SQLite, CSV de categorías/marcas y `seed.sqlite` (11.027 productos).
-- Runtime oficial de Node 22.
+- Runtime oficial de Node 22, como sidecar `almacen-node` (no `node`: en Linux chocaría con
+  el Node del sistema en `/usr/bin`).
 
 La base de datos, los respaldos, la clave del SII y `server.log` se crean en el directorio de
 datos del usuario:
 
 - **Windows:** `%APPDATA%\cl.almacenpos.caja\`
+- **Linux:** `~/.local/share/cl.almacenpos.caja/`
 - **macOS:** `~/Library/Application Support/cl.almacenpos.caja/`
 
 ## Requisitos para compilar
@@ -106,6 +109,65 @@ pnpm --filter @almacen/server sidecar \
 
 Aun así, el empaquetado NSIS debe ejecutarse en Windows.
 
+## Linux (Zorin OS Lite)
+
+Paquete `.deb` x86_64 para el equipo de la caja (ADR-020). Se compila en **Ubuntu 22.04** para
+que sirva en Zorin 17 (base 22.04) y Zorin 18 (base 24.04).
+
+### Generarlo: GitHub Actions
+
+```bash
+gh workflow run instalador-linux.yml --ref main
+gh run list --workflow instalador-linux.yml --limit 1
+gh run download <id> -n instalador-linux -D ./instalador
+```
+
+El workflow reconstruye la semilla, compila, muestra el contenido del paquete y la glibc que
+pide, y hace una **prueba de humo**: instala el `.deb` en el runner, abre la caja en una
+pantalla virtual (Xvfb) y espera a que `/health` responda.
+
+Para compilar en un Ubuntu/Zorin propio:
+
+```bash
+sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev \
+  libssl-dev libayatana-appindicator3-dev librsvg2-dev
+pnpm install && pnpm data:build
+pnpm --filter @almacen/pos tauri build
+```
+
+Salida: `apps/pos/src-tauri/target/release/bundle/deb/almacen-pos_0.1.0_amd64.deb`. En Linux el
+`productName` es `almacen-pos` (`tauri.linux.conf.json`): Debian no acepta tildes ni espacios en
+el nombre del paquete. En el menú sigue apareciendo "Almacén POS".
+
+### Instalar en el equipo
+
+Conviene un **usuario dedicado** a la caja (por ejemplo `caja`), porque el paso 2 cambia los
+atajos de ese usuario.
+
+1. Copia el `.deb` (pendrive) e instálalo; `apt` baja WebKitGTK si falta:
+   ```bash
+   sudo apt install ./almacen-pos_*_amd64.deb
+   ```
+2. Con la sesión del usuario de la caja abierta:
+   ```bash
+   bash /usr/share/almacen-pos/configurar-caja-linux.sh
+   ```
+   Abre la caja al iniciar sesión, quita la tecla Super, Alt+Tab y otros atajos del
+   escritorio, deja la pantalla siempre encendida, oculta los avisos de actualización y agrega
+   el usuario al grupo `lp` (impresora USB; pide la clave). Se deshace con `--deshacer`.
+3. Cierra sesión y vuelve a entrar. La caja se abre sola en pantalla completa.
+
+Para actualizar: `sudo apt install ./nuevo.deb` con la caja cerrada. Los datos no se tocan.
+
+### Si algo falla
+
+- **Ventana en blanco:** la caja ya desactiva el renderizador DMA-BUF. Si sigue en blanco,
+  prueba `WEBKIT_DISABLE_COMPOSITING_MODE=1 almacen-pos` desde una terminal y, si funciona,
+  agrégalo a la línea `Exec=` de `~/.config/autostart/almacen-pos.desktop`.
+- **Impresora USB:** `ls -l /dev/usb/lp0` debe mostrar el grupo `lp`. Con cola de CUPS,
+  créala en *Configuración → Impresoras* con el driver "Raw".
+- **Log:** `~/.local/share/cl.almacenpos.caja/server.log`.
+
 ## Variables de compilación
 
 Se leen al compilar el binario de Rust (`option_env!`):
@@ -152,8 +214,8 @@ guardar como PDF es [`manual-1-pagina.html`](manual-1-pagina.html) /
   arranque del sidecar, semilla e impresora USB (`TODO` en `impresion/transportes.ts`).
 - No está firmado: Windows SmartScreen advierte "editor desconocido". En macOS la app no está
   notarizada. Falta firma/notarización en ambos.
-- `better-sqlite3` viaja con los binarios de todas las plataformas (~16 MB); el sidecar solo
-  usa el de su sistema. Se puede podar para achicar el instalador.
+- El `.deb` de Linux no se ha probado en un equipo con Zorin OS Lite (RAM, escáner, impresora
+  térmica, atajos de xfwm4). Solo hay x86_64.
 - No hay autoactualización.
 - El puerto es fijo (`3001`); si otra app lo ocupa, el sidecar no arranca. En pruebas se puede
   cambiar con `ALMACEN_PORT`, pero la interfaz compilada apunta a 3001.

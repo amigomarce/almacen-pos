@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "almacen-pos",
+  "bundle": {
+    "targets": ["deb"],
+    "linux": {
+      "deb": {
+        "section": "misc",
+        "depends": ["cups-client"],
+        "desktopTemplate": "linux/almacen-pos.desktop",
+        "files": {
+          "/usr/share/almacen-pos/configurar-caja-linux.sh": "linux/configurar-caja-linux.sh"
+        }
+      }
+    }
+  }
+}

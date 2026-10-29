@@ -26,6 +26,8 @@ para extraer recursos; el equipo ya tiene Node 22 disponible en el equipo de la 
   SQLite, `drizzle/` (migraciones), `data/` (CSV) y `data/out/seed.sqlite`.
 - **Runtime**: se copia el binario oficial de **Node 22** a
   `src-tauri/binaries/node-<target-triple>[.exe]` y Tauri lo declara como `externalBin`.
+  (ADR-020 lo renombra a `almacen-node-<target-triple>` y deja solo el `better-sqlite3` del
+  target.)
   No se usa el Node de Homebrew: depende de `libnode` y otras dylibs y no es autocontenido.
 - El script `apps/server/scripts/preparar-sidecar.mjs` hace todo lo anterior. Falla si falta
   `data/out/seed.sqlite` o si el runtime no es Node 22+.

@@ -19,8 +19,22 @@ struct ServidorSidecar(Mutex<Option<CommandChild>>);
 /// Si está al arrancar, la vez anterior terminó con un cierre forzado o un corte de luz.
 struct MarcaEnUso(std::path::PathBuf);
 
+/// Linux (ADR-020): WebKitGTK con el renderizador DMA-BUF deja la ventana en blanco en muchos
+/// equipos con gráficos antiguos (Intel viejos, NVIDIA con driver libre). La caja no necesita
+/// esa aceleración. Se respeta si el equipo ya define la variable.
+#[cfg(target_os = "linux")]
+fn preparar_webkit_linux() {
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        // Antes de crear cualquier hilo o ventana: todavía no hay otros hilos leyendo el entorno.
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    preparar_webkit_linux();
+
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
@@ -73,7 +87,7 @@ pub fn run() {
             let puerto = std::env::var("ALMACEN_PORT").unwrap_or_else(|_| "3001".to_string());
             let mut comando = app
                 .shell()
-                .sidecar("node")?
+                .sidecar("almacen-node")?
                 .args([servidor.to_string_lossy().to_string()])
                 .env("PORT", puerto)
                 .env("HOST", "127.0.0.1")

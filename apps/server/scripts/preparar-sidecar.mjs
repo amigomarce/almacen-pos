@@ -3,13 +3,16 @@
  * Prepara el servidor local para el instalador de Tauri:
  *
  * 1. Compila `apps/server/src/main.ts` con esbuild en un solo `server.mjs`.
- * 2. Copia `better-sqlite3` (con sus prebuilds para todas las plataformas).
+ * 2. Copia `better-sqlite3` solo con el binario nativo del target.
  * 3. Copia migraciones, CSV de categorías/marcas y `seed.sqlite`.
- * 4. Copia el runtime de Node como sidecar de Tauri, con el sufijo del target.
+ * 4. Copia el runtime de Node como sidecar `almacen-node-<target>` de Tauri. No se llama
+ *    `node` porque en Linux el `.deb` lo instala en `/usr/bin` y chocaría con el Node del
+ *    sistema (ADR-020).
  *
  * Uso (desde `apps/server`):
  *   pnpm sidecar
  *   pnpm sidecar -- --node /ruta/node.exe --target x86_64-pc-windows-msvc
+ *   pnpm sidecar -- --node /ruta/node-v22-linux-x64/bin/node --target x86_64-unknown-linux-gnu
  *
  * El binario de Windows no se puede copiar desde macOS: hay que pasar `--node` con el
  * `node.exe` de la distribución oficial (o compilar en Windows/CI).
@@ -50,6 +53,15 @@ function tripleActual() {
     return `${process.arch === 'arm64' ? 'aarch64' : 'x86_64'}-pc-windows-msvc`;
   }
   return `${process.arch === 'x64' ? 'x86_64' : 'aarch64'}-unknown-linux-gnu`;
+}
+
+/** Nombre del prebuild de better-sqlite3 para un target de Rust (glibc en Linux). */
+function prebuildDe(triple) {
+  const arch = triple.startsWith('aarch64') ? 'arm64' : 'x64';
+  if (triple.includes('apple-darwin')) return `darwin-${arch}`;
+  if (triple.includes('windows')) return `win32-${arch}`;
+  if (triple.includes('linux-musl')) return `linuxmusl-${arch}`;
+  return `linux-${arch}`;
 }
 
 const target = valores.target ?? tripleActual();
@@ -108,16 +120,24 @@ await build({
   logLevel: 'info',
 });
 
-// better-sqlite3 se queda externo para usar su addon nativo; el paquete trae prebuilds
-// para macOS, Windows y Linux, así que el mismo recurso sirve en todos los targets.
+// better-sqlite3 se queda externo para usar su addon nativo. El paquete trae prebuilds para
+// todas las plataformas (~16 MB); solo viaja el del target, que es el único que carga.
 const req = createRequire(join(serverDir, 'package.json'));
 const paqueteSqlite = dirname(req.resolve('better-sqlite3/package.json'));
 const destinoSqlite = join(resources, 'node_modules', 'better-sqlite3');
 mkdirSync(destinoSqlite, { recursive: true });
-for (const parte of ['package.json', 'LICENSE', 'lib', 'prebuilds']) {
+for (const parte of ['package.json', 'LICENSE', 'lib']) {
   const origen = join(paqueteSqlite, parte);
   if (existsSync(origen)) cpSync(origen, join(destinoSqlite, parte), { recursive: true });
 }
+const prebuild = `${prebuildDe(target)}.node`;
+const origenPrebuild = join(paqueteSqlite, 'prebuilds', prebuild);
+if (!existsSync(origenPrebuild)) {
+  console.error(`better-sqlite3 no trae binario para ${target} (${prebuild}).`);
+  process.exit(1);
+}
+mkdirSync(join(destinoSqlite, 'prebuilds'), { recursive: true });
+copyFileSync(origenPrebuild, join(destinoSqlite, 'prebuilds', prebuild));
 
 cpSync(join(serverDir, 'drizzle'), join(resources, 'drizzle'), { recursive: true });
 
@@ -135,8 +155,10 @@ for (const archivo of [
 copyFileSync(seed, join(destinoData, 'out', 'seed.sqlite'));
 
 mkdirSync(binDir, { recursive: true });
-const destinoNode = join(binDir, `node-${target}${esWindows ? '.exe' : ''}`);
+const destinoNode = join(binDir, `almacen-node-${target}${esWindows ? '.exe' : ''}`);
 copyFileSync(nodeOrigen, destinoNode);
+// Fuera el sidecar con el nombre anterior (`node-<target>`), ya copiado si era el origen.
+rmSync(join(binDir, `node-${target}${esWindows ? '.exe' : ''}`), { force: true });
 try {
   chmodSync(destinoNode, 0o755);
 } catch {
@@ -149,7 +171,7 @@ console.log('Sidecar listo:');
 console.log(
   `  servidor:      ${join(resources, 'server.mjs')} (${mb(join(resources, 'server.mjs'))})`,
 );
-console.log(`  better-sqlite3: ${destinoSqlite}`);
+console.log(`  better-sqlite3: ${destinoSqlite} (${prebuild})`);
 console.log(
   `  seed:          ${join(destinoData, 'out', 'seed.sqlite')} (${mb(join(destinoData, 'out', 'seed.sqlite'))})`,
 );

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Categories={{categories}}
+Comment=Caja para almacenes de barrio
+Exec={{exec}}
+StartupWMClass={{exec}}
+Icon={{icon}}
+Name=Almacén POS
+Terminal=false
+Type=Application

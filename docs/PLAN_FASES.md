@@ -181,6 +181,13 @@ Windows). Se revisó su contenido: app, Node 22 oficial, servidor, migraciones, 
 para `win32-x64` y semilla de 11.039 productos con atribución ODbL. La app de macOS se recompiló
 con los cambios de ADR-017 y la poda del outbox. Detalle en [`INSTALADOR.md`](INSTALADOR.md).
 
+### Estado al 2026-10-29 — caja en Linux (Zorin OS Lite)
+
+**Hecho (ADR-020):** `.deb` x86_64 compilado en Ubuntu 22.04 por el workflow
+`instalador-linux.yml`, con prueba de humo (instalar, arrancar en Xvfb, `/health`). Sidecar
+renombrado a `almacen-node`, `better-sqlite3` solo con el binario del target y script
+`configurar-caja-linux.sh` para dejar XFCE en modo caja. Guía en [`INSTALADOR.md`](INSTALADOR.md).
+
 ### Estado al 2026-10-26 — respaldo cifrado activo en producción
 
 **Hecho:**
@@ -202,6 +209,8 @@ con los cambios de ADR-017 y la poda del outbox. Detalle en [`INSTALADOR.md`](IN
 - Rotar `SUPABASE_SERVICE_ROLE_KEY` a la secret key nueva `SUPABASE_SECRET_KEY` cuando se cree
   en el panel de Supabase.
 - Instalar y probar el `.exe` en un PC Windows real (sidecar, semilla, impresora USB).
+- Instalar y probar el `.deb` en el equipo con Zorin OS Lite (RAM, escáner, impresora térmica,
+  atajos de XFCE quitados).
 - Firma del instalador (Windows) y notarización (macOS).
 
 ## Mejoras futuras (backlog)

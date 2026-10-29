@@ -1,0 +1,83 @@
+name: Instalador Linux
+
+# Paquete .deb para Zorin OS Lite (ADR-020). Se compila en Ubuntu 22.04 a propósito: Zorin 17
+# usa esa base (glibc 2.35) y Zorin 18 la 24.04. Un binario hecho en 24.04 no arranca en 22.04.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      # La versión sale de "packageManager" en package.json.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/pos/src-tauri -> target
+
+      - name: Dependencias de Tauri (WebKitGTK 4.1)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev xvfb
+
+      - run: pnpm install --frozen-lockfile
+
+      # La semilla de productos no se versiona: se reconstruye desde los exports de OFF.
+      - uses: actions/cache@v6
+        with:
+          path: data/raw
+          key: off-raw-${{ runner.os }}
+
+      - name: Base semilla
+        run: pnpm data:build
+
+      # El Node de setup-node es la distribución oficial: se copia tal cual como sidecar.
+      - name: Paquete .deb
+        run: pnpm --filter @almacen/pos tauri build
+        env:
+          ALMACEN_CLOUD_URL: ${{ vars.ALMACEN_CLOUD_URL }}
+          ALMACEN_CONTACTO: ${{ vars.ALMACEN_CONTACTO }}
+
+      - name: Revisar el paquete
+        run: |
+          deb=$(ls apps/pos/src-tauri/target/release/bundle/deb/*.deb)
+          ls -lh "$deb"
+          dpkg-deb -I "$deb"
+          dpkg-deb -c "$deb" | grep -v '/$' | awk '{print $3, $6}'
+          echo "glibc máxima que pide la caja:"
+          objdump -T apps/pos/src-tauri/target/release/almacen-pos \
+            | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1
+
+      # Prueba de humo: instala el .deb, abre la caja en una pantalla virtual y espera a que el
+      # servidor local responda. Comprueba sidecar, migraciones y semilla en Linux.
+      - name: Instalar y arrancar
+        run: |
+          sudo apt-get install -y ./apps/pos/src-tauri/target/release/bundle/deb/*.deb
+          xvfb-run -a almacen-pos &
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3001/health; then echo; ok=1; break; fi
+            sleep 2
+          done
+          echo "--- server.log"
+          cat ~/.local/share/cl.almacenpos.caja/server.log || true
+          pkill -f almacen-pos || true
+          pkill -f almacen-node || true
+          test "$ok" = 1
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: instalador-linux
+          path: apps/pos/src-tauri/target/release/bundle/deb/*.deb
+          if-no-files-found: error

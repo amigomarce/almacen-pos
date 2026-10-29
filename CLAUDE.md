@@ -95,8 +95,8 @@ Reglas que no se negocian:
 ## 5. Stack (resumen — detalle en docs/ARQUITECTURA.md)
 
 - Monorepo con **pnpm workspaces** + TypeScript estricto en todo.
-- `apps/pos` — **React + Vite** envuelta en **Tauri 2** (Windows es el SO más probable en el
-  local, desarrollo en macOS). Tauri no tiene lógica propia: lanza el servidor como sidecar
+- `apps/pos` — **React + Vite** envuelta en **Tauri 2**. El equipo de la caja usa **Zorin OS
+  Lite** (`.deb`, ADR-020); también hay instalador de Windows y el desarrollo es en macOS. Tauri no tiene lógica propia: lanza el servidor como sidecar
   de Node 22 (ADR-005, ADR-014). La impresión ESC/POS la hace el servidor (`POST /print/...`).
 - `apps/server` — servidor local en la caja: **Node 22 + Fastify + SQLite (better-sqlite3)
   + Drizzle ORM**. Es la fuente de verdad del local.
@@ -140,6 +140,7 @@ pnpm --filter @almacen/server respaldo:restaurar --respaldo var/respaldos/<carpe
 pnpm --filter @almacen/server respaldo:listar-nube
 pnpm --filter @almacen/server respaldo:restaurar-nube --id <id> --si
 pnpm --filter @almacen/pos tauri build   # app/instalador (Node 22 oficial y seed; ver docs/INSTALADOR.md)
+gh workflow run instalador-linux.yml --ref main     # .deb para Zorin OS Lite (ADR-020)
 (cd apps/mobile && npx eas-cli build -p android --profile preview)   # APK del dueño (docs/APP_DUENO.md)
 pnpm deploy:cloud    # publica apps/cloud en Fly.io (docs/NUBE.md)
 ```

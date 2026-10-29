@@ -1,4 +1,4 @@
-//! Modo kiosco de la caja (ADR-019). Pensado para **Windows**, que es donde corre la caja.
+//! Modo kiosco de la caja (ADR-019). Pensado para **Windows** y **Linux**, donde corre la caja.
 //!
 //! La ventana abre en pantalla completa y queda **bloqueada**:
 //! - Alt+F4 y el botón de cerrar no cierran la caja.
@@ -14,6 +14,11 @@
 //! Además, **mientras haya una caja abierta la app no se cierra de ninguna forma**: ni con el
 //! botón del dueño, ni con Alt+F4, ni con la ventana ya fuera de pantalla completa. Primero hay
 //! que hacer el cierre de caja. El estado lo da el servidor local (`/health` → `cajaAbierta`).
+//!
+//! En **Linux** (Zorin OS Lite, ADR-020) la pantalla completa y el bloqueo del cierre funcionan
+//! igual. WebKitGTK no trae atajos de navegador propios y la capa de `src/kiosco.ts` anula el
+//! resto; la tecla Super y Alt+Tab son del gestor de ventanas (xfwm4) y se desactivan con
+//! `linux/configurar-caja-linux.sh`, no desde aquí.
 //!
 //! En desarrollo (`pnpm dev:pos:app`) no se bloquea, salvo con `ALMACEN_KIOSCO=1`.
 
