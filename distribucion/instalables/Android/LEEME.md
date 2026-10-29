@@ -1,7 +1,19 @@
 # App del dueño — Android
 
-El APK **no está incluido** en esta carpeta. Se genera con EAS Build (Expo) y se descarga desde
-el enlace que entrega el servicio.
+En esta carpeta está el APK generado con EAS Build (build `e3441aca`, commit `86018ef`, con la
+pestaña **Reportes**). No se versiona en git (pesa ~88 MB):
+
+```text
+Almacen-Dueno-0.1.0-Android.apk
+```
+
+SHA-256:
+
+```text
+110ebb63e00c0ac95ccd37736f2e946b5e2f6b3b6a9a490ea932b3c4d9d53046
+```
+
+Si falta (por ejemplo, en un clon nuevo del repositorio), se genera así:
 
 ## Generar el APK
 
@@ -11,7 +23,7 @@ npx eas-cli login
 npx eas-cli build --platform android --profile preview
 ```
 
-Al terminar (~10–15 min), descargar el `.apk` y guardarlo acá como:
+Al terminar (10–15 min, más si hay cola en Expo: hasta ~30 min), descargar el `.apk` y guardarlo acá como:
 
 ```text
 Almacen-Dueno-0.1.0-Android.apk
