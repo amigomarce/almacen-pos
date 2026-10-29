@@ -22,6 +22,30 @@ function repoReportesFalso(): RepoReportes {
       Promise.resolve([
         { id: 'a', name: 'Leche', unit: 'UN', stockQtyMilli: 100, stockMinMilli: 1000 },
       ]),
+    datosReporte: () =>
+      Promise.resolve({
+        ventas: [{ id: 'v1', createdAt: new Date(), totalClp: 2000, paymentMethod: 'EFECTIVO' }],
+        lineas: [
+          {
+            saleId: 'v1',
+            productId: 'p1',
+            nameSnapshot: 'Leche',
+            unit: 'UN',
+            qtyMilli: 2000,
+            lineTotalClp: 2000,
+          },
+        ],
+        devoluciones: [],
+        productos: [
+          {
+            id: 'p1',
+            name: 'Leche',
+            unit: 'UN',
+            costClp: 700,
+            stockMilli: 0,
+          },
+        ],
+      }),
     ultimoCierre: () =>
       Promise.resolve({
         id: 'cierre-1',
@@ -80,6 +104,37 @@ describe('rutas de reportes', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(resumenVentas).toHaveBeenCalledWith('dueno-1', new Date('2026-10-25T03:00:00Z'));
+  });
+
+  it('reporte del dueño: más vendidos, margen y sugerido de compra', async () => {
+    const token = await firmarJwt('dueno-1');
+    const res = await crearAppDePrueba().inject({
+      method: 'GET',
+      url: '/report/summary?dias=30',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({
+      dias: 30,
+      ventas: { totalClp: 2000, cantidad: 1 },
+      masVendidos: [{ nombre: 'Leche', montoClp: 2000, margenClp: 600 }],
+      margen: { margenClp: 600, porcentaje: 30 },
+      sugeridoCompra: [{ id: 'p1', nombre: 'Leche' }],
+    });
+    const porDefecto = await crearAppDePrueba().inject({
+      method: 'GET',
+      url: '/report/summary',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(porDefecto.json()).toMatchObject({ dias: 7 });
+    const malo = await crearAppDePrueba().inject({
+      method: 'GET',
+      url: '/report/summary?dias=5',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(malo.statusCode).toBe(400);
+    const sin = await crearAppDePrueba().inject({ method: 'GET', url: '/report/summary' });
+    expect(sin.statusCode).toBe(401);
   });
 
   it('stock bajo', async () => {

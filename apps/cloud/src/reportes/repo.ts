@@ -1,6 +1,13 @@
 import { and, desc, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { cashCloses, products, saleReturns, sales, stockMovements } from '../db/schema.js';
+import {
+  cashCloses,
+  products,
+  saleItems,
+  saleReturns,
+  sales,
+  stockMovements,
+} from '../db/schema.js';
 import { calcularStockBajo, resumirVentas, type RepoReportes } from './servicio.js';
 
 /** Repositorio real de reportes sobre PostgreSQL (Drizzle). */
@@ -57,6 +64,68 @@ export function crearRepoReportes(db: Db): RepoReportes {
         conMinimo,
         saldos.map((s) => ({ productId: s.productId, qty: Number(s.total) })),
       );
+    },
+    async datosReporte(ownerId, desde) {
+      const delPeriodo = and(
+        eq(sales.ownerId, ownerId),
+        eq(sales.status, 'OK'),
+        gte(sales.createdAt, desde),
+      );
+      const ventas = await db
+        .select({
+          id: sales.id,
+          createdAt: sales.createdAt,
+          totalClp: sales.totalClp,
+          paymentMethod: sales.paymentMethod,
+        })
+        .from(sales)
+        .where(delPeriodo);
+      const lineas = await db
+        .select({
+          saleId: saleItems.saleId,
+          productId: saleItems.productId,
+          nameSnapshot: saleItems.nameSnapshot,
+          unit: saleItems.unit,
+          qtyMilli: saleItems.qtyMilli,
+          lineTotalClp: saleItems.lineTotalClp,
+        })
+        .from(saleItems)
+        .innerJoin(sales, eq(sales.id, saleItems.saleId))
+        .where(delPeriodo);
+      const devoluciones = await db
+        .select({
+          createdAt: saleReturns.createdAt,
+          refundClp: saleReturns.refundClp,
+          paymentMethod: saleReturns.paymentMethod,
+          items: saleReturns.items,
+        })
+        .from(saleReturns)
+        .where(and(eq(saleReturns.ownerId, ownerId), gte(saleReturns.createdAt, desde)));
+      const catalogo = await db
+        .select({
+          id: products.id,
+          name: products.name,
+          unit: products.unit,
+          costClp: products.costClp,
+        })
+        .from(products)
+        .where(and(eq(products.ownerId, ownerId), isNull(products.deletedAt)));
+      // Postgres suma los movimientos: una fila por producto.
+      const saldos = await db
+        .select({
+          productId: stockMovements.productId,
+          total: sql<string>`coalesce(sum(${stockMovements.qtyMilli}), 0)`,
+        })
+        .from(stockMovements)
+        .where(eq(stockMovements.ownerId, ownerId))
+        .groupBy(stockMovements.productId);
+      const saldo = new Map(saldos.map((s) => [s.productId, Number(s.total)]));
+      return {
+        ventas,
+        lineas,
+        devoluciones,
+        productos: catalogo.map((p) => ({ ...p, stockMilli: saldo.get(p.id) ?? 0 })),
+      };
     },
     async ultimoCierre(ownerId) {
       const [fila] = await db

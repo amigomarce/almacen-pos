@@ -52,9 +52,47 @@ export interface FiltroPrecios {
 }
 
 export interface ResumenVentas {
+  /** Ventas netas (menos devoluciones). */
   totalClp: number;
   cantidad: number;
   porMedio: Record<string, number>;
+  devolucionesClp?: number;
+}
+
+/** Período del reporte: hoy, 7 o 30 días (días de Chile). */
+export type DiasReporte = 1 | 7 | 30;
+
+export interface ReporteDueno {
+  desde: string;
+  dias: number;
+  ventas: ResumenVentas;
+  ticketPromedioClp: number;
+  masVendidos: {
+    productoId: string | null;
+    nombre: string;
+    unidad: string;
+    cantidadMilli: number;
+    montoClp: number;
+    margenClp: number | null;
+  }[];
+  margen: {
+    ventasClp: number;
+    costoClp: number;
+    margenClp: number;
+    porcentaje: number | null;
+    sinCostoClp: number;
+  };
+  porHora: { hora: number; montoClp: number; cantidad: number }[];
+  porDia: { fecha: string; montoClp: number; cantidad: number }[];
+  sugeridoCompra: {
+    id: string;
+    nombre: string;
+    unidad: string;
+    stockMilli: number;
+    ventaDiariaMilli: number;
+    diasDeStock: number;
+    sugeridoMilli: number;
+  }[];
 }
 
 export interface ProductoStockBajo {
@@ -185,6 +223,10 @@ export class ClienteApi {
 
   ventasDelDia(): Promise<ResumenVentas> {
     return this.pedir('/report/sales/today');
+  }
+
+  reporte(dias: DiasReporte): Promise<ReporteDueno> {
+    return this.pedir(`/report/summary?dias=${String(dias)}`);
   }
 
   stockBajo(): Promise<ProductoStockBajo[]> {

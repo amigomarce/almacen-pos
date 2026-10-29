@@ -6,12 +6,14 @@ import { CambioMasivo } from './CambioMasivo';
 import { Inicio } from './Inicio';
 import { Productos } from './Productos';
 import { Recepcion } from './Recepcion';
+import { Reportes } from './Reportes';
 import { VincularCaja } from './VincularCaja';
 
-type Tab = 'inicio' | 'productos' | 'cambio' | 'recepcion' | 'caja';
+type Tab = 'inicio' | 'reportes' | 'productos' | 'cambio' | 'recepcion' | 'caja';
 
 const TABS: { id: Tab; etiqueta: string }[] = [
   { id: 'inicio', etiqueta: 'Inicio' },
+  { id: 'reportes', etiqueta: 'Reportes' },
   { id: 'productos', etiqueta: 'Productos' },
   { id: 'cambio', etiqueta: 'Precios' },
   { id: 'recepcion', etiqueta: 'Recibir' },
@@ -42,6 +44,7 @@ export function Principal() {
       </View>
       <View style={{ flex: 1 }}>
         {tab === 'inicio' ? <Inicio /> : null}
+        {tab === 'reportes' ? <Reportes /> : null}
         {tab === 'productos' ? <Productos /> : null}
         {tab === 'cambio' ? <CambioMasivo /> : null}
         {tab === 'recepcion' ? <Recepcion /> : null}

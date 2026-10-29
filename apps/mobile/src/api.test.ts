@@ -29,6 +29,16 @@ describe('ClienteApi (app del dueño)', () => {
     });
   });
 
+  it('pide el reporte del período', async () => {
+    const fetchFn = responder(200, { dias: 30 });
+    const cliente = new ClienteApi('http://nube', fetchFn);
+    await cliente.reporte(30);
+    expect(fetchFn).toHaveBeenCalledWith('http://nube/report/summary?dias=30', {
+      method: 'GET',
+      headers: {},
+    });
+  });
+
   it('arma la búsqueda de productos', async () => {
     const fetchFn = responder(200, []);
     await new ClienteApi('http://nube', fetchFn).productos('pan', 10);

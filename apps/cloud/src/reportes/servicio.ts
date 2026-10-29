@@ -1,3 +1,5 @@
+import type { DevolucionReporte, LineaReporte, ProductoReporte, VentaReporte } from './analisis.js';
+
 export interface ResumenVentas {
   /** Ventas netas: lo vendido menos lo devuelto en el período. */
   totalClp: number;
@@ -62,6 +64,13 @@ export function calcularStockBajo(
     .sort((a, b) => a.stockQtyMilli - b.stockQtyMilli);
 }
 
+export interface DatosReporte {
+  ventas: VentaReporte[];
+  lineas: LineaReporte[];
+  devoluciones: DevolucionReporte[];
+  productos: ProductoReporte[];
+}
+
 export interface RepoReportes {
   /** Ventas OK desde `desde` (total, cantidad y desglose por medio de pago). */
   resumenVentas(ownerId: string, desde: Date): Promise<ResumenVentas>;
@@ -69,6 +78,8 @@ export interface RepoReportes {
   stockBajo(ownerId: string): Promise<ProductoStockBajo[]>;
   /** Último cierre de caja subido por la caja (para el aviso en el móvil). */
   ultimoCierre(ownerId: string): Promise<CierrePublico | null>;
+  /** Filas del período para los reportes (ventas OK, líneas, devoluciones y productos). */
+  datosReporte(ownerId: string, desde: Date): Promise<DatosReporte>;
 }
 
 export interface CierrePublico {
