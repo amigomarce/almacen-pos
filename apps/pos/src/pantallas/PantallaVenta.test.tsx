@@ -339,3 +339,64 @@ describe('venta en espera (F8)', () => {
     );
   });
 });
+
+describe('cobro fiado (tecla F)', () => {
+  const rosa = {
+    id: 'c1',
+    nombre: 'Rosa Pérez',
+    telefono: null,
+    nota: null,
+    limiteClp: 5000,
+    activo: true,
+    saldoClp: 3000,
+    ultimoMovimiento: null,
+  };
+
+  it('elige al vecino y carga la venta a su cuenta', async () => {
+    const { s, u, escanear } = montar({ clientes: [{ ...rosa }] });
+    await escanear('7801');
+    await u.keyboard('{F12}');
+    const cobro = await screen.findByRole('dialog', { name: 'Cobrar' });
+    await u.keyboard('f');
+    const buscar = await within(cobro).findByLabelText('Buscar vecino');
+    // Escribir en el buscador no cambia el medio de pago (la "e" no elige Efectivo).
+    await u.type(buscar, 'ro');
+    expect(within(cobro).getByRole('button', { name: /Fiado/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await u.keyboard('{Enter}');
+    expect(within(cobro).getByText(/A cuenta de/)).toHaveTextContent('Rosa Pérez');
+    expect(within(cobro).getByText(/quedará debiendo/)).toHaveTextContent('$4.890');
+    await u.click(within(cobro).getByRole('button', { name: 'Fiar (Enter)' }));
+    await waitFor(() => {
+      expect(s.estado.pedidos.at(-1)).toMatchObject({ medioPago: 'FIADO', clienteId: 'c1' });
+    });
+    expect(s.estado.clientes[0]?.saldoClp).toBe(4890);
+  });
+
+  it('si pasa su límite pide la clave del dueño', async () => {
+    const { s, u, escanear } = montar({ clientes: [{ ...rosa, saldoClp: 4000 }] });
+    await escanear('7801');
+    await u.keyboard('{F12}');
+    const cobro = await screen.findByRole('dialog', { name: 'Cobrar' });
+    await u.click(within(cobro).getByRole('button', { name: /Fiado/ }));
+    await u.click(await within(cobro).findByRole('button', { name: /Rosa Pérez/ }));
+    await u.click(within(cobro).getByRole('button', { name: 'Fiar (Enter)' }));
+    expect(within(cobro).getByRole('alert')).toHaveTextContent('escribe la clave del dueño');
+    await u.type(within(cobro).getByLabelText(/clave del dueño/), '1234');
+    await u.click(within(cobro).getByRole('button', { name: 'Fiar (Enter)' }));
+    await waitFor(() => {
+      expect(s.estado.pedidos.at(-1)).toMatchObject({ medioPago: 'FIADO', pinDueno: '1234' });
+    });
+  });
+
+  it('sin vecinos con cuenta lo explica', async () => {
+    const { u, escanear } = montar();
+    await escanear('7801');
+    await u.keyboard('{F12}');
+    const cobro = await screen.findByRole('dialog', { name: 'Cobrar' });
+    await u.keyboard('f');
+    expect(await within(cobro).findByText(/No hay vecinos con cuenta/)).toBeInTheDocument();
+  });
+});

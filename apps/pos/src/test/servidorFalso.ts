@@ -50,6 +50,19 @@ export interface EstadoFalso {
   tokens: Map<string, UsuarioFalso>;
   fallos: Map<string, number>;
   sesionCaja: SesionCaja | null;
+  /** Vecinos con cuenta corriente (fiado). */
+  clientes: {
+    id: string;
+    nombre: string;
+    telefono: string | null;
+    nota: string | null;
+    limiteClp: number | null;
+    activo: boolean;
+    saldoClp: number;
+    ultimoMovimiento: string | null;
+  }[];
+  /** Movimientos de las cuentas (por cliente). */
+  movimientosFiado: Record<string, Record<string, unknown>[]>;
   /** Flejes de precio por cambiar (GET /labels/pending). */
   flejes: {
     id: string;
@@ -132,6 +145,8 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
     fallos: new Map(),
     sesionCaja: null,
     movimientos: [],
+    clientes: [],
+    movimientosFiado: {},
     flejes: [],
     productos: [...PRODUCTOS_FALSOS],
     creados: [],
@@ -420,6 +435,23 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
         estado.movimientos = [];
         return json(200, { caja: { id: 'c1', name: 'Caja 1' }, sesion, resumen: r });
       }
+      case 'POST /customers': {
+        if (!usuario) return sinSesion();
+        if (usuario.role !== 'DUENO')
+          return json(403, { error: 'SIN_PERMISO', mensaje: 'Solo el dueño' });
+        const nuevo = {
+          id: `c${String(estado.clientes.length + 1)}`,
+          nombre: String(cuerpo['nombre']),
+          telefono: (cuerpo['telefono'] as string | null | undefined) ?? null,
+          nota: null,
+          limiteClp: (cuerpo['limiteClp'] as number | null | undefined) ?? null,
+          activo: true,
+          saldoClp: 0,
+          ultimoMovimiento: null,
+        };
+        estado.clientes.push(nuevo);
+        return json(201, nuevo);
+      }
       case 'GET /labels/pending':
         if (!usuario) return sinSesion();
         return json(200, estado.flejes);
@@ -646,9 +678,38 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
           });
         }
         const medio = String(cuerpo['medioPago']);
+        let vecino: (typeof estado.clientes)[number] | undefined;
+        if (medio === 'FIADO') {
+          vecino = estado.clientes.find((x) => x.id === cuerpo['clienteId']);
+          if (!vecino)
+            return json(400, { error: 'FALTA_CLIENTE', mensaje: 'Elige a qué vecino se le fía' });
+          const pasa = vecino.limiteClp !== null && vecino.saldoClp + q.totalClp > vecino.limiteClp;
+          if (pasa && usuario.role !== 'DUENO' && cuerpo['pinDueno'] !== '1234') {
+            return json(403, {
+              error: 'FIADO_EXCEDE_LIMITE',
+              mensaje: 'Pasa su límite: se necesita la clave del dueño',
+            });
+          }
+          vecino.saldoClp += q.totalClp;
+          (estado.movimientosFiado[vecino.id] ??= []).unshift({
+            id: `mf${String(Date.now())}`,
+            tipo: 'VENTA',
+            montoClp: q.totalClp,
+            ventaId: id,
+            medioPago: null,
+            motivo: null,
+            usuario: usuario.name,
+            creadoEn: '2026-10-25T12:00:00.000Z',
+          });
+        }
         const r = medio === 'EFECTIVO' && estado.redondeo ? redondear(q.totalClp) : 0;
         const aPagar = q.totalClp + r;
-        const pagado = medio === 'EFECTIVO' ? Number(cuerpo['pagadoClp'] ?? aPagar) : aPagar;
+        const pagado =
+          medio === 'FIADO'
+            ? aPagar
+            : medio === 'EFECTIVO'
+              ? Number(cuerpo['pagadoClp'] ?? aPagar)
+              : aPagar;
         if (pagado < aPagar)
           return json(400, {
             error: 'PAGO_INSUFICIENTE',
@@ -686,6 +747,9 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
             devueltoMilli: 0,
             devueltoClp: 0,
           })),
+          cliente: vecino
+            ? { id: vecino.id, nombre: vecino.nombre, saldoClp: vecino.saldoClp }
+            : null,
           devoluciones: [] as Record<string, unknown>[],
           devueltoClp: 0,
           anulacion: null,
@@ -752,6 +816,63 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
             vistaPrevia: 'COMPROBANTE DE VENTA - NO VÁLIDO COMO BOLETA',
             motivo: estado.impresora ? null : 'SIN_IMPRESORA',
           });
+        }
+        const listaClientes = /^GET \/customers(\?.*)?$/.exec(clave);
+        if (listaClientes) {
+          if (!usuario) return sinSesion();
+          const q = new URLSearchParams(listaClientes[1]?.slice(1) ?? '');
+          const lista = estado.clientes.filter((x) => x.activo || q.get('inactivos') === '1');
+          return json(
+            200,
+            q.get('orden') === 'deuda' ? [...lista].sort((a, b) => b.saldoClp - a.saldoClp) : lista,
+          );
+        }
+        const abonoImprimir = /^POST \/customers\/([^/]+)\/payments\/([^/]+)\/print$/.exec(clave);
+        if (abonoImprimir) {
+          if (!usuario) return sinSesion();
+          return json(200, { impreso: estado.impresora, vistaPrevia: 'ABONO', motivo: null });
+        }
+        const abono = /^POST \/customers\/([^/]+)\/(payments|adjustments)$/.exec(clave);
+        if (abono) {
+          if (!usuario) return sinSesion();
+          const v = estado.clientes.find((x) => x.id === abono[1]);
+          if (!v) return json(404, { error: 'NO_ENCONTRADO', mensaje: 'Cliente no encontrado' });
+          const esAbono = abono[2] === 'payments';
+          if (!esAbono && usuario.role !== 'DUENO') {
+            return json(403, { error: 'SIN_PERMISO', mensaje: 'Solo el dueño' });
+          }
+          const monto = Number(cuerpo['montoClp']);
+          if (esAbono && monto > v.saldoClp) {
+            return json(400, {
+              error: 'ABONO_EXCEDE_DEUDA',
+              mensaje: 'El abono es mayor que lo que debe',
+            });
+          }
+          const delta = esAbono ? -monto : monto;
+          v.saldoClp += delta;
+          const movimiento = {
+            id: `mf${String((estado.movimientosFiado[v.id] ?? []).length + 1)}`,
+            tipo: esAbono ? 'ABONO' : 'AJUSTE',
+            montoClp: delta,
+            ventaId: null,
+            medioPago: esAbono ? cuerpo['medioPago'] : null,
+            motivo: esAbono ? null : cuerpo['motivo'],
+            usuario: usuario.name,
+            creadoEn: '2026-10-25T13:00:00.000Z',
+          };
+          (estado.movimientosFiado[v.id] ??= []).unshift(movimiento);
+          return json(201, { movimiento, cliente: v });
+        }
+        const detalleCliente = /^(GET|PATCH) \/customers\/([^/?]+)$/.exec(clave);
+        if (detalleCliente) {
+          if (!usuario) return sinSesion();
+          const v = estado.clientes.find((x) => x.id === detalleCliente[2]);
+          if (!v) return json(404, { error: 'NO_ENCONTRADO', mensaje: 'Cliente no encontrado' });
+          if (detalleCliente[1] === 'PATCH') {
+            Object.assign(v, cuerpo);
+            return json(200, v);
+          }
+          return json(200, { cliente: v, movimientos: estado.movimientosFiado[v.id] ?? [] });
         }
         const devolver = /^POST \/sales\/(.+)\/returns$/.exec(clave);
         if (devolver) {
