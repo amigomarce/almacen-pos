@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toQR } from 'toqr';
+import { SeccionPantallaCompleta } from '../configuracion/SeccionPantallaCompleta.js';
+import { crearPantallaCompleta, type PantallaCompleta } from '../kiosco.js';
 import {
   ErrorApi,
   type CambiosConfiguracion,
@@ -990,7 +992,18 @@ function SeccionNube({ api }: { api: ClienteApi }) {
 }
 
 /** Configuración del local (solo el dueño). */
-export function PantallaConfiguracion({ api }: { api: ClienteApi }) {
+export function PantallaConfiguracion({
+  api,
+  pantalla,
+  cajaAbierta = false,
+}: {
+  api: ClienteApi;
+  /** Con un turno sin cerrar no se puede salir de pantalla completa. */
+  cajaAbierta?: boolean;
+  /** Inyectable para tests; por defecto controla la ventana de Tauri. */
+  pantalla?: PantallaCompleta;
+}) {
+  const pantallaCompleta = useMemo(() => pantalla ?? crearPantallaCompleta(), [pantalla]);
   return (
     <section className="pantalla-caja">
       <SeccionPrimeraConfiguracion api={api} />
@@ -998,6 +1011,7 @@ export function PantallaConfiguracion({ api }: { api: ClienteApi }) {
       <SeccionImpresora api={api} />
       <SeccionRespaldos api={api} />
       <SeccionNube api={api} />
+      <SeccionPantallaCompleta pantalla={pantallaCompleta} cajaAbierta={cajaAbierta} />
     </section>
   );
 }

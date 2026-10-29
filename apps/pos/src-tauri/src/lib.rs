@@ -3,9 +3,13 @@
 //! En desarrollo la interfaz usa el servidor que levanta `pnpm dev:pos:app`. En la versión
 //! compilada, Tauri arranca el servidor Node como sidecar, con la base y los respaldos en el
 //! directorio de datos de la app, y lo detiene al cerrar.
+//!
+//! La ventana funciona en modo kiosco: pantalla completa bloqueada (ver `kiosco.rs`, ADR-019).
+
+mod kiosco;
 
 use std::sync::Mutex;
-use tauri::{Manager, RunEvent};
+use tauri::{Manager, RunEvent, WindowEvent};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
@@ -13,9 +17,31 @@ struct ServidorSidecar(Mutex<Option<CommandChild>>);
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let app = tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .invoke_handler(tauri::generate_handler![
+            kiosco::salir_pantalla_completa,
+            kiosco::entrar_pantalla_completa,
+            kiosco::estado_pantalla_completa
+        ])
+        // Alt+F4, el botón de cerrar o Cmd+W no cierran la caja mientras está en pantalla
+        // completa bloqueada ni mientras haya una caja abierta.
+        .on_window_event(|ventana, evento| {
+            if let WindowEvent::CloseRequested { api, .. } = evento {
+                if !kiosco::puede_cerrarse(ventana) {
+                    api.prevent_close();
+                }
+            }
+        });
+    #[cfg(target_os = "macos")]
+    let builder = builder.menu(kiosco::menu_mac);
+
+    let app = builder
         .setup(|app| {
+            if let Some(ventana) = app.get_webview_window("main") {
+                kiosco::preparar(&ventana)?;
+            }
+
             // En dev el servidor lo levanta `beforeDevCommand`.
             if cfg!(debug_assertions) {
                 return Ok(());
@@ -112,6 +138,13 @@ pub fn run() {
         .expect("no se pudo iniciar la caja");
 
     app.run(|app, evento| {
+        // Cmd+Q o el cierre de la última ventana: mismas reglas. `app.exit` (código explícito)
+        // sí sale.
+        if let RunEvent::ExitRequested { api, code, .. } = &evento {
+            if code.is_none() && !kiosco::puede_cerrarse(app) {
+                api.prevent_exit();
+            }
+        }
         if let RunEvent::Exit = evento {
             if let Some(estado) = app.try_state::<ServidorSidecar>() {
                 if let Some(child) = estado.0.lock().expect("sidecar envenenado").take() {

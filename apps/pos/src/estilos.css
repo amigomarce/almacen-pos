@@ -240,6 +240,22 @@ body {
   color: var(--texto-suave);
 }
 
+/* --- Aviso al intentar cerrar la app con la caja abierta (ADR-019) --- */
+.aviso-cierre {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1rem;
+  background: #8a5a00;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
 .mensaje-aviso {
   min-height: 1.4em;
   margin: 0;

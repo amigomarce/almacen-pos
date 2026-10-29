@@ -34,6 +34,8 @@ export interface EstadoServidor {
   modoPrueba: boolean;
   /** `true` con SII_DIRECTO en ambiente de certificación: las boletas no tienen validez. */
   ambienteCertificacion?: boolean;
+  /** `true` con un turno de caja sin cerrar: la app de escritorio no se puede cerrar. */
+  cajaAbierta?: boolean;
 }
 
 export interface Usuario {

@@ -19,6 +19,11 @@ import { PantallaConfiguracion } from './pantallas/PantallaConfiguracion.js';
 import { PantallaProductos } from './pantallas/PantallaProductos.js';
 import { PantallaRecepcion } from './pantallas/PantallaRecepcion.js';
 import { PantallaVenta } from './pantallas/PantallaVenta.js';
+import {
+  escucharCierreBloqueado,
+  MENSAJE_CIERRE_BLOQUEADO,
+  type MotivoCierreBloqueado,
+} from './kiosco.js';
 import { guardarToken, leerToken } from './sesion.js';
 import { useEstadoServidor, type Conexion } from './useEstadoServidor.js';
 
@@ -49,6 +54,20 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
     valor: ConfiguracionLocal | null;
   } | null>(null);
   const [fase, setFase] = useState<Fase>({ tipo: 'CARGANDO' });
+  // Intento de cerrar la app (Alt+F4, botón de la ventana) rechazado por la caja abierta o la
+  // pantalla completa (ADR-019).
+  const [cierreBloqueado, setCierreBloqueado] = useState<MotivoCierreBloqueado | null>(null);
+  useEffect(() => escucharCierreBloqueado(setCierreBloqueado), []);
+  useEffect(() => {
+    if (!cierreBloqueado) return;
+    const id = setTimeout(() => {
+      setCierreBloqueado(null);
+    }, 8000);
+    return () => {
+      clearTimeout(id);
+    };
+  }, [cierreBloqueado]);
+  const cajaAbierta = conexion.tipo === 'OK' && conexion.estado.cajaAbierta === true;
 
   const volverAlPin = useCallback(() => {
     guardarToken(null);
@@ -153,6 +172,20 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
     <main className="app">
       {conexion.tipo === 'OK' && conexion.estado.modoPrueba && <AvisoModoPrueba />}
       {conexion.tipo === 'OK' && conexion.estado.ambienteCertificacion && <AvisoCertificacion />}
+      {cierreBloqueado && (
+        <div className="aviso-cierre" role="alert">
+          {MENSAJE_CIERRE_BLOQUEADO[cierreBloqueado]}
+          <button
+            type="button"
+            className="boton boton-chico"
+            onClick={() => {
+              setCierreBloqueado(null);
+            }}
+          >
+            Entendido
+          </button>
+        </div>
+      )}
       <header className="barra">
         <h1>Almacén POS</h1>
         {fase.tipo === 'CAJA' && (
@@ -227,6 +260,7 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
               vista={vista}
               api={api}
               reintentar={() => void cargarCaja(fase.usuario)}
+              cajaAbierta={cajaAbierta}
               alAbrir={(caja) => {
                 setFase({ ...fase, caja });
               }}
@@ -248,8 +282,11 @@ function Caja({
   reintentar,
   alAbrir,
   alCerrarCaja,
+  cajaAbierta,
 }: {
   fase: Extract<Fase, { tipo: 'CAJA' }>;
+  /** Según el servidor (`/health`): algún turno sin cerrar en este equipo. */
+  cajaAbierta: boolean;
   vista: Vista;
   api: ClienteApi;
   reintentar: () => void;
@@ -285,7 +322,9 @@ function Caja({
       {vista === 'CAJA' && (
         <PantallaCaja api={api} esDueno={esDueno} alCambiarCaja={alCerrarCaja} />
       )}
-      {vista === 'CONFIGURACION' && esDueno && <PantallaConfiguracion api={api} />}
+      {vista === 'CONFIGURACION' && esDueno && (
+        <PantallaConfiguracion api={api} cajaAbierta={cajaAbierta || fase.caja.sesion !== null} />
+      )}
     </>
   );
 }
