@@ -39,6 +39,16 @@ describe('ClienteApi (app del dueño)', () => {
     });
   });
 
+  it('pide el reporte de fiado', async () => {
+    const fetchFn = responder(200, { totalClp: 0, deudores: [] });
+    const cliente = new ClienteApi('http://nube', fetchFn);
+    await expect(cliente.fiado()).resolves.toEqual({ totalClp: 0, deudores: [] });
+    expect(fetchFn).toHaveBeenCalledWith('http://nube/report/fiado', {
+      method: 'GET',
+      headers: {},
+    });
+  });
+
   it('arma la búsqueda de productos', async () => {
     const fetchFn = responder(200, []);
     await new ClienteApi('http://nube', fetchFn).productos('pan', 10);

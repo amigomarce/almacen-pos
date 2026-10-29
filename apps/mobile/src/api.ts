@@ -59,6 +59,21 @@ export interface ResumenVentas {
   devolucionesClp?: number;
 }
 
+/** Fiado (ADR-022): quién debe y cuánto. */
+export interface ReporteFiado {
+  totalClp: number;
+  deudores: {
+    id: string;
+    nombre: string;
+    telefono: string | null;
+    saldoClp: number;
+    limiteClp: number | null;
+    sobreLimite: boolean;
+    ultimoAbono: string | null;
+    ultimoMovimiento: string | null;
+  }[];
+}
+
 /** Período del reporte: hoy, 7 o 30 días (días de Chile). */
 export type DiasReporte = 1 | 7 | 30;
 
@@ -223,6 +238,10 @@ export class ClienteApi {
 
   ventasDelDia(): Promise<ResumenVentas> {
     return this.pedir('/report/sales/today');
+  }
+
+  fiado(): Promise<ReporteFiado> {
+    return this.pedir('/report/fiado');
   }
 
   reporte(dias: DiasReporte): Promise<ReporteDueno> {
