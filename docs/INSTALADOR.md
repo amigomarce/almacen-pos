@@ -163,6 +163,13 @@ El workflow reconstruye la semilla, compila, muestra el contenido del paquete y 
 pide, y hace una **prueba de humo**: instala el `.deb` en el runner, abre la caja en una
 pantalla virtual (Xvfb) y espera a que `/health` responda.
 
+**Primera corrida (40876334711, 2026-10-29, ~7 min):** `almacen-pos_0.1.0_amd64.deb` de 48 MB
+(133 MB instalado). `Depends: cups-client, libwebkit2gtk-4.1-0, libgtk-3-0`. Trae
+`/usr/bin/almacen-pos`, `/usr/bin/almacen-node` (Node 22 oficial), `/usr/lib/almacen-pos/server/`
+con las 10 migraciones, `better-sqlite3` solo con `linux-x64.node`, la semilla y
+`/usr/share/almacen-pos/configurar-caja-linux.sh`. Pide glibc 2.34 (Zorin 17 trae 2.35). La prueba
+de humo pasó: migró la base, cargó la semilla, creó el primer respaldo y `/health` respondió.
+
 Para compilar en un Ubuntu/Zorin propio:
 
 ```bash
