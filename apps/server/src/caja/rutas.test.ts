@@ -57,6 +57,16 @@ describe('caja', () => {
     expect(res.json()).toMatchObject({ caja: { name: 'Caja 1' }, sesion: null, resumen: null });
   });
 
+  it('/health informa si hay caja abierta (la app de escritorio no se cierra mientras tanto)', async () => {
+    const salud = async () =>
+      (await c.app.inject({ method: 'GET', url: '/health' })).json<{ cajaAbierta: boolean }>();
+    expect((await salud()).cajaAbierta).toBe(false);
+    expect((await abrir(10000)).statusCode).toBe(201);
+    expect((await salud()).cajaAbierta).toBe(true);
+    expect((await cerrar(10000)).statusCode).toBe(200);
+    expect((await salud()).cajaAbierta).toBe(false);
+  });
+
   it('abre con el efectivo inicial y queda registrada a nombre de quien abrió', async () => {
     const res = await abrir(20000);
     expect(res.statusCode).toBe(201);

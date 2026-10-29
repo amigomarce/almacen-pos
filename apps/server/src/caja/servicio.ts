@@ -67,6 +67,20 @@ function aSesion(db: Db, f: FilaSesion): SesionCaja {
   };
 }
 
+/**
+ * ¿Hay algún turno de caja sin cerrar en este equipo? Mientras lo haya, la app de escritorio
+ * no se puede cerrar de ninguna forma (ADR-019).
+ */
+export function hayCajaAbierta(db: Db): boolean {
+  return (
+    db
+      .select({ id: cashSessions.id })
+      .from(cashSessions)
+      .where(isNull(cashSessions.closedAt))
+      .get() !== undefined
+  );
+}
+
 function filaAbierta(db: Db, registerId: string): FilaSesion | undefined {
   return db
     .select()

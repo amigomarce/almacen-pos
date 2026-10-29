@@ -8,6 +8,7 @@ import { registrarAsistente } from './asistente/rutas.js';
 import { registrarAuth } from './auth/rutas.js';
 import { Sesiones } from './auth/sesiones.js';
 import { registrarCaja } from './caja/rutas.js';
+import { hayCajaAbierta } from './caja/servicio.js';
 import { registrarConfiguracion } from './configuracion/rutas.js';
 import { configBalanzaDe, leerConfiguracion } from './configuracion/servicio.js';
 import type { Db } from './db/client.js';
@@ -152,6 +153,14 @@ export function crearApp({
     } catch {
       // Base sin migrar o caída: se informa como null.
     }
+    // La app de escritorio lo consulta antes de permitir cerrarse (ADR-019). Con la base caída
+    // no se puede vender, así que se informa `false` para poder reiniciar la caja.
+    let cajaAbierta = false;
+    try {
+      cajaAbierta = hayCajaAbierta(db);
+    } catch {
+      // Base caída: queda en `false`.
+    }
     let sii: ReturnType<typeof estadoColaSii> | null = null;
     try {
       sii = estadoColaSii(db);
@@ -166,6 +175,7 @@ export function crearApp({
       modalidadBoleta,
       modoPrueba: modalidadBoleta === 'MOCK',
       ambienteCertificacion,
+      cajaAbierta,
       sii,
       hora: new Date().toISOString(),
     };
