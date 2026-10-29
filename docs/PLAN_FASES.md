@@ -235,3 +235,11 @@ renombrado a `almacen-node`, `better-sqlite3` solo con el binario del target y s
   mostrarla con placeholder en alta/venta/productos y sincronizarla. Para uso offline hay que
   cachear los archivos; las fotos de OFF son CC BY-SA y requieren atribución propia. Detalle
   en [`BASE_PRODUCTOS.md`](BASE_PRODUCTOS.md) §4.
+- **Foto del producto al escanear, para que el cliente confirme.** Al pasar un código, la caja
+  muestra la imagen del producto junto a su nombre y precio, en grande y visible para el
+  cliente, para que confirme que lo que marcó la caja es lo que está comprando (evita cobrar
+  un sabor, tamaño o marca equivocados). Depende de la mejora anterior (`image_url` guardada y
+  cacheada para uso offline). Requisitos: no agregar pasos ni popups a la venta (§3, venta en
+  ≤ 3 acciones; la imagen se reemplaza sola con el siguiente escaneo), un recuadro con el
+  nombre si el producto no tiene foto y, más adelante, la opción de mostrarla en una segunda
+  pantalla orientada al cliente. El dueño puede subir o cambiar la foto desde la app móvil.
