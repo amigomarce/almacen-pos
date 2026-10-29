@@ -6,11 +6,12 @@ Archivo incluido:
 Almacen-POS-0.1.0-Windows-x64.exe
 ```
 
-Generado por el workflow **`instalador-windows`** de GitHub Actions (run `40354376643`, commit
-`459283b`). Incluye como valor inicial:
+Generado por el workflow **`instalador-windows`** de GitHub Actions (run `40885105677`, commit
+`b797242`). Incluye como valor inicial:
 
 ```text
 ALMACEN_CLOUD_URL = https://almacen-pos-nube.fly.dev
+ALMACEN_CONTACTO  = arrayan.labs@gmail.com
 ```
 
 La URL quedó embebida en `almacen-pos.exe`; se puede cambiar después desde la app.
@@ -19,7 +20,7 @@ La URL quedó embebida en `almacen-pos.exe`; se puede cambiar después desde la 
 SHA-256:
 
 ```text
-f5f8e59619b85d53fb9313c3136e275530ed50eee4261e5f6df9423072f63003
+4268453465de23687c7125e42f87a8eb0c43cd5aac177a6a4195c0daa69de303
 ```
 
 ## Cómo regenerarlo

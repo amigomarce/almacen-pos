@@ -6,16 +6,16 @@ Archivo incluido:
 Almacen-POS-0.1.0-Linux-x64.deb
 ```
 
-Generado por el workflow **`instalador-linux`** de GitHub Actions (run `40876334711`, commit
-`3b8a6d2`), en Ubuntu 22.04: sirve para Zorin OS 17 y 18 (x86_64). Incluye como valor inicial:
+Generado por el workflow **`instalador-linux`** de GitHub Actions (run `40885099678`, commit
+`b797242`), en Ubuntu 22.04: sirve para Zorin OS 17 y 18 (x86_64). Incluye como valor inicial:
 
 ```text
 ALMACEN_CLOUD_URL = https://almacen-pos-nube.fly.dev
+ALMACEN_CONTACTO  = arrayan.labs@gmail.com
 ```
 
-La URL se puede cambiar después desde la app. La consulta en línea a Open Food Facts va
-**desactivada** (no se definió `ALMACEN_CONTACTO`): los códigos que no están en la base semilla
-se cargan a mano.
+La URL se puede cambiar después desde la app. Con el contacto, los códigos que no están en la
+base semilla se buscan en línea en Open Food Facts.
 
 En CI se instaló y arrancó (base, semilla, respaldo y `/health` OK). **Falta probarlo en el
 equipo real**: pantalla, RAM, impresora USB, gaveta, lector y atajos de XFCE.
@@ -23,7 +23,7 @@ equipo real**: pantalla, RAM, impresora USB, gaveta, lector y atajos de XFCE.
 SHA-256:
 
 ```text
-03947598d2bddf71980a73e5a6bbac2d5c505d91e1e5089f0e4fcdedddba3aac
+d3b0d60bf1cd38eb6227e735db7d99a292fdaed5cf5aa1ca2a970361f4caabb6
 ```
 
 ## Cómo regenerarlo
