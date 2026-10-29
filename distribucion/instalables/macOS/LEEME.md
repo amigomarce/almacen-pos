@@ -30,5 +30,5 @@ xattr -dr com.apple.quarantine "/Applications/Almacén POS.app"
 SHA-256 esperado del DMG de esta entrega:
 
 ```text
-e9a28b98f1dd58820db0d2c70feb8d5c3fc32cc44216ae8041710fe624e74052
+3af8fed487c02fdd4c18a73270fefee3f018985570bb38a9f729772761fa71fe
 ```

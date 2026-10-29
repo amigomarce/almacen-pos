@@ -6,8 +6,8 @@ Archivo incluido:
 Almacen-POS-0.1.0-Linux-x64.deb
 ```
 
-Generado por el workflow **`instalador-linux`** de GitHub Actions (run `40933407112`, commit
-`86018ef`), en Ubuntu 22.04: sirve para Zorin OS 17 y 18 (x86_64). Incluye como valor inicial:
+Generado por el workflow **`instalador-linux`** de GitHub Actions (run `40972473574`, commit
+`e66e34f`), en Ubuntu 22.04: sirve para Zorin OS 17 y 18 (x86_64). Incluye como valor inicial:
 
 ```text
 ALMACEN_CLOUD_URL = https://almacen-pos-nube.fly.dev
@@ -23,7 +23,7 @@ equipo real**: pantalla, RAM, impresora USB, gaveta, lector y atajos de XFCE.
 SHA-256:
 
 ```text
-1ee0751745abe0062503a872176e2366df2900d7f18fd2a75f95b309f6ac187c
+a75448f7b8c78bbef0d551eac1bcbd0c6bda723fec7d6db48f316c9f511b5c5e
 ```
 
 ## Cómo regenerarlo
