@@ -1,7 +1,7 @@
 import { asegurarEntero } from './aritmetica.js';
 import type { Clp } from './dinero.js';
 import { ErrorDominio } from './errores.js';
-import { MEDIOS_PAGO, type MedioPago } from './pago.js';
+import { MEDIOS_PAGO, type MedioAbono, type MedioPago } from './pago.js';
 
 /** Lo mínimo de cada venta para cuadrar la caja. */
 export interface VentaParaCuadratura {
@@ -19,6 +19,12 @@ export type TipoMovimientoEfectivo = 'RETIRO' | 'INGRESO';
 export interface MovimientoEfectivo {
   tipo: TipoMovimientoEfectivo;
   /** Siempre positivo; el tipo dice si suma o resta. */
+  montoClp: Clp;
+}
+
+/** Un abono al fiado recibido en el turno (ADR-022). */
+export interface AbonoParaCuadratura {
+  medioPago: MedioAbono;
   montoClp: Clp;
 }
 
@@ -55,9 +61,11 @@ export interface CuadraturaCaja {
    * `efectivoClp`, lo entregado en efectivo (con redondeo), que sale del cajón.
    */
   devoluciones: { cantidad: number; totalClp: Clp; efectivoClp: Clp };
+  /** Abonos al fiado recibidos en el turno; los de efectivo entran al cajón. */
+  abonos: { cantidad: number; totalClp: Clp; efectivoClp: Clp };
   /**
    * Efectivo que debería haber en el cajón: inicial + cobrado en efectivo + ingresos − retiros
-   * − devoluciones en efectivo.
+   * − devoluciones en efectivo + abonos al fiado en efectivo. Las ventas fiadas no suman.
    */
   efectivoEsperadoClp: Clp;
 }
@@ -81,6 +89,7 @@ export function cuadrarCaja(
   ventas: readonly VentaParaCuadratura[],
   movimientos: readonly MovimientoEfectivo[] = [],
   devoluciones: readonly DevolucionParaCuadratura[] = [],
+  abonos: readonly AbonoParaCuadratura[] = [],
 ): CuadraturaCaja {
   asegurarEntero(efectivoInicialClp, 'efectivoInicialClp');
   if (efectivoInicialClp < 0) {
@@ -140,6 +149,17 @@ export function cuadrarCaja(
     if (d.medioPago === 'EFECTIVO') dev.efectivoClp += d.totalClp + d.redondeoClp;
   });
 
+  const ab = { cantidad: 0, totalClp: 0, efectivoClp: 0 };
+  abonos.forEach((a, i) => {
+    asegurarEntero(a.montoClp, `abono ${i + 1}: monto`);
+    if (a.montoClp <= 0) {
+      throw new ErrorDominio('MONTO_INVALIDO', `abono ${i + 1}: el monto debe ser positivo`);
+    }
+    ab.cantidad += 1;
+    ab.totalClp += a.montoClp;
+    if (a.medioPago === 'EFECTIVO') ab.efectivoClp += a.montoClp;
+  });
+
   return {
     porMedio,
     cantidadVentas,
@@ -150,8 +170,14 @@ export function cuadrarCaja(
     efectivoInicialClp,
     movimientos: { retirosClp: retiros, ingresosClp: ingresos, cantidad: movimientos.length },
     devoluciones: dev,
+    abonos: ab,
     efectivoEsperadoClp:
-      efectivoInicialClp + porMedio.EFECTIVO.cobradoClp + ingresos - retiros - dev.efectivoClp,
+      efectivoInicialClp +
+      porMedio.EFECTIVO.cobradoClp +
+      ingresos -
+      retiros -
+      dev.efectivoClp +
+      ab.efectivoClp,
   };
 }
 

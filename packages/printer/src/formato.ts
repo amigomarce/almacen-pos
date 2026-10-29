@@ -25,6 +25,7 @@ export const NOMBRE_MEDIO: Record<MedioPago, string> = {
   DEBITO: 'Débito',
   CREDITO: 'Crédito',
   TRANSFERENCIA: 'Transferencia',
+  FIADO: 'Fiado',
 };
 
 export interface DatosLocal {

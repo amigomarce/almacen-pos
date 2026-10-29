@@ -4,7 +4,9 @@ import type { ModeloEmision, TipoDte, VentaParaDte } from './tipos.js';
 /** ¿Esta venta necesita boleta emitida por la caja? (ADR-001 §4, Res. 76/2021). */
 export function requiereBoleta(modelo: ModeloEmision, medioPago: MedioPago): boolean {
   if (modelo === 'TODO_MEDIO_PAGO') return true;
-  return medioPago === 'EFECTIVO' || medioPago === 'TRANSFERENCIA';
+  // Fiado (ADR-022): es una venta al entregar el producto; no hay voucher que sirva de boleta.
+  // TODO(SII): confirmar que la boleta se emite al vender fiado y no al recibir el pago.
+  return medioPago === 'EFECTIVO' || medioPago === 'TRANSFERENCIA' || medioPago === 'FIADO';
 }
 
 /** 41 si todo es exento; 39 en otro caso (la 39 admite líneas exentas en `MntExe`). */

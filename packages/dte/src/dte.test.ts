@@ -43,6 +43,7 @@ describe('requiereBoleta', () => {
   it.each<[MedioPago, boolean]>([
     ['EFECTIVO', true],
     ['TRANSFERENCIA', true],
+    ['FIADO', true],
     ['DEBITO', false],
     ['CREDITO', false],
   ])('SOLO_NO_ELECTRONICOS + %s → %s', (medio, esperado) => {

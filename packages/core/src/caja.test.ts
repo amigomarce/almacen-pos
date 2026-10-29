@@ -38,6 +38,7 @@ describe('cuadrarCaja', () => {
       DEBITO: { cantidad: 2, cobradoClp: 6990 },
       CREDITO: { cantidad: 1, cobradoClp: 12000 },
       TRANSFERENCIA: { cantidad: 1, cobradoClp: 3500 },
+      FIADO: { cantidad: 0, cobradoClp: 0 },
     });
     expect(c.cantidadVentas).toBe(6);
     expect(c.totalVentasClp).toBe(1293 + 2497 + 5990 + 12000 + 3500 + 1000);

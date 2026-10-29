@@ -27,6 +27,7 @@ import { leerConfiguracion } from '../configuracion/servicio.js';
 import { ErrorHttp } from '../errores.js';
 import { movimientoAWire } from '../sincronizacion/mapping.js';
 import { encolar } from '../sincronizacion/outbox.js';
+import { descontarVentaFiada } from '../fiado/servicio.js';
 
 export interface DevolucionRegistrada {
   id: string;
@@ -243,6 +244,19 @@ export function registrarDevolucion(
         .where(eq(products.id, l.productId))
         .run();
     }
+    if (medioPago === 'FIADO' && v.customerId) {
+      descontarVentaFiada(db, {
+        clienteId: v.customerId,
+        ventaId: v.id,
+        devolucionId: dev.id,
+        montoClp: calculo.totalClp,
+        tipo: 'DEVOLUCION',
+        usuarioId: datos.usuarioId,
+        autorizadaPorId: datos.autorizadaPorId,
+        motivo,
+        ahora,
+      });
+    }
     encolar(db, {
       entity: 'sale_returns',
       entityId: dev.id,
@@ -291,7 +305,9 @@ function recordatorioDevolucion(db: Db, d: DevolucionRegistrada): string | null 
         : `Si emitiste la boleta en e-Boleta, emite en sii.cl una nota de crédito por ${monto}`,
     );
   }
-  if (d.medioPago === 'DEBITO' || d.medioPago === 'CREDITO') {
+  if (d.medioPago === 'FIADO') {
+    partes.push(`se descontaron ${monto} de la cuenta del vecino`);
+  } else if (d.medioPago === 'DEBITO' || d.medioPago === 'CREDITO') {
     partes.push(`devuelve ${monto} en la máquina de tarjetas`);
   } else if (d.medioPago === 'TRANSFERENCIA') {
     partes.push(`devuelve ${monto} por transferencia`);

@@ -40,6 +40,7 @@ import { leerConfiguracion } from '../configuracion/servicio.js';
 import { ErrorHttp } from '../errores.js';
 import { lineaAWire, movimientoAWire, ventaAWire } from '../sincronizacion/mapping.js';
 import { encolar } from '../sincronizacion/outbox.js';
+import { cargarVentaFiada, descontarVentaFiada, obtenerCliente } from '../fiado/servicio.js';
 import {
   devolucionesDeVenta,
   devueltoPorLinea,
@@ -75,6 +76,8 @@ export interface PedidoVenta {
   entrega?: Entrega;
   /** Total que mostró la pantalla. Si los precios cambiaron, la venta se rechaza. */
   totalEsperadoClp?: number;
+  /** Solo `FIADO`: el vecino a cuya cuenta se carga (ADR-022). */
+  clienteId?: string;
 }
 
 /** Una línea calculada (cotización, documento tributario). */
@@ -131,6 +134,8 @@ export interface VentaDetalle {
   totales: TotalesDocumento;
   lineas: LineaDetalle[];
   anulacion: { en: string; autorizadaPor: { id: string; name: string }; motivo: string } | null;
+  /** Venta fiada: el vecino y su saldo actual (ADR-022). */
+  cliente: { id: string; nombre: string; saldoClp: number } | null;
   /** Devoluciones parciales (ADR-021). */
   devoluciones: DevolucionRegistrada[];
   /** Suma devuelta en devoluciones parciales. */
@@ -267,11 +272,18 @@ export async function obtenerVenta(db: Db, id: string): Promise<VentaDetalle | n
             motivo: v.voidReason ?? '',
           }
         : null,
+    cliente: clienteDeVenta(db, v.customerId),
     devoluciones,
     devueltoClp: devoluciones.reduce((s, d) => s + d.totalClp, 0),
     documento,
     motivoSinDocumento: doc ? null : v.totalClp === 0 ? 'TOTAL_CERO' : 'VOUCHER_ES_BOLETA',
   };
+}
+
+function clienteDeVenta(db: Db, clienteId: string | null): VentaDetalle['cliente'] {
+  if (!clienteId) return null;
+  const c = obtenerCliente(db, clienteId);
+  return { id: c.id, nombre: c.nombre, saldoClp: c.saldoClp };
 }
 
 function sesionAbiertaId(db: Db, registerId: string): string | null {
@@ -429,7 +441,14 @@ export interface ResultadoRegistro {
 
 export async function registrarVenta(
   db: Db,
-  datos: { pedido: PedidoVenta; registerId: string; cajeroId: string; ahora?: Date },
+  datos: {
+    pedido: PedidoVenta;
+    registerId: string;
+    cajeroId: string;
+    ahora?: Date;
+    /** Quién autorizó fiar sobre el límite (el dueño). `null` si nadie. */
+    fiadoAutorizadoPorId?: string | null;
+  },
   log?: { error: (obj: object, msg: string) => void },
   dependenciasSii?: DependenciasSii,
 ): Promise<ResultadoRegistro> {
@@ -461,11 +480,14 @@ export async function registrarVenta(
     }
 
     const cobro = calcularCobro(calculo.totalClp, pedido.medioPago, config.cashRoundingEnabled);
+    // Fiado: no se paga nada ahora; el total se carga a la cuenta del vecino.
     const pagado =
-      pedido.medioPago === 'EFECTIVO'
-        ? (pedido.pagadoClp ?? cobro.totalACobrarClp)
-        : cobro.totalACobrarClp;
-    const vuelto = calcularVuelto(cobro.totalACobrarClp, pagado);
+      pedido.medioPago === 'FIADO'
+        ? 0
+        : pedido.medioPago === 'EFECTIVO'
+          ? (pedido.pagadoClp ?? cobro.totalACobrarClp)
+          : cobro.totalACobrarClp;
+    const vuelto = pedido.medioPago === 'FIADO' ? 0 : calcularVuelto(cobro.totalACobrarClp, pagado);
 
     const ultimo = db
       .select({ n: sql<number>`coalesce(max(${sales.number}), 0)` })
@@ -483,12 +505,24 @@ export async function registrarVenta(
         totalClp: calculo.totalClp,
         roundingClp: cobro.redondeoClp,
         paymentMethod: pedido.medioPago,
+        customerId: pedido.medioPago === 'FIADO' ? (pedido.clienteId ?? null) : null,
         paidClp: pagado,
         changeClp: vuelto,
         createdAt: ahora,
       })
       .returning()
       .get();
+
+    if (pedido.medioPago === 'FIADO') {
+      cargarVentaFiada(db, {
+        clienteId: pedido.clienteId,
+        ventaId: venta.id,
+        montoClp: calculo.totalClp,
+        usuarioId: cajeroId,
+        autorizadaPorId: datos.fiadoAutorizadoPorId ?? null,
+        ahora,
+      });
+    }
 
     for (const l of calculo.lineas) {
       const item = db
@@ -662,6 +696,18 @@ export async function anularVenta(
     const anulada = db.select().from(sales).where(eq(sales.id, v.id)).get();
     /* v8 ignore next -- existe: se acaba de anular */
     if (!anulada) throw new Error('Venta anulada no encontrada');
+    if (v.paymentMethod === 'FIADO' && v.customerId) {
+      descontarVentaFiada(db, {
+        clienteId: v.customerId,
+        ventaId: v.id,
+        montoClp: v.totalClp,
+        tipo: 'ANULACION',
+        usuarioId: datos.usuarioId,
+        autorizadaPorId: datos.autorizadaPorId,
+        motivo: datos.motivo.trim(),
+        ahora,
+      });
+    }
     encolar(db, {
       entity: 'sales',
       entityId: v.id,
@@ -706,6 +752,13 @@ export async function anularVenta(
 
 // TODO(SII): confirmar el procedimiento de nota de crédito para boletas de e-Boleta (ADR-001 §5).
 function recordatorioAnulacion(v: VentaDetalle): string | null {
+  const base = recordatorioDocumentoOPago(v);
+  if (v.medioPago !== 'FIADO' || !v.cliente) return base;
+  const cuenta = `Se descontaron ${formatearClp(v.totalClp)} de la cuenta de ${v.cliente.nombre}.`;
+  return base ? `${base}. ${cuenta}` : cuenta;
+}
+
+function recordatorioDocumentoOPago(v: VentaDetalle): string | null {
   const total = formatearClp(v.totalClp);
   if (v.documento?.provider === 'SII_DIRECTO') {
     return `Anula la boleta folio ${v.documento.folio ?? '?'} (${total}) con una nota de crédito electrónica en el SII`;

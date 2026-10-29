@@ -1,3 +1,7 @@
+import { cpSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { abrirDb, type Db } from './client.js';
@@ -36,6 +40,52 @@ function base() {
 }
 
 describe('migraciones', () => {
+  it('reconstruir tablas (0013) no rompe una base con ventas: conserva datos y referencias', () => {
+    // Copia de las migraciones hasta la 0012, para partir de una base "vieja" con datos.
+    const origen = fileURLToPath(new URL('../../drizzle', import.meta.url));
+    const vieja = mkdtempSync(join(tmpdir(), 'mig-'));
+    cpSync(join(origen, 'meta'), join(vieja, 'meta'), { recursive: true });
+    for (const f of readdirSync(origen).filter((x) => /^00(0\d|1[0-2])_.*\.sql$/.test(x))) {
+      cpSync(join(origen, f), join(vieja, f));
+    }
+    const rutaJournal = join(vieja, 'meta', '_journal.json');
+    const journal = JSON.parse(readFileSync(rutaJournal, 'utf8')) as {
+      entries: { idx: number }[];
+    };
+    journal.entries = journal.entries.filter((e) => e.idx <= 12);
+    writeFileSync(rutaJournal, JSON.stringify(journal));
+
+    const vieja12 = abrirDb(':memory:');
+    migrar(vieja12, vieja);
+    db = vieja12;
+    const { caja, user } = base();
+    const [sesion] = db
+      .insert(t.cashSessions)
+      .values({ registerId: caja.id, openedBy: user.id, openingCash: 0 })
+      .returning()
+      .all();
+    db.$client
+      .prepare(
+        `insert into sales(id, number, register_id, cash_session_id, cashier_id, total_clp,
+          payment_method, paid_clp, created_at) values ('v1', 1, ?, ?, ?, 1000, 'EFECTIVO', 1000, 0)`,
+      )
+      .run(caja.id, sesion?.id, user.id);
+    db.$client
+      .prepare(
+        `insert into sale_items(id, sale_id, name_snapshot, unit, qty_milli, unit_price_clp,
+          tax_type, line_total_clp) values ('i1', 'v1', 'Pan', 'UN', 1000, 1000, 'AFECTO', 1000)`,
+      )
+      .run();
+
+    expect(() => {
+      migrar(db);
+    }).not.toThrow();
+    expect(db.select().from(t.sales).all()).toHaveLength(1);
+    expect(db.select().from(t.saleItems).all()).toHaveLength(1);
+    expect(db.$client.pragma('foreign_key_check')).toEqual([]);
+    expect(db.$client.pragma('foreign_keys', { simple: true })).toBe(1);
+  });
+
   it('crean todas las tablas del modelo', () => {
     expect(tablas()).toEqual(
       [
@@ -43,6 +93,8 @@ describe('migraciones', () => {
         'cash_movements',
         'cash_sessions',
         'categories',
+        'customer_ledger',
+        'customers',
         'outbox',
         'price_history',
         'product_barcodes',

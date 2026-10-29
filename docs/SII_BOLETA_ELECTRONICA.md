@@ -414,6 +414,8 @@ Normativa pendiente de confirmar (`TODO(SII)`):
 - Devolución parcial (ADR-021): ¿cómo se emite la nota de crédito por una parte de la boleta
   (e-Boleta en sii.cl y DTE 61 desde la caja)? Hoy la caja solo muestra el recordatorio con el
   monto y el folio (`TODO(SII)` en `apps/server/src/ventas/devoluciones.ts`).
+- Fiado (ADR-022): ¿la boleta se emite al entregar el producto (como hace la caja) o se puede
+  emitir al recibir el pago? (`TODO(SII)` en `packages/dte/src/reglas.ts`).
 - Devolución en efectivo: ¿se aplica el redondeo de la Ley 20.956 a lo que se entrega al
   cliente? Hoy se redondea igual que al cobrar (`TODO(SII)` en `packages/core/src/devolucion.ts`).
 - Venta por monto / etiqueta de balanza con precio (ADR-006): la línea cobra un monto exacto

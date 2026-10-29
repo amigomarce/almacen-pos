@@ -329,6 +329,68 @@ export const unexpectedShutdowns = sqliteTable(
   (t) => [index('unexpected_shutdowns_sesion_idx').on(t.cashSessionId)],
 );
 
+/** Vecinos con cuenta corriente (fiado, ADR-022). No se borran: se desactivan. */
+export const customers = sqliteTable(
+  'customers',
+  {
+    id: id(),
+    name: text('name').notNull(),
+    phone: text('phone'),
+    note: text('note'),
+    /** Tope de deuda; superarlo pide la clave del dueño. NULL = sin límite. */
+    creditLimitClp: integer('credit_limit_clp'),
+    active: booleano('active', true),
+    ...sync(),
+  },
+  (t) => [
+    check('customers_limite', sql`${t.creditLimitClp} is null or ${t.creditLimitClp} >= 0`),
+    index('customers_nombre_idx').on(t.name),
+  ],
+);
+
+export const TIPOS_MOVIMIENTO_FIADO = [
+  'VENTA',
+  'ABONO',
+  'ANULACION',
+  'DEVOLUCION',
+  'AJUSTE',
+] as const;
+
+/**
+ * Cuenta corriente del vecino: solo se agregan filas. `amount_clp` positivo aumenta la deuda
+ * (venta fiada, ajuste en contra) y negativo la baja (abono, anulación, devolución, ajuste a
+ * favor). El saldo es la suma.
+ */
+export const customerLedger = sqliteTable(
+  'customer_ledger',
+  {
+    id: id(),
+    customerId: text('customer_id')
+      .notNull()
+      .references(() => customers.id),
+    type: text('type', { enum: TIPOS_MOVIMIENTO_FIADO }).notNull(),
+    amountClp: integer('amount_clp').notNull(),
+    saleId: text('sale_id'),
+    returnId: text('return_id'),
+    /** Medio del abono (no FIADO). */
+    paymentMethod: text('payment_method'),
+    /** Turno donde entró la plata del abono. */
+    cashSessionId: text('cash_session_id').references(() => cashSessions.id),
+    reason: text('reason'),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    authorizedBy: text('authorized_by').references(() => users.id),
+    createdAt: ahora('created_at'),
+  },
+  (t) => [
+    check('customer_ledger_tipo', enEnum(t.type, TIPOS_MOVIMIENTO_FIADO)),
+    check('customer_ledger_monto', sql`${t.amountClp} <> 0`),
+    index('customer_ledger_cliente_idx').on(t.customerId),
+    index('customer_ledger_sesion_idx').on(t.cashSessionId),
+  ],
+);
+
 export const sales = sqliteTable(
   'sales',
   {
@@ -347,6 +409,8 @@ export const sales = sqliteTable(
     /** Ajuste Ley 20.956 (−5..+4). Cobrado = total + redondeo. */
     roundingClp: integer('rounding_clp').notNull().default(0),
     paymentMethod: text('payment_method', { enum: MEDIOS }).notNull(),
+    /** Vecino al que se fió la venta (solo con `FIADO`). */
+    customerId: text('customer_id').references(() => customers.id),
     paidClp: integer('paid_clp').notNull(),
     changeClp: integer('change_clp').notNull().default(0),
     voidedAt: integer('voided_at', { mode: 'timestamp_ms' }),

@@ -12,3 +12,4 @@ export * from './cantidad.js';
 export * from './costo.js';
 export * from './fecha.js';
 export * from './devolucion.js';
+export * from './fiado.js';

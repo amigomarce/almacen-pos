@@ -15,7 +15,9 @@ export type EntidadSync =
   | 'sale_items'
   | 'stock_movements'
   | 'cash_closes'
-  | 'sale_returns';
+  | 'sale_returns'
+  | 'customers'
+  | 'customer_ledger';
 export type OperacionSync = 'INSERT' | 'UPDATE' | 'DELETE';
 
 export const ENTIDADES_SYNC: readonly EntidadSync[] = [
@@ -26,6 +28,8 @@ export const ENTIDADES_SYNC: readonly EntidadSync[] = [
   'stock_movements',
   'cash_closes',
   'sale_returns',
+  'customers',
+  'customer_ledger',
 ];
 
 export interface ProductoWire {
@@ -120,6 +124,33 @@ export interface DevolucionWire {
     qtyMilli: number;
     amountClp: number;
   }[];
+}
+
+/** Vecino con cuenta corriente (fiado, ADR-022). */
+export interface ClienteWire {
+  id: string;
+  name: string;
+  phone: string | null;
+  note: string | null;
+  creditLimitClp: number | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  version: number;
+  deletedAt: string | null;
+}
+
+/** Movimiento de la cuenta corriente: positivo aumenta la deuda, negativo la baja. */
+export interface MovimientoFiadoWire {
+  id: string;
+  customerId: string;
+  type: 'VENTA' | 'ABONO' | 'ANULACION' | 'DEVOLUCION' | 'AJUSTE';
+  amountClp: number;
+  saleId: string | null;
+  returnId: string | null;
+  paymentMethod: string | null;
+  reason: string | null;
+  createdAt: string;
 }
 
 /** Cierre de caja que la caja sube para que el dueño lo vea en el móvil. */

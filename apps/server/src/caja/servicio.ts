@@ -20,6 +20,7 @@ import {
 } from '../db/schema.js';
 import { encolar } from '../sincronizacion/outbox.js';
 import { devolucionesDeSesion } from '../ventas/devoluciones.js';
+import { abonosDeSesion } from '../fiado/servicio.js';
 
 export interface Caja {
   id: string;
@@ -198,6 +199,7 @@ function resumir(db: Db, f: FilaSesion, movimientos = movimientosDe(db, f.id)): 
     })),
     movimientos.map((m) => ({ tipo: m.tipo, montoClp: m.montoClp })),
     devolucionesDeSesion(db, f.id),
+    abonosDeSesion(db, f.id),
   );
 }
 

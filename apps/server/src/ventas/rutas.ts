@@ -38,6 +38,9 @@ const ESQUEMA_VENTA = {
     pagadoClp: MONTO,
     entrega: { type: 'string', enum: ['IMPRESA', 'VIRTUAL'] },
     totalEsperadoClp: MONTO,
+    clienteId: { type: 'string', minLength: 1 },
+    /** Fiado sobre el límite: clave del dueño (el dueño con su sesión no la necesita). */
+    pinDueno: { type: 'string', pattern: '^[0-9]{4,8}$' },
     lineas: {
       type: 'array',
       minItems: 1,
@@ -83,15 +86,30 @@ export function registrarVentas(
     return caja;
   };
 
-  app.post<{ Body: PedidoVenta & { registerId?: string } }>(
+  app.post<{ Body: PedidoVenta & { registerId?: string; pinDueno?: string } }>(
     '/sales',
     { onRequest: conSesion, schema: { body: ESQUEMA_VENTA } },
     async (req, reply) => {
       const caja = cajaOError(req.body.registerId);
-      const { registerId: _registerId, ...pedido } = req.body;
+      const { registerId: _registerId, pinDueno, ...pedido } = req.body;
+      // Fiado sobre el límite: lo autoriza el dueño (su sesión, o su clave en la caja del cajero).
+      let fiadoAutorizadoPorId: string | null = null;
+      if (pedido.medioPago === 'FIADO') {
+        if (req.sesion?.usuario.role === 'DUENO') fiadoAutorizadoPorId = req.sesion.usuario.id;
+        else if (pinDueno) {
+          const a = autorizarDueno(db, intentos, pinDueno);
+          if (!a.ok) return reply.code(a.estado).send(a.cuerpo);
+          fiadoAutorizadoPorId = a.dueno.id;
+        }
+      }
       const r = await registrarVenta(
         db,
-        { pedido, registerId: caja.id, cajeroId: req.sesion?.usuario.id ?? '' },
+        {
+          pedido,
+          registerId: caja.id,
+          cajeroId: req.sesion?.usuario.id ?? '',
+          fiadoAutorizadoPorId,
+        },
         req.log,
         sii,
       );

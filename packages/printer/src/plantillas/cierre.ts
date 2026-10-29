@@ -41,6 +41,8 @@ export function ticketCierre(datos: DatosTicketCierre, columnas: number): Docume
   doc.columnas2('Ventas', String(r.cantidadVentas));
   for (const medio of MEDIOS_PAGO) {
     const m = r.porMedio[medio];
+    // El fiado solo aparece en los almacenes que lo usan.
+    if (medio === 'FIADO' && m.cantidad === 0) continue;
     doc.columnas2(`${NOMBRE_MEDIO[medio]} (${m.cantidad})`, formatearClp(m.cobradoClp));
   }
   doc.columnas2('Total cobrado', formatearClp(r.totalCobradoClp), { negrita: true });

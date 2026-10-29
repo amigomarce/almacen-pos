@@ -2,9 +2,25 @@ import { asegurarEntero } from './aritmetica.js';
 import type { Clp } from './dinero.js';
 import { ErrorDominio } from './errores.js';
 
-export type MedioPago = 'EFECTIVO' | 'DEBITO' | 'CREDITO' | 'TRANSFERENCIA';
+/** `FIADO`: venta a la cuenta corriente de un vecino (ADR-022). No entra plata a la caja. */
+export type MedioPago = 'EFECTIVO' | 'DEBITO' | 'CREDITO' | 'TRANSFERENCIA' | 'FIADO';
 
-export const MEDIOS_PAGO: readonly MedioPago[] = ['EFECTIVO', 'DEBITO', 'CREDITO', 'TRANSFERENCIA'];
+export const MEDIOS_PAGO: readonly MedioPago[] = [
+  'EFECTIVO',
+  'DEBITO',
+  'CREDITO',
+  'TRANSFERENCIA',
+  'FIADO',
+];
+
+/** Medios con que se paga un abono al fiado (no se abona con más fiado). */
+export type MedioAbono = Exclude<MedioPago, 'FIADO'>;
+export const MEDIOS_ABONO: readonly MedioAbono[] = [
+  'EFECTIVO',
+  'DEBITO',
+  'CREDITO',
+  'TRANSFERENCIA',
+];
 
 export interface RedondeoEfectivo {
   totalACobrarClp: Clp;

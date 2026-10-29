@@ -47,6 +47,7 @@ describe('mapeo local → wire', () => {
       totalClp: 1290,
       roundingClp: 0,
       paymentMethod: 'EFECTIVO' as const,
+      customerId: null,
       paidClp: 2000,
       changeClp: 710,
       voidedAt: null,

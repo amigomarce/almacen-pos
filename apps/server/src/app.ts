@@ -34,6 +34,7 @@ import { requiereSesion } from './auth/rutas.js';
 import type { Semilla } from './productos/semilla.js';
 import { estadoColaSii } from './sii/cola.js';
 import { ambienteSii } from './sii/config.js';
+import { registrarFiado } from './fiado/rutas.js';
 
 export interface OpcionesApp {
   db: Db;
@@ -130,6 +131,7 @@ export function crearApp({
     ...(claveSii ? { sii: { clave: claveSii, ...(fetchSii ? { fetchFn: fetchSii } : {}) } } : {}),
   });
   registrarBotones(app, { db, sesiones });
+  registrarFiado(app, { db, sesiones });
   registrarGestionProductos(app, { db, sesiones });
   registrarRecepciones(app, { db, sesiones });
   registrarImpresion(app, { db, sesiones, impresion, ...(ejecutar ? { ejecutar } : {}) });
