@@ -3,7 +3,7 @@
 Carpeta de entrega con las aplicaciones instalables y los manuales del sistema. Versión
 **0.1.0** (2026-10-26).
 
-> Los archivos grandes (`.dmg`, `.exe`, `.apk`, `.ipa`) **no se versionan en git**. Se generan
+> Los archivos grandes (`.dmg`, `.exe`, `.deb`, `.apk`, `.ipa`) **no se versionan en git**. Se generan
 > localmente o en CI y se copian a esta carpeta. Los manuales y las instrucciones sí quedan en
 > el repositorio.
 
@@ -17,6 +17,8 @@ distribucion/
 │   │   └── Almacen-POS-0.1.0-macOS-AppleSilicon.dmg
 │   ├── Windows/
 │   │   └── Almacen-POS-0.1.0-Windows-x64.exe
+│   ├── Linux/       ← equipo de la caja (Zorin OS Lite)
+│   │   └── Almacen-POS-0.1.0-Linux-x64.deb
 │   ├── Android/     ← el .apk se genera con EAS Build
 │   └── iPhone/      ← se distribuye por TestFlight
 └── manuales/
@@ -82,6 +84,11 @@ Para regenerarlo: ejecutar el workflow o compilar en un PC Windows
 ([`manuales/Guia-Instalacion.md`](manuales/Guia-Instalacion.md)). El artefacto de CI contiene
 `apps/pos/src-tauri/target/release/bundle/nsis/*.exe`.
 
+## Linux — Zorin OS Lite (incluido, sin probar en el equipo real)
+
+Archivo: `instalables/Linux/Almacen-POS-0.1.0-Linux-x64.deb`. Instrucciones, SHA-256 y lista de
+pruebas en [`instalables/Linux/LEEME.md`](instalables/Linux/LEEME.md).
+
 ## Android (pendiente de generar)
 
 El APK se genera con EAS Build (no se compila en este Mac):
@@ -119,7 +126,7 @@ Luego se agrega a los probadores por correo desde App Store Connect.
 | `Manual-Rapido-Dueno.pdf` | Dueño / cajero | Una página: primer arranque, venta, cierre, anulación, boleta, respaldos y app del dueño |
 | `Manual-Rapido-Dueno.md` | Dueño / cajero | Misma guía en texto, para editar o imprimir |
 | `Manual-Rapido-Dueno.html` | Diseño / imprenta | Fuente HTML del PDF |
-| `Guia-Instalacion.md` | Técnico | Instalación, sidecar, variables, Windows/macOS y limitaciones |
+| `Guia-Instalacion.md` | Técnico | Instalación, sidecar, variables, Windows/macOS/Linux y limitaciones |
 | `Guia-App-Dueno.md` | Técnico / dueño | EAS, APK, TestFlight y vinculación de la caja |
 | `Guia-Respaldos.md` | Técnico / dueño | Respaldo local, cifrado en la nube y restauración |
 

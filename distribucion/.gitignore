@@ -3,6 +3,7 @@ instalables/macOS/*.dmg
 instalables/macOS/*.zip
 instalables/Windows/*.exe
 instalables/Windows/*.msi
+instalables/Linux/*.deb
 instalables/Android/*.apk
 instalables/Android/*.aab
 instalables/iPhone/*.ipa
