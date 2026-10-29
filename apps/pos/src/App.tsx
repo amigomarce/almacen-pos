@@ -70,6 +70,11 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
     };
   }, [cierreBloqueado]);
   const cajaAbierta = conexion.tipo === 'OK' && conexion.estado.cajaAbierta === true;
+  // El servidor ya respondió alguna vez. Hasta entonces no se decide entre instalar y pedir
+  // PIN: en Windows la ventana abre antes de que el servidor termine de arrancar, y sin esta
+  // espera una instalación nueva quedaba en el PIN sin usuarios ("No hay conexión…").
+  const [servidorVisto, setServidorVisto] = useState(false);
+  if (conexion.tipo === 'OK' && !servidorVisto) setServidorVisto(true);
 
   const volverAlPin = useCallback(() => {
     guardarToken(null);
@@ -128,8 +133,10 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
     };
   }, [api, usuarioId, vista]);
 
-  // Al iniciar: se retoma la sesión guardada o se decide entre instalar y pedir PIN.
+  // Al iniciar (con el servidor ya arriba): se retoma la sesión guardada o se decide entre
+  // instalar y pedir PIN.
   useEffect(() => {
+    if (!servidorVisto) return;
     const token = leerToken();
     if (token) {
       api.usarToken(token);
@@ -151,7 +158,7 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
     return () => {
       vigente = false;
     };
-  }, [api, volverAlPin, cargarCaja]);
+  }, [api, volverAlPin, cargarCaja, servidorVisto]);
 
   const alEntrar = (token: string, usuario: Usuario) => {
     setVista('VENTA');
@@ -239,7 +246,11 @@ export function App({ api = apiPorDefecto }: { api?: ClienteApi }) {
         />
       )}
       <div className="contenido">
-        {fase.tipo === 'CARGANDO' && <p className="pantalla-centrada">Cargando…</p>}
+        {fase.tipo === 'CARGANDO' && (
+          <p className="pantalla-centrada">
+            {conexion.tipo === 'ERROR' ? 'Esperando al servidor de la caja…' : 'Cargando…'}
+          </p>
+        )}
         {fase.tipo === 'INSTALACION' && <PantallaInstalacion api={api} alEntrar={alEntrar} />}
         {fase.tipo === 'PIN' && <PantallaPin api={api} alEntrar={alEntrar} />}
         {fase.tipo === 'CAJA' &&

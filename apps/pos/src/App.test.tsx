@@ -59,6 +59,42 @@ describe('conexión y modo prueba', () => {
   });
 });
 
+describe('servidor que tarda en arrancar (Windows)', () => {
+  /** El servidor no responde hasta que se "enciende". */
+  function servidorLento(...args: Parameters<typeof servidorFalso>) {
+    const s = servidorFalso(...args);
+    let arriba = false;
+    const api = new ClienteApi('/api', (...p: Parameters<typeof s.fetchFn>) =>
+      arriba ? s.fetchFn(...p) : Promise.reject(new TypeError('Failed to fetch')),
+    );
+    return {
+      api,
+      encender: () => {
+        arriba = true;
+      },
+    };
+  }
+
+  it('una instalación nueva espera al servidor y luego pide la configuración inicial', async () => {
+    const { api, encender } = servidorLento({ requiereInstalacion: true });
+    render(<App api={api} />);
+    expect(await screen.findByText('Esperando al servidor de la caja…')).toBeInTheDocument();
+    encender();
+    expect(
+      await screen.findByRole('heading', { name: 'Configura la caja' }, { timeout: 3000 }),
+    ).toBeInTheDocument();
+  });
+
+  it('con usuarios ya creados llega al PIN cuando el servidor responde', async () => {
+    const { api, encender } = servidorLento();
+    render(<App api={api} />);
+    await screen.findByText('Esperando al servidor de la caja…');
+    expect(screen.queryByText('¿Quién atiende?')).not.toBeInTheDocument();
+    encender();
+    expect(await screen.findByText('¿Quién atiende?', {}, { timeout: 3000 })).toBeInTheDocument();
+  });
+});
+
 describe('primera instalación', () => {
   it('crea dueño, caja y cajero antes de pedir PIN', async () => {
     const u = userEvent.setup();
