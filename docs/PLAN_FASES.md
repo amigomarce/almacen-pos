@@ -226,6 +226,23 @@ renombrado a `almacen-node`, `better-sqlite3` solo con el binario del target y s
   atajos de XFCE quitados).
 - Firma del instalador (Windows) y notarización (macOS).
 
+### Estado al 2026-10-29 — funciones de POS de mercado
+
+**Hecho** (comparación con POS de mercado; el pago mixto se descartó):
+- **Retiros e ingresos de efectivo** en el turno, con motivo y a nombre de quien los hizo;
+  ajustan el esperado del cierre y salen en el ticket (`cash_movements`).
+- **Venta en espera (F8)**: guarda la venta en curso y la retoma con precios vigentes; sobrevive
+  a cerrar la app y el cierre avisa si quedan.
+- **Ventas del turno**: reimprimir, anular o **devolver productos** (devolución parcial,
+  ADR-021; la nube resta las devoluciones).
+- **Etiquetas de precio por cambiar** (flejes): cada producto guarda el precio de su etiqueta;
+  los cambios de precio quedan pendientes y se imprimen en la térmica.
+- **Reportes del dueño** (app móvil → Reportes): ventas netas, más vendidos con margen,
+  ventas por hora y por día y sugerido de compra (`GET /report/summary`).
+
+Pendiente: desplegar la nube y generar un APK nuevo para ver Reportes en el celular; probar
+los flejes en la impresora real; definir con el SII la nota de crédito parcial (§6).
+
 ## Mejoras futuras (backlog)
 
 - **Imágenes de producto en la caja y el móvil.** La semilla y Open Food Facts traen

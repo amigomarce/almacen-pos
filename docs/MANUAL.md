@@ -25,10 +25,16 @@
    escribe cuánto pagó el cliente para calcular el vuelto.
 5. Entrega el comprobante o la boleta que salga por la impresora.
 
-- **Anular:** **Caja → última venta → Anular venta**. Pide autorización del dueño y motivo.
-  El stock vuelve solo. Si la boleta ya se emitió, anúlala también en el SII.
-- **Reimprimir:** **Caja → última venta → Reimprimir**.
-- Atajos: **F2** buscar, **F4** cantidad, **F12** cobrar, **Esc** cancelar.
+- **Venta en espera (F8):** "se me olvidó la leche". F8 guarda la venta, atiendes al siguiente
+  y F8 la retoma (con varias, eliges cuál con su número).
+- **Ventas del turno:** en **Caja → Ventas del turno** abre cualquier venta para
+  **reimprimirla**, **anularla** o **devolver productos** (devolución parcial: devuelve lo que
+  se pagó por esos productos, por el mismo medio). Anular y devolver piden la clave del dueño y
+  un motivo; el stock vuelve solo. Si la boleta ya se emitió, haz la nota de crédito en el SII.
+- **Retiros e ingresos:** en **Caja → Retiros e ingresos de efectivo** anota la plata que sale
+  del cajón sin ser venta (pago al proveedor del pan, retiro) o que entra (sencillo). El cierre
+  la descuenta o suma.
+- Atajos: **F2** buscar, **F4** cantidad, **F8** en espera, **F12** cobrar, **Esc** cancelar.
 - Con tarjeta, según la configuración, el **voucher puede ser la boleta**. Si no, emite la
   boleta en la app del SII.
 
@@ -48,6 +54,10 @@ Si el código no está en la base, la caja ofrece crearlo: escribe nombre, preci
 unidad o por kg y el stock. La próxima vez lo reconoce solo. Para balanza (códigos que empiezan
 con 20–29) usa la etiqueta del pesaje.
 
+**Etiquetas por cambiar:** cuando cambia un precio (en la caja o desde el celular), en
+**Productos** aparece **Etiquetas de precio por cambiar**. Imprímelas en la térmica y pégalas en
+la góndola, o márcalas si ya las cambiaste a mano.
+
 > **Regla de oro:** la caja es la fuente de verdad. No borres archivos ni la base; si algo no
 > cuadra, crea un respaldo y contacta a soporte.
 
@@ -59,6 +69,7 @@ sigue vendiendo aunque el celular no tenga señal.
 | Pestaña      | Para qué sirve                                                                 |
 | ------------ | ------------------------------------------------------------------------------ |
 | **Inicio**   | Ventas de hoy, último cierre con su diferencia y productos con stock bajo.     |
+| **Reportes** | Hoy, 7 o 30 días: ventas netas, lo más vendido, margen, ventas por hora y por día, y **qué comprar**. |
 | **Productos**| Buscar por nombre, marca o código y **cambiar el precio** de venta.            |
 | **Precios**  | Subir o bajar precios por **marca** o **ID de categoría** (ej. +5 o -10 %).    |
 | **Recibir**  | Escanear mercadería con la cámara o el código; suma 1 unidad/kg por escaneo.   |

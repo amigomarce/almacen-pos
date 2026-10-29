@@ -85,6 +85,7 @@
       }
 
       .nota {
+        break-inside: avoid;
         margin: 1mm 0;
         padding: 1mm 1.5mm;
         border-left: 2px solid #e8c38b;
@@ -182,13 +183,16 @@
         </ol>
         <ul>
           <li>
-            <strong>Anular:</strong> Caja → última venta → Anular venta. Pide autorización del dueño
-            y motivo. El stock vuelve solo; si la boleta ya se emitió, anúlala también en el SII.
+            <strong>En espera (F8):</strong> guarda la venta, atiende al siguiente y F8 la retoma.
           </li>
-          <li><strong>Reimprimir:</strong> Caja → última venta → Reimprimir.</li>
           <li>
-            Atajos: <strong>F2</strong> buscar, <strong>F4</strong> cantidad,
-            <strong>F12</strong> cobrar, <strong>Esc</strong> cancelar.
+            <strong>Caja → Ventas del turno:</strong> reimprimir, anular o devolver productos (clave
+            del dueño). Si ya se emitió la boleta, nota de crédito en el SII.
+          </li>
+          <li><strong>Caja → Retiros e ingresos:</strong> plata que sale o entra sin ser venta.</li>
+          <li>
+            Atajos: <strong>F2</strong> buscar, <strong>F4</strong> cantidad, <strong>F8</strong> en
+            espera, <strong>F12</strong> cobrar, <strong>Esc</strong> cancelar.
           </li>
           <li>
             Con tarjeta, según la configuración, el <strong>voucher puede ser la boleta</strong>. Si
@@ -216,7 +220,8 @@
         <p>
           Si el código no está en la base, la caja ofrece crearlo: escribe nombre, precio, si se
           vende por unidad o por kg y el stock. La próxima vez lo reconoce solo. Para balanza
-          (códigos que empiezan con 20–29) usa la etiqueta del pesaje.
+          (códigos que empiezan con 20–29) usa la etiqueta del pesaje. Si cambia un precio,
+          <strong>Productos → Etiquetas por cambiar</strong> imprime el fleje nuevo.
         </p>
       </section>
 
@@ -235,6 +240,10 @@
           <li>
             <strong>Inicio:</strong> ventas de hoy, último cierre con su diferencia y productos con
             stock bajo.
+          </li>
+          <li>
+            <strong>Reportes:</strong> hoy, 7 o 30 días: ventas netas, lo más vendido, margen,
+            ventas por hora y qué comprar.
           </li>
           <li>
             <strong>Productos:</strong> busca por nombre, marca o código y

@@ -65,7 +65,7 @@ Reglas que no se negocian:
   adolescente. Botones grandes, pocas pantallas, todo en español de Chile.
 - **Venta en ≤ 3 acciones**: escanear → (repetir) → cobrar. Sin popups innecesarios.
 - **Teclado primero**: el lector de barras funciona como teclado (HID); el campo de
-  escaneo debe tener foco permanente. Atajos: F2 buscar, F4 cantidad, F12 cobrar, Esc cancelar.
+  escaneo debe tener foco permanente. Atajos: F2 buscar, F4 cantidad, F8 venta en espera, F12 cobrar, Esc cancelar.
 - **Offline-first**: la caja vende aunque se caiga internet. Las boletas pendientes de envío
   al SII quedan en cola y se reintentan (dentro de los plazos legales, ver doc SII).
 - **El dinero se guarda en pesos enteros (CLP, `INTEGER`)**. Nunca `float` para montos.
