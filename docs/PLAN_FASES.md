@@ -69,7 +69,8 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
   *trial* (sin tarjeta), la máquina se detiene a los 5 min y no está siempre encendida.
 - App del dueño instalable: EAS Build configurado (APK `preview`, TestFlight `production`,
   [`APP_DUENO.md`](APP_DUENO.md)); falta instalar el APK y probar la vinculación con la caja.
-- Fiado / cuenta corriente (opcional) no se hizo.
+- ~~Fiado / cuenta corriente~~: hecho 2026-10-30 (ADR-022): venta fiada con límite, abonos,
+  ajustes, pestaña Fiado en la caja y deudores en el celular.
 
 **TODOs menores (resueltos 2026-10-26):** `GET /report/sales/today` cuenta desde las 00:00 de
 Chile; el `outbox` local borra lo ya subido hace más de 30 días (los pendientes nunca); el stock

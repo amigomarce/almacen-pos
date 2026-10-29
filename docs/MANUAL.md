@@ -31,10 +31,14 @@
   **reimprimirla**, **anularla** o **devolver productos** (devolución parcial: devuelve lo que
   se pagó por esos productos, por el mismo medio). Anular y devolver piden la clave del dueño y
   un motivo; el stock vuelve solo. Si la boleta ya se emitió, haz la nota de crédito en el SII.
+- **Fiado:** al cobrar, tecla **F** y elige al vecino. Si pasa su límite, se pide la clave del
+  dueño. En la pestaña **Fiado** se ven las deudas y se reciben **abonos** (imprime recibo); el
+  dueño crea vecinos, les pone límite y hace ajustes con motivo.
 - **Retiros e ingresos:** en **Caja → Retiros e ingresos de efectivo** anota la plata que sale
   del cajón sin ser venta (pago al proveedor del pan, retiro) o que entra (sencillo). El cierre
   la descuenta o suma.
 - Atajos: **F2** buscar, **F4** cantidad, **F8** en espera, **F12** cobrar, **Esc** cancelar.
+  En el cobro: **E** efectivo, **D** débito, **C** crédito, **T** transferencia, **F** fiado.
 - Con tarjeta, según la configuración, el **voucher puede ser la boleta**. Si no, emite la
   boleta en la app del SII.
 
@@ -68,7 +72,7 @@ sigue vendiendo aunque el celular no tenga señal.
 
 | Pestaña      | Para qué sirve                                                                 |
 | ------------ | ------------------------------------------------------------------------------ |
-| **Inicio**   | Ventas de hoy, último cierre con su diferencia y productos con stock bajo.     |
+| **Inicio**   | Ventas de hoy, último cierre, **fiado** (quién debe y cuánto) y stock bajo.   |
 | **Reportes** | Hoy, 7 o 30 días: ventas netas, lo más vendido, margen, ventas por hora y por día, y **qué comprar**. |
 | **Productos**| Buscar por nombre, marca o código y **cambiar el precio** de venta.            |
 | **Precios**  | Subir o bajar precios por **marca** o **ID de categoría** (ej. +5 o -10 %).    |

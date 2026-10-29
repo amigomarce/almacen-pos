@@ -87,7 +87,8 @@ Reglas que no se negocian:
 - **Redondeo de efectivo** a la decena (Ley 20.956 art. 13: 1–5 baja, 6–9 sube): solo pagos en
   efectivo y sobre el total. **La boleta lleva el total exacto**; el redondeo se guarda aparte
   (`sales.rounding_clp`). Ver `docs/SII_BOLETA_ELECTRONICA.md` P8.
-- **"Fiado" / cuenta corriente** de vecinos (libreta digital): opcional, Fase 4.
+- **"Fiado" / cuenta corriente** de vecinos (libreta digital): hecho (ADR-022). Medio de pago
+  `FIADO`, límite con clave del dueño, abonos que suman al cierre y nada se borra.
 - **Promociones simples**: "2x $1.500", precio por pack.
 - **Stock negativo permitido** (con alerta): en un almacén real se vende aunque el sistema
   diga 0; no se debe bloquear la venta.
