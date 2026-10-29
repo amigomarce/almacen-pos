@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import * as t from '../db/schema.js';
 import { entrarComo, prepararApp, type CtxPrueba } from '../test/sesion.js';
+import { registrarCierreInesperado } from './servicio.js';
 
 let c: CtxPrueba;
 let headers: { authorization: string };
@@ -65,6 +66,29 @@ describe('caja', () => {
     expect((await salud()).cajaAbierta).toBe(true);
     expect((await cerrar(10000)).statusCode).toBe(200);
     expect((await salud()).cajaAbierta).toBe(false);
+  });
+
+  it('anota los cierres inesperados de la app en el turno abierto (para el dueño)', async () => {
+    // Sin turno abierto no hay nada que anotar.
+    expect(registrarCierreInesperado(c.db)).toBe(0);
+    expect(c.db.select().from(t.unexpectedShutdowns).all()).toHaveLength(0);
+
+    expect((await abrir(5000)).statusCode).toBe(201);
+    expect((await actual()).json()).toMatchObject({
+      sesion: { cierresInesperados: { cantidad: 0, ultimo: null } },
+    });
+    expect(registrarCierreInesperado(c.db, new Date('2026-10-29T13:00:00Z'))).toBe(1);
+    expect(registrarCierreInesperado(c.db, new Date('2026-10-29T15:30:00Z'))).toBe(1);
+    expect((await actual()).json()).toMatchObject({
+      sesion: { cierresInesperados: { cantidad: 2, ultimo: '2026-10-29T15:30:00.000Z' } },
+    });
+
+    // Al cerrar el turno el registro se conserva (nada se borra).
+    const cierre = await cerrar(5000);
+    expect(cierre.json()).toMatchObject({
+      sesion: { cierresInesperados: { cantidad: 2 } },
+    });
+    expect(c.db.select().from(t.unexpectedShutdowns).all()).toHaveLength(2);
   });
 
   it('abre con el efectivo inicial y queda registrada a nombre de quien abrió', async () => {

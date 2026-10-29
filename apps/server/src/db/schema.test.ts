@@ -54,6 +54,7 @@ describe('migraciones', () => {
         'stock_movements',
         'store_settings',
         'tax_documents',
+        'unexpected_shutdowns',
         'users',
       ].sort(),
     );

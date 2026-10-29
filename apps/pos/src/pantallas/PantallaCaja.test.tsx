@@ -116,6 +116,25 @@ describe('pantalla de caja', () => {
     );
   });
 
+  it('al dueño le muestra los cierres inesperados del turno', async () => {
+    const conCierres = {
+      ...sesion,
+      cierresInesperados: { cantidad: 2, ultimo: '2026-10-29T15:30:00.000Z' },
+    };
+    montar(true, { sesionCaja: conCierres });
+    expect(await screen.findByRole('note', { name: 'Cierres inesperados' })).toHaveTextContent(
+      'La caja se cerró sin hacer el cierre de caja (cierre forzado o corte de luz) 2 veces',
+    );
+  });
+
+  it('el cajero no ve el aviso de cierres inesperados', async () => {
+    montar(false, {
+      sesionCaja: { ...sesion, cierresInesperados: { cantidad: 1, ultimo: null } },
+    });
+    expect(await screen.findByRole('heading', { name: /Turno de/ })).toBeInTheDocument();
+    expect(screen.queryByRole('note', { name: 'Cierres inesperados' })).not.toBeInTheDocument();
+  });
+
   it('sin ventas en el turno lo dice', async () => {
     const vacio = montar(true, { sesionCaja: { ...sesion } });
     await vacio.u.click(await screen.findByRole('button', { name: 'Ver última venta' }));

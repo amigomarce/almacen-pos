@@ -15,6 +15,10 @@ use tauri_plugin_shell::ShellExt;
 
 struct ServidorSidecar(Mutex<Option<CommandChild>>);
 
+/// Archivo que existe mientras la caja está en uso y se borra solo al salir de forma limpia.
+/// Si está al arrancar, la vez anterior terminó con un cierre forzado o un corte de luz.
+struct MarcaEnUso(std::path::PathBuf);
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default()
@@ -50,6 +54,13 @@ pub fn run() {
             let recursos = app.path().resource_dir()?;
             let datos = app.path().app_data_dir()?;
             std::fs::create_dir_all(&datos)?;
+
+            // Cierre inesperado de la ejecución anterior (ADR-019): el servidor lo anota en el
+            // turno de caja que haya quedado abierto.
+            let marca = datos.join("caja-en-uso.lock");
+            let cierre_inesperado = marca.exists();
+            std::fs::write(&marca, std::process::id().to_string())?;
+            app.manage(MarcaEnUso(marca));
 
             let servidor = recursos.join("server").join("server.mjs");
             let servidor_data = recursos.join("server").join("data");
@@ -94,6 +105,9 @@ pub fn run() {
             }
             if let Some(contacto) = option_env!("ALMACEN_CONTACTO") {
                 comando = comando.env("ALMACEN_CONTACTO", contacto);
+            }
+            if cierre_inesperado {
+                comando = comando.env("ALMACEN_CIERRE_INESPERADO", "1");
             }
 
             let (mut rx, child) = comando.spawn()?;
@@ -146,6 +160,10 @@ pub fn run() {
             }
         }
         if let RunEvent::Exit = evento {
+            // Salida limpia (solo se llega aquí con la caja cerrada): fuera la marca.
+            if let Some(marca) = app.try_state::<MarcaEnUso>() {
+                let _ = std::fs::remove_file(&marca.0);
+            }
             if let Some(estado) = app.try_state::<ServidorSidecar>() {
                 if let Some(child) = estado.0.lock().expect("sidecar envenenado").take() {
                     let _ = child.kill();

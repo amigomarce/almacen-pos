@@ -54,6 +54,8 @@ export interface SesionCaja {
   abiertaPor: { id: string; name: string };
   abiertaEn: string;
   efectivoInicialClp: number;
+  /** Veces que la app se cerró sin el cierre de caja en este turno (ADR-019). */
+  cierresInesperados?: { cantidad: number; ultimo: string | null };
 }
 
 export interface EstadoCaja {

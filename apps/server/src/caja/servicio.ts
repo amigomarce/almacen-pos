@@ -1,8 +1,8 @@
 import { cuadrarCaja, diferenciaCaja, type CuadraturaCaja, type MedioPago } from '@almacen/core';
 import type { CierreCajaWire } from '@almacen/sync';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, count, eq, isNull, max } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { cashSessions, registers, sales, users } from '../db/schema.js';
+import { cashSessions, registers, sales, unexpectedShutdowns, users } from '../db/schema.js';
 import { encolar } from '../sincronizacion/outbox.js';
 
 export interface Caja {
@@ -22,6 +22,11 @@ export interface SesionCaja {
   efectivoEsperadoClp: number | null;
   /** Contado − esperado. Solo en sesiones cerradas. */
   diferenciaClp: number | null;
+  /**
+   * Veces que la app se cerró sin el cierre de caja durante este turno (cierre forzado o corte
+   * de luz) y la última (ADR-019).
+   */
+  cierresInesperados: { cantidad: number; ultimo: string | null };
 }
 
 export interface SesionConResumen {
@@ -64,7 +69,38 @@ function aSesion(db: Db, f: FilaSesion): SesionCaja {
     efectivoEsperadoClp: f.expectedCash,
     diferenciaClp:
       f.countedCash !== null && f.expectedCash !== null ? f.countedCash - f.expectedCash : null,
+    cierresInesperados: cierresInesperados(db, f.id),
   };
+}
+
+function cierresInesperados(db: Db, sesionId: string): SesionCaja['cierresInesperados'] {
+  const fila = db
+    .select({ cantidad: count(), ultimo: max(unexpectedShutdowns.detectedAt) })
+    .from(unexpectedShutdowns)
+    .where(eq(unexpectedShutdowns.cashSessionId, sesionId))
+    .get();
+  const ultimo = fila?.ultimo;
+  return {
+    cantidad: fila?.cantidad ?? 0,
+    ultimo: ultimo ? new Date(Number(ultimo)).toISOString() : null,
+  };
+}
+
+/**
+ * La app de escritorio avisa al arrancar que la vez anterior terminó sin salida limpia. Se
+ * anota en cada turno que seguía abierto; sin turno abierto no hay nada que anotar. Devuelve
+ * cuántos turnos quedaron registrados.
+ */
+export function registrarCierreInesperado(db: Db, detectadoEn = new Date()): number {
+  const abiertas = db
+    .select({ id: cashSessions.id })
+    .from(cashSessions)
+    .where(isNull(cashSessions.closedAt))
+    .all();
+  for (const s of abiertas) {
+    db.insert(unexpectedShutdowns).values({ cashSessionId: s.id, detectedAt: detectadoEn }).run();
+  }
+  return abiertas.length;
 }
 
 /**

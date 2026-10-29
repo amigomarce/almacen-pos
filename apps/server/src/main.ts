@@ -18,6 +18,7 @@ import { leerClaveSii } from './sii/cifrado.js';
 import { iniciarEnvioSii } from './sii/envio.js';
 import { iniciarSincronizacion } from './sincronizacion/cliente.js';
 import { obtenerIdentidad } from './sincronizacion/identidad.js';
+import { registrarCierreInesperado } from './caja/servicio.js';
 
 const conEnv = cargarEnvLocal();
 
@@ -32,6 +33,10 @@ const rutaClaveRespaldo = variable('ALMACEN_RESPALDO_KEY') ?? join(dirname(rutaD
 
 const db = abrirDb(rutaDb);
 migrar(db);
+// La app de escritorio avisa si la vez anterior terminó sin salida limpia (cierre forzado o corte
+// de luz). Queda anotado en el turno abierto para el dueño (ADR-019).
+const turnosInterrumpidos =
+  variable('ALMACEN_CIERRE_INESPERADO') === '1' ? registrarCierreInesperado(db) : 0;
 const semilla = Semilla.abrir(rutaSemilla);
 
 // Open Food Facts en línea: exige un contacto en el User-Agent. Sin contacto (o con
@@ -126,6 +131,12 @@ if (off) {
     contacto
       ? 'Consulta en línea a Open Food Facts desactivada (ALMACEN_OFF=0).'
       : 'Consulta en línea a Open Food Facts desactivada (falta ALMACEN_CONTACTO).',
+  );
+}
+
+if (turnosInterrumpidos > 0) {
+  app.log.warn(
+    `La caja se cerró sin hacer el cierre de caja (cierre forzado o corte de luz): anotado en ${turnosInterrumpidos} turno(s) abierto(s).`,
   );
 }
 

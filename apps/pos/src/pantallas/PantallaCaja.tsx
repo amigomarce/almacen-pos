@@ -9,6 +9,7 @@ import {
   type ResultadoImpresion,
   type VentaRegistrada,
 } from '../api.js';
+import { AvisoCierresInesperados } from '../componentes/AvisoCierresInesperados.js';
 
 const MEDIOS: { medio: MedioPago; etiqueta: string }[] = [
   { medio: 'EFECTIVO', etiqueta: 'Efectivo' },
@@ -157,6 +158,7 @@ export function PantallaCaja({ api, esDueno, alCambiarCaja }: Props) {
           Contado {formatearClp(cierre.sesion.efectivoContadoClp ?? 0)} · esperado{' '}
           {formatearClp(cierre.sesion.efectivoEsperadoClp ?? 0)}
         </p>
+        {esDueno && <AvisoCierresInesperados sesion={cierre.sesion} />}
         {cierre.resumen.anuladas.cantidad > 0 && (
           <p className="accion-cajero">
             Hay ventas anuladas: revisa si falta anular boletas en sii.cl o pagos con tarjeta.
@@ -202,6 +204,7 @@ export function PantallaCaja({ api, esDueno, alCambiarCaja }: Props) {
           Abierta por {estado.sesion.abiertaPor.name} con{' '}
           {formatearClp(estado.sesion.efectivoInicialClp)}
         </p>
+        {esDueno && <AvisoCierresInesperados sesion={estado.sesion} />}
         <table className="tabla" aria-label="Ventas del turno">
           <tbody>
             {MEDIOS.map((m) => (

@@ -281,6 +281,22 @@ export const cashSessions = sqliteTable(
   ],
 );
 
+/**
+ * La app de caja terminó sin salida limpia (cierre forzado, corte de luz) con este turno abierto.
+ * Solo auditoría para el dueño (ADR-019): nunca se borra.
+ */
+export const unexpectedShutdowns = sqliteTable(
+  'unexpected_shutdowns',
+  {
+    id: id(),
+    cashSessionId: text('cash_session_id')
+      .notNull()
+      .references(() => cashSessions.id),
+    detectedAt: ahora('detected_at'),
+  },
+  (t) => [index('unexpected_shutdowns_sesion_idx').on(t.cashSessionId)],
+);
+
 export const sales = sqliteTable(
   'sales',
   {

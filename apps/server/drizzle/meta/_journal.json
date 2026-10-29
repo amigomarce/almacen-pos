@@ -64,6 +64,13 @@
       "when": 1792987509638,
       "tag": "0008_nube_respaldos",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1793275910363,
+      "tag": "0009_cierres_inesperados",
+      "breakpoints": true
     }
   ]
 }
