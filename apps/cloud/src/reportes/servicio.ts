@@ -1,3 +1,4 @@
+import type { ClienteFiadoFila, MovimientoFiadoFila } from './fiado.js';
 import type { DevolucionReporte, LineaReporte, ProductoReporte, VentaReporte } from './analisis.js';
 
 export interface ResumenVentas {
@@ -78,6 +79,10 @@ export interface RepoReportes {
   stockBajo(ownerId: string): Promise<ProductoStockBajo[]>;
   /** Último cierre de caja subido por la caja (para el aviso en el móvil). */
   ultimoCierre(ownerId: string): Promise<CierrePublico | null>;
+  /** Vecinos y movimientos de su cuenta corriente (fiado, ADR-022). */
+  datosFiado(
+    ownerId: string,
+  ): Promise<{ clientes: ClienteFiadoFila[]; movimientos: MovimientoFiadoFila[] }>;
   /** Filas del período para los reportes (ventas OK, líneas, devoluciones y productos). */
   datosReporte(ownerId: string, desde: Date): Promise<DatosReporte>;
 }

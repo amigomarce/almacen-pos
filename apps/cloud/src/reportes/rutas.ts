@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { requiereDueno } from '../auth/requerir.js';
 import type { VerificadorJwt } from '../auth/supabase.js';
 import { analizarVentas, inicioPeriodo } from './analisis.js';
+import { resumirFiado } from './fiado.js';
 import type { RepoReportes } from './servicio.js';
 
 export interface DependenciasReportes {
@@ -54,6 +55,14 @@ export function registrarReportes(
       return analizarVentas({ dias, ahora, ...datos });
     },
   );
+
+  /** Fiado: quién debe y cuánto (ADR-022). */
+  app.get('/report/fiado', { onRequest: conDueno }, async (req, reply) => {
+    const ownerId = duenoDe(req, reply);
+    if (!ownerId) return;
+    const { clientes, movimientos } = await repo.datosFiado(ownerId);
+    return resumirFiado(clientes, movimientos);
+  });
 
   app.get('/report/stock-bajo', { onRequest: conDueno }, async (req, reply) => {
     const ownerId = duenoDe(req, reply);

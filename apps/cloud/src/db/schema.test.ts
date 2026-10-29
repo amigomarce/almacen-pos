@@ -54,6 +54,8 @@ describe('migraciones', () => {
         'backups',
         'cash_closes',
         'categories',
+        'customer_ledger',
+        'customers',
         'installations',
         'outbox',
         'products',

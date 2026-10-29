@@ -2,6 +2,8 @@ import { and, desc, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm
 import type { Db } from '../db/client.js';
 import {
   cashCloses,
+  customerLedger,
+  customers,
   products,
   saleItems,
   saleReturns,
@@ -64,6 +66,28 @@ export function crearRepoReportes(db: Db): RepoReportes {
         conMinimo,
         saldos.map((s) => ({ productId: s.productId, qty: Number(s.total) })),
       );
+    },
+    async datosFiado(ownerId) {
+      const clientes = await db
+        .select({
+          id: customers.id,
+          name: customers.name,
+          phone: customers.phone,
+          creditLimitClp: customers.creditLimitClp,
+          active: customers.active,
+        })
+        .from(customers)
+        .where(and(eq(customers.ownerId, ownerId), isNull(customers.deletedAt)));
+      const movimientos = await db
+        .select({
+          customerId: customerLedger.customerId,
+          type: customerLedger.type,
+          amountClp: customerLedger.amountClp,
+          createdAt: customerLedger.createdAt,
+        })
+        .from(customerLedger)
+        .where(eq(customerLedger.ownerId, ownerId));
+      return { clientes, movimientos };
     },
     async datosReporte(ownerId, desde) {
       const delPeriodo = and(

@@ -196,6 +196,52 @@ describe('ingestarEventos', () => {
     });
   });
 
+  it('ingesta vecinos (alta y edición) y movimientos de su cuenta', async () => {
+    const repo = repoSyncFalso();
+    const vecino = {
+      id: 'c1',
+      name: 'Rosa',
+      phone: null,
+      note: null,
+      creditLimitClp: 5000,
+      active: true,
+      createdAt: ISO,
+      updatedAt: ISO,
+      version: 1,
+      deletedAt: null,
+    };
+    await ingestarEventos(repo, 'dueno-1', [
+      { entity: 'customers', op: 'INSERT', entityId: 'c1', payload: vecino },
+      { entity: 'customers', op: 'UPDATE', entityId: 'c1', payload: { ...vecino, version: 2 } },
+      {
+        entity: 'customer_ledger',
+        op: 'INSERT',
+        entityId: 'm1',
+        payload: {
+          id: 'm1',
+          customerId: 'c1',
+          type: 'VENTA',
+          amountClp: 3780,
+          saleId: 's1',
+          returnId: null,
+          paymentMethod: null,
+          reason: null,
+          createdAt: ISO,
+        },
+      },
+    ]);
+    expect(repo.clientes).toHaveLength(2);
+    expect(repo.clientes[1]).toMatchObject({ id: 'c1', ownerId: 'dueno-1', version: 2 });
+    expect(repo.movimientosFiado).toEqual([
+      expect.objectContaining({
+        id: 'm1',
+        ownerId: 'dueno-1',
+        amountClp: 3780,
+        createdAt: new Date(ISO),
+      }),
+    ]);
+  });
+
   it('UPDATE de producto actualiza (upsert)', async () => {
     const repo = repoSyncFalso();
     await ingestarEventos(repo, 'dueno-1', [

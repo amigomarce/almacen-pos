@@ -22,6 +22,18 @@ function repoReportesFalso(): RepoReportes {
       Promise.resolve([
         { id: 'a', name: 'Leche', unit: 'UN', stockQtyMilli: 100, stockMinMilli: 1000 },
       ]),
+    datosFiado: () =>
+      Promise.resolve({
+        clientes: [{ id: 'c1', name: 'Rosa', phone: null, creditLimitClp: 5000, active: true }],
+        movimientos: [
+          {
+            customerId: 'c1',
+            type: 'VENTA',
+            amountClp: 3780,
+            createdAt: new Date('2026-10-29T15:00:00Z'),
+          },
+        ],
+      }),
     datosReporte: () =>
       Promise.resolve({
         ventas: [{ id: 'v1', createdAt: new Date(), totalClp: 2000, paymentMethod: 'EFECTIVO' }],
@@ -135,6 +147,23 @@ describe('rutas de reportes', () => {
     expect(malo.statusCode).toBe(400);
     const sin = await crearAppDePrueba().inject({ method: 'GET', url: '/report/summary' });
     expect(sin.statusCode).toBe(401);
+  });
+
+  it('fiado: quién debe y cuánto', async () => {
+    const token = await firmarJwt('dueno-1');
+    const res = await crearAppDePrueba().inject({
+      method: 'GET',
+      url: '/report/fiado',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({
+      totalClp: 3780,
+      deudores: [{ id: 'c1', nombre: 'Rosa', saldoClp: 3780, limiteClp: 5000 }],
+    });
+    expect(
+      (await crearAppDePrueba().inject({ method: 'GET', url: '/report/fiado' })).statusCode,
+    ).toBe(401);
   });
 
   it('stock bajo', async () => {

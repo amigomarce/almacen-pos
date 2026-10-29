@@ -216,6 +216,43 @@ export const saleItems = pgTable(
  * Devolución parcial que hizo la caja (ADR-021). Espejo append-only: los ítems viajan en JSON
  * para restar lo devuelto en los reportes del dueño.
  */
+/** Vecinos con cuenta corriente (fiado, ADR-022). Espejo de la caja. */
+export const customers = pgTable(
+  'customers',
+  {
+    id: id(),
+    ownerId: text('owner_id').notNull(),
+    name: text('name').notNull(),
+    phone: text('phone'),
+    note: text('note'),
+    creditLimitClp: integer('credit_limit_clp'),
+    active: booleano('active', true),
+    ...sync(),
+  },
+  (t) => [index('customers_owner_idx').on(t.ownerId)],
+);
+
+/** Cuenta corriente del vecino (append-only): positivo aumenta la deuda, negativo la baja. */
+export const customerLedger = pgTable(
+  'customer_ledger',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('owner_id').notNull(),
+    customerId: text('customer_id').notNull(),
+    type: text('type').notNull(),
+    amountClp: integer('amount_clp').notNull(),
+    saleId: text('sale_id'),
+    returnId: text('return_id'),
+    paymentMethod: text('payment_method'),
+    reason: text('reason'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    index('customer_ledger_owner_cliente_idx').on(t.ownerId, t.customerId),
+    check('customer_ledger_monto', sql`${t.amountClp} <> 0`),
+  ],
+);
+
 export const saleReturns = pgTable(
   'sale_returns',
   {

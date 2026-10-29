@@ -1,8 +1,10 @@
 import type {
   CategoriaWire,
   CierreCajaWire,
+  ClienteWire,
   DevolucionWire,
   LineaVentaWire,
+  MovimientoFiadoWire,
   MovimientoStockWire,
   ProductoWire,
   VentaWire,
@@ -11,6 +13,8 @@ import type { TipoImpuesto, Unidad } from '@almacen/core';
 import type {
   cashCloses,
   categories,
+  customerLedger,
+  customers,
   products,
   saleItems,
   saleReturns,
@@ -99,4 +103,21 @@ export function movimientoAWire(m: typeof stockMovements.$inferSelect): Movimien
 export function cierreDeWire(w: CierreCajaWire, ownerId: string): typeof cashCloses.$inferInsert {
   const { ...resto } = w;
   return { ...resto, ownerId, closedAt: new Date(w.closedAt) };
+}
+
+export function clienteDeWire(w: ClienteWire, ownerId: string): typeof customers.$inferInsert {
+  return {
+    ...w,
+    ownerId,
+    createdAt: new Date(w.createdAt),
+    updatedAt: new Date(w.updatedAt),
+    deletedAt: fecha(w.deletedAt),
+  };
+}
+
+export function movimientoFiadoDeWire(
+  w: MovimientoFiadoWire,
+  ownerId: string,
+): typeof customerLedger.$inferInsert {
+  return { ...w, ownerId, createdAt: new Date(w.createdAt) };
 }

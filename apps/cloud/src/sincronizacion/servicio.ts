@@ -1,10 +1,12 @@
 import type {
   CategoriaWire,
   CierreCajaWire,
+  ClienteWire,
   DevolucionWire,
   EntidadSync,
   EventoSync,
   LineaVentaWire,
+  MovimientoFiadoWire,
   MovimientoStockWire,
   OperacionSync,
   ProductoWire,
@@ -13,15 +15,19 @@ import type {
 import {
   categoriaDeWire,
   cierreDeWire,
+  clienteDeWire,
   devolucionDeWire,
   lineaDeWire,
   movimientoDeWire,
+  movimientoFiadoDeWire,
   productoDeWire,
   ventaDeWire,
 } from './mapping.js';
 import type {
   cashCloses,
   categories,
+  customerLedger,
+  customers,
   products,
   saleItems,
   saleReturns,
@@ -51,6 +57,8 @@ export interface RepoSyncNube {
   insertarMovimiento(m: typeof stockMovements.$inferInsert): Promise<void>;
   upsertCierre(c: typeof cashCloses.$inferInsert): Promise<void>;
   insertarDevolucion(d: typeof saleReturns.$inferInsert): Promise<void>;
+  upsertCliente(c: typeof customers.$inferInsert): Promise<void>;
+  insertarMovimientoFiado(m: typeof customerLedger.$inferInsert): Promise<void>;
   eventosPendientes(ownerId: string): Promise<EventoSaliente[]>;
   marcarSincronizados(ownerId: string, ids: readonly string[]): Promise<void>;
 }
@@ -85,6 +93,12 @@ export async function ingestarEventos(
       await repo.upsertCierre(cierreDeWire(e.payload as CierreCajaWire, ownerId));
     } else if (e.entity === 'sale_returns' && e.op === 'INSERT') {
       await repo.insertarDevolucion(devolucionDeWire(e.payload as DevolucionWire, ownerId));
+    } else if (e.entity === 'customers' && e.op !== 'DELETE') {
+      await repo.upsertCliente(clienteDeWire(e.payload as ClienteWire, ownerId));
+    } else if (e.entity === 'customer_ledger' && e.op === 'INSERT') {
+      await repo.insertarMovimientoFiado(
+        movimientoFiadoDeWire(e.payload as MovimientoFiadoWire, ownerId),
+      );
     }
     // Cualquier otro (UPDATE/DELETE de append-only) se ignora: esas entidades solo se insertan.
   }

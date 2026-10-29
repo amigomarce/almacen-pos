@@ -29,6 +29,13 @@
       "when": 1793296567386,
       "tag": "0003_devoluciones",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793312701209,
+      "tag": "0004_fiado",
+      "breakpoints": true
     }
   ]
 }

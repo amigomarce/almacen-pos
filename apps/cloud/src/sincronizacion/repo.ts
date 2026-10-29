@@ -3,6 +3,8 @@ import type { Db } from '../db/client.js';
 import {
   cashCloses,
   categories,
+  customerLedger,
+  customers,
   outbox,
   products,
   saleItems,
@@ -44,6 +46,13 @@ export function crearRepoSyncNube(db: Db): RepoSyncNube {
     },
     async insertarDevolucion(d) {
       await db.insert(saleReturns).values(d).onConflictDoNothing();
+    },
+    async upsertCliente(c) {
+      const { id: _id, ...set } = c;
+      await db.insert(customers).values(c).onConflictDoUpdate({ target: customers.id, set });
+    },
+    async insertarMovimientoFiado(m) {
+      await db.insert(customerLedger).values(m).onConflictDoNothing();
     },
     async upsertCierre(c) {
       const { id: _id, ...set } = c;
