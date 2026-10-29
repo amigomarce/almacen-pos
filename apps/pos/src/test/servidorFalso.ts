@@ -50,6 +50,17 @@ export interface EstadoFalso {
   tokens: Map<string, UsuarioFalso>;
   fallos: Map<string, number>;
   sesionCaja: SesionCaja | null;
+  /** Flejes de precio por cambiar (GET /labels/pending). */
+  flejes: {
+    id: string;
+    nombre: string;
+    marca: string | null;
+    formato: string | null;
+    unidad: 'UN' | 'KG';
+    codigo: string | null;
+    precioClp: number;
+    precioEtiquetaClp: number | null;
+  }[];
   /** Retiros e ingresos del turno abierto (POST /cash/movements). */
   movimientos: { id: string; tipo: 'RETIRO' | 'INGRESO'; montoClp: number; motivo: string }[];
   productos: ProductoLocal[];
@@ -121,6 +132,7 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
     fallos: new Map(),
     sesionCaja: null,
     movimientos: [],
+    flejes: [],
     productos: [...PRODUCTOS_FALSOS],
     creados: [],
     extra: {},
@@ -407,6 +419,27 @@ export function servidorFalso(inicial: Partial<EstadoFalso> = {}) {
         estado.sesionCaja = null;
         estado.movimientos = [];
         return json(200, { caja: { id: 'c1', name: 'Caja 1' }, sesion, resumen: r });
+      }
+      case 'GET /labels/pending':
+        if (!usuario) return sinSesion();
+        return json(200, estado.flejes);
+      case 'POST /labels/print': {
+        if (!usuario) return sinSesion();
+        const ids = cuerpo['ids'] as string[];
+        const elegidos = estado.flejes.filter((f) => ids.includes(f.id));
+        if (estado.impresora) estado.flejes = estado.flejes.filter((f) => !ids.includes(f.id));
+        return json(200, {
+          impreso: estado.impresora,
+          vistaPrevia: elegidos.map((f) => f.nombre).join('\n'),
+          motivo: estado.impresora ? null : 'SIN_IMPRESORA',
+        });
+      }
+      case 'POST /labels/done': {
+        if (!usuario) return sinSesion();
+        const ids = cuerpo['ids'] as string[];
+        const antes = estado.flejes.length;
+        estado.flejes = estado.flejes.filter((f) => !ids.includes(f.id));
+        return json(200, { marcados: antes - estado.flejes.length });
       }
       case 'GET /sales/turno': {
         if (!usuario) return sinSesion();

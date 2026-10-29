@@ -1,4 +1,11 @@
-import { aTexto, ticketCierre, ticketPrueba, ticketVenta, type Documento } from '@almacen/printer';
+import {
+  aTexto,
+  ticketCierre,
+  ticketFlejes,
+  ticketPrueba,
+  ticketVenta,
+  type Documento,
+} from '@almacen/printer';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { requiereSesion } from '../auth/rutas.js';
 import type { Sesiones } from '../auth/sesiones.js';
@@ -7,6 +14,7 @@ import { leerConfiguracion } from '../configuracion/servicio.js';
 import type { Db } from '../db/client.js';
 import { TRANSPORTES_IMPRESORA } from '../db/schema.js';
 import { ErrorHttp } from '../errores.js';
+import { flejesPendientes, marcarFlejesAlDia } from '../flejes/servicio.js';
 import { obtenerVenta } from '../ventas/servicio.js';
 import {
   ANCHOS_PAPEL,
@@ -117,6 +125,54 @@ export function registrarImpresion(app: FastifyInstance, deps: DependenciasImpre
   app.get('/printer/system-queues', { onRequest: soloDueno }, async () => ({
     colas: await listarColasSistema(deps.ejecutar ? { ejecutar: deps.ejecutar } : {}),
   }));
+
+  /** Flejes de precio por cambiar: productos cuyo precio cambió desde que se imprimió su etiqueta. */
+  app.get('/labels/pending', { onRequest: conSesion }, () => flejesPendientes(db));
+
+  const ESQUEMA_IDS = {
+    body: {
+      type: 'object',
+      required: ['ids'],
+      additionalProperties: false,
+      properties: {
+        ids: { type: 'array', minItems: 1, maxItems: 500, items: { type: 'string', minLength: 1 } },
+        registerId: { type: 'string' },
+      },
+    },
+  } as const;
+
+  /** Imprime los flejes elegidos y los deja al día. */
+  app.post<{ Body: { ids: string[]; registerId?: string } }>(
+    '/labels/print',
+    { onRequest: conSesion, schema: ESQUEMA_IDS },
+    async (req, reply) => {
+      const c = caja(req.body.registerId);
+      const elegidos = flejesPendientes(db).filter((f) => req.body.ids.includes(f.id));
+      if (elegidos.length === 0) {
+        return reply
+          .code(409)
+          .send({ error: 'SIN_FLEJES', mensaje: 'Esos flejes ya están al día' });
+      }
+      const config = leerConfigImpresora(db, c.id);
+      const doc = ticketFlejes(elegidos, columnasEfectivas(config));
+      const r = await imprimir(reply, c.id, config, doc);
+      // Sin impresora no se marca nada: el dueño ve la vista previa y los imprime después.
+      if ('impreso' in r && r.impreso) {
+        marcarFlejesAlDia(
+          db,
+          elegidos.map((f) => f.id),
+        );
+      }
+      return r;
+    },
+  );
+
+  /** "Ya cambié estas etiquetas a mano": quedan al día sin imprimir. */
+  app.post<{ Body: { ids: string[] } }>(
+    '/labels/done',
+    { onRequest: conSesion, schema: ESQUEMA_IDS },
+    (req) => ({ marcados: marcarFlejesAlDia(db, req.body.ids) }),
+  );
 
   app.post<{ Body: { registerId?: string; abrirCajon?: boolean } | undefined }>(
     '/printer/test',

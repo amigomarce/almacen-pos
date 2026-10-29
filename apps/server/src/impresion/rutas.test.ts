@@ -354,3 +354,86 @@ describe('fila de impresión', () => {
     expect(eventos).toEqual(['inicio 1', 'fin 1', 'inicio 2', 'fin 2']);
   });
 });
+
+describe('flejes de precio pendientes', () => {
+  const pendientes = async () =>
+    (await c.app.inject({ method: 'GET', url: '/labels/pending', headers: cajero })).json<
+      { id: string; nombre: string; precioClp: number; precioEtiquetaClp: number | null }[]
+    >();
+
+  it('un cambio de precio deja el fleje pendiente; imprimir lo deja al día', async () => {
+    // Los productos de prueba nunca tuvieron fleje: todos parten pendientes.
+    const todos = await pendientes();
+    expect(todos.length).toBeGreaterThan(0);
+    const listo = await c.app.inject({
+      method: 'POST',
+      url: '/labels/done',
+      headers: cajero,
+      payload: { ids: todos.map((f) => f.id) },
+    });
+    expect(listo.json()).toEqual({ marcados: todos.length });
+    expect(await pendientes()).toEqual([]);
+
+    const bebida = todos.find((f) => f.nombre === 'Bebida cola 1,5 L');
+    if (!bebida) throw new Error('sin bebida');
+    await c.app.inject({
+      method: 'PATCH',
+      url: `/products/${bebida.id}`,
+      headers: dueno,
+      payload: { priceClp: 1990 },
+    });
+    expect(await pendientes()).toEqual([
+      expect.objectContaining({
+        id: bebida.id,
+        precioClp: 1990,
+        precioEtiquetaClp: bebida.precioClp,
+      }),
+    ]);
+
+    // Sin impresora: muestra la vista previa pero no lo da por cambiado.
+    const sin = await c.app.inject({
+      method: 'POST',
+      url: '/labels/print',
+      headers: cajero,
+      payload: { ids: [bebida.id] },
+    });
+    expect(sin.json()).toMatchObject({ impreso: false, motivo: 'SIN_IMPRESORA' });
+    expect(sin.json<{ vistaPrevia: string }>().vistaPrevia).toContain('Bebida cola 1,5 L');
+    expect(await pendientes()).toHaveLength(1);
+
+    await configurar({});
+    const impreso = await c.app.inject({
+      method: 'POST',
+      url: '/labels/print',
+      headers: cajero,
+      payload: { ids: [bebida.id] },
+    });
+    expect(impreso.json()).toMatchObject({ impreso: true });
+    expect(falso.enviados).toHaveLength(1);
+    expect(await pendientes()).toEqual([]);
+
+    // Ya al día: no hay nada que imprimir.
+    const otra = await c.app.inject({
+      method: 'POST',
+      url: '/labels/print',
+      headers: cajero,
+      payload: { ids: [bebida.id] },
+    });
+    expect(otra.statusCode).toBe(409);
+    expect(otra.json()).toMatchObject({ error: 'SIN_FLEJES' });
+  });
+
+  it('valida el cuerpo y exige sesión', async () => {
+    expect(
+      (
+        await c.app.inject({
+          method: 'POST',
+          url: '/labels/done',
+          headers: cajero,
+          payload: { ids: [] },
+        })
+      ).statusCode,
+    ).toBe(400);
+    expect((await c.app.inject({ method: 'GET', url: '/labels/pending' })).statusCode).toBe(401);
+  });
+});

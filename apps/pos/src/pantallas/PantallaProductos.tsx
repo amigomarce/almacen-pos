@@ -11,6 +11,7 @@ import { EditorBotones } from '../productos/EditorBotones.js';
 import { ModalProducto } from '../productos/ModalProducto.js';
 import { leerEntrada } from '../venta/entrada.js';
 import { ModalAltaProducto } from '../venta/ModalAltaProducto.js';
+import { SeccionFlejes } from '../productos/SeccionFlejes.js';
 
 const FILTROS: { filtro: FiltroProductos | null; etiqueta: string }[] = [
   { filtro: null, etiqueta: 'Todos' },
@@ -83,6 +84,7 @@ export function PantallaProductos({ api, esDueno }: { api: ClienteApi; esDueno: 
 
   return (
     <section className="pantalla-lista">
+      <SeccionFlejes api={api} />
       <div className="fila fila-izquierda">
         <input
           className="campo campo-escaneo"

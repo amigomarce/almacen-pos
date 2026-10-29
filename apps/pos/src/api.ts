@@ -404,6 +404,19 @@ export type VentaDetalle = VentaRegistrada & {
   anulacion: { en: string; autorizadaPor: { name: string }; motivo: string } | null;
 };
 
+/** Fleje de góndola cuyo precio cambió desde que se imprimió. */
+export interface FlejePendiente {
+  id: string;
+  nombre: string;
+  marca: string | null;
+  formato: string | null;
+  unidad: 'UN' | 'KG';
+  codigo: string | null;
+  precioClp: number;
+  /** Lo que dice la etiqueta hoy (`null` si nunca se imprimió). */
+  precioEtiquetaClp: number | null;
+}
+
 export interface ResultadoImpresion {
   impreso: boolean;
   vistaPrevia: string;
@@ -631,6 +644,18 @@ export class ClienteApi {
 
   registrarVenta(pedido: PedidoVenta): Promise<VentaRegistrada> {
     return this.pedir<VentaRegistrada>('/sales', { metodo: 'POST', cuerpo: pedido });
+  }
+
+  flejesPendientes(): Promise<FlejePendiente[]> {
+    return this.pedir<FlejePendiente[]>('/labels/pending');
+  }
+
+  imprimirFlejes(ids: readonly string[]): Promise<ResultadoImpresion> {
+    return this.pedir<ResultadoImpresion>('/labels/print', { metodo: 'POST', cuerpo: { ids } });
+  }
+
+  flejesAlDia(ids: readonly string[]): Promise<{ marcados: number }> {
+    return this.pedir('/labels/done', { metodo: 'POST', cuerpo: { ids } });
   }
 
   imprimirVenta(id: string, reimpresion = false): Promise<ResultadoImpresion> {

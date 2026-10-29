@@ -165,6 +165,11 @@ export const products = sqliteTable(
     unit: text('unit', { enum: UNIDADES }).notNull().default('UN'),
     categoryId: text('category_id').references(() => categories.id),
     priceClp: integer('price_clp').notNull(),
+    /**
+     * Precio impreso en el fleje de la góndola. Si es NULL o distinto de `price_clp`, la
+     * etiqueta está pendiente de cambio (Productos → Etiquetas por cambiar). Solo local.
+     */
+    labelPriceClp: integer('label_price_clp'),
     costClp: integer('cost_clp'),
     taxType: text('tax_type', { enum: TIPOS_IMPUESTO }).notNull().default('AFECTO'),
     /** ILA, bebidas azucaradas: solo para reportes, no se desglosa en la boleta (SII §5 P7). */

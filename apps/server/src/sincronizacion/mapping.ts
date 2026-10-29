@@ -14,7 +14,15 @@ import type { categories, products, saleItems, sales, stockMovements } from '../
  */
 
 export function productoAWire(p: typeof products.$inferSelect): ProductoWire {
-  const { stockQtyMilli: _stock, createdAt, updatedAt, deletedAt, ...resto } = p;
+  // El precio del fleje es solo local (qué etiqueta hay en la góndola de este almacén).
+  const {
+    stockQtyMilli: _stock,
+    labelPriceClp: _fleje,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    ...resto
+  } = p;
   return {
     ...resto,
     createdAt: createdAt.toISOString(),

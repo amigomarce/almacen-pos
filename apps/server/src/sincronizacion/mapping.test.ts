@@ -15,6 +15,7 @@ describe('mapeo local → wire', () => {
       unit: 'UN' as const,
       categoryId: null,
       priceClp: 1290,
+      labelPriceClp: 990,
       costClp: null,
       taxType: 'AFECTO' as const,
       extraTaxCode: null,
@@ -31,6 +32,7 @@ describe('mapeo local → wire', () => {
     } satisfies typeof t.products.$inferSelect;
     const w = productoAWire(p);
     expect(w).not.toHaveProperty('stockQtyMilli');
+    expect(w).not.toHaveProperty('labelPriceClp');
     expect(w).toMatchObject({ id: 'p1', priceClp: 1290, createdAt: FECHA.toISOString() });
   });
 

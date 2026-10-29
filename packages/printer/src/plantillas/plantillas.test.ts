@@ -2,6 +2,7 @@ import { cuadrarCaja } from '@almacen/core';
 import { describe, expect, it } from 'vitest';
 import { aEscPos, aTexto, CMD } from '../escpos.js';
 import { ticketCierre, textoDiferencia } from './cierre.js';
+import { ticketFlejes } from './flejes.js';
 import { ticketPrueba } from './prueba.js';
 import { ticketVenta, type DatosTicketVenta } from './venta.js';
 
@@ -418,5 +419,40 @@ describe('ticketPrueba', () => {
       sobra espacio, ajusta las
       columnas."
     `);
+  });
+});
+
+describe('ticketFlejes', () => {
+  it('un fleje por producto: nombre, marca y formato, precio grande y código', () => {
+    const texto = aTexto(
+      ticketFlejes(
+        [
+          {
+            nombre: 'Bebida cola',
+            marca: 'Coca-Cola',
+            formato: '1,5 L',
+            unidad: 'UN',
+            precioClp: 1990,
+            codigo: '7801610001196',
+          },
+          {
+            nombre: 'Queso laminado',
+            marca: null,
+            formato: null,
+            unidad: 'KG',
+            precioClp: 11990,
+            codigo: null,
+          },
+        ],
+        32,
+        new Date('2026-10-29T15:00:00Z'),
+      ),
+    );
+    expect(texto).toContain('Bebida cola');
+    expect(texto).toContain('Coca-Cola · 1,5 L');
+    expect(texto).toContain('$ 1 . 9 9 0');
+    expect(texto).toContain('$ 1 1 . 9 9 0 / k g');
+    expect(texto).toMatch(/7801610001196\s+Precio al 29-10-2026/);
+    expect(texto).toContain('- - - -');
   });
 });
