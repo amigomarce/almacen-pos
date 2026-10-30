@@ -1,6 +1,6 @@
 # App del dueño — Android
 
-En esta carpeta está el APK generado con EAS Build (build `60c35150`, commit `fcd9cde`, con la
+En esta carpeta está el APK generado con EAS Build (build `c6d1f52a`, commit `fd27ff7`, con la
 pestaña **Reportes**). No se versiona en git (pesa ~88 MB):
 
 ```text
@@ -10,7 +10,7 @@ Almacen-Dueno-0.1.0-Android.apk
 SHA-256:
 
 ```text
-5cb206011f44e5e93c5aefbd89a553fb235a32fc1a9c20c95486c6dea708d519
+38e475657fa3219dcd8bc5a72aa13199ad536c89e8fa0bc53e642c81007cbe92
 ```
 
 Si falta (por ejemplo, en un clon nuevo del repositorio), se genera así:
