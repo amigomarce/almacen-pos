@@ -100,6 +100,14 @@ production` genera el `.aab` y `eas submit --platform android` lo sube.
   permiso de cámara, modo claro (`expo-system-ui`), `usesCleartextTraffic` solo fuera de
   `production` (`expo-build-properties`) y `ITSAppUsesNonExemptEncryption: false` (evita la
   pregunta de cifrado de exportación en cada build de TestFlight).
+- **Lector de códigos en el APK:** Expo compacta el APK con R8
+  (`android.enableMinifyInReleaseBuilds=true`) y eso cambiaba el nombre de las clases de ML Kit.
+  `expo-camera` solo enciende el lector si encuentra `com.google.mlkit.vision.barcode.BarcodeScanning`
+  por nombre, así que la cámara se veía pero no leía el QR ni códigos de barras.
+  `REGLAS_LECTOR_CODIGOS` (`extraProguardRules`) conserva esos nombres; lo vigila
+  `src/configLector.test.ts`.
+- **Nube dormida (Render gratis, ADR-023):** `ClienteApi` reintenta hasta 90 s y la app
+  muestra "Despertando la nube…".
 - `eas.json`: Node 22.23.4 y pnpm 12.15.0 (como el monorepo), versión de build manejada por
   EAS (`appVersionSource: remote`, `autoIncrement` en `production`).
 - `assets/icono.svg` y `assets/icono-adaptativo.svg`: fuentes de los íconos (el almacén de la

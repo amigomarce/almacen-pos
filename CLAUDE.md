@@ -105,9 +105,9 @@ Reglas que no se negocian:
   + Drizzle ORM**. Es la fuente de verdad del local.
 - `apps/cloud` — API de sincronización y del dueño: **Fastify + Drizzle sobre el Postgres de
   Supabase**, con Supabase Auth y Storage para respaldos (ADR-007, ADR-016). Publicada en
-  **Fly.io**: `https://almacen-pos-nube.fly.dev` (ADR-018, `docs/NUBE.md`). Para que esté
-  siempre encendida hace falta tarjeta en Fly; la cuenta en trial detiene la máquina a los
-  5 minutos.
+  **Render, plan gratis** (`render.yaml`, ADR-023, `docs/NUBE.md`): se duerme tras 15 min sin
+  tráfico y despierta en ~1 min; la app del dueño reintenta. Fly.io (ADR-018) quedó detenida al
+  terminar la prueba gratis.
 - `apps/mobile` — **Expo (React Native)** para el dueño (iOS/Android).
 - `packages/core` — dominio puro: productos, ventas, cálculo de IVA, redondeo, validación RUT.
 - `packages/dte` — generación de XML de boleta, timbre (TED), firma, cliente SII o proveedor.
@@ -145,7 +145,8 @@ pnpm --filter @almacen/server respaldo:restaurar-nube --id <id> --si
 pnpm --filter @almacen/pos tauri build   # app/instalador (Node 22 oficial y seed; ver docs/INSTALADOR.md)
 gh workflow run instalador-linux.yml --ref main     # .deb para Zorin OS Lite (ADR-020)
 (cd apps/mobile && npx eas-cli build -p android --profile preview)   # APK del dueño (docs/APP_DUENO.md)
-pnpm deploy:cloud    # publica apps/cloud en Fly.io (docs/NUBE.md)
+# La nube se publica sola en Render al subir cambios a main (render.yaml, docs/NUBE.md).
+pnpm deploy:cloud    # solo Fly.io (detenida, ADR-018)
 ```
 Requiere **Node 22** (`.nvmrc`). Con Node 20 los tests se caen (`better-sqlite3` con SIGSEGV
 y workers de la caja que no arrancan) y la cobertura del servidor sale en 0 %. Si `node -v` no

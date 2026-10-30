@@ -1,0 +1,40 @@
+# Nube del almacén (apps/cloud) en Render, plan gratis (ADR-023, docs/NUBE.md).
+# Render crea el servicio desde este archivo ("New → Blueprint" con este repositorio).
+# Los secretos (`sync: false`) se escriben en el panel de Render: nunca van en este archivo.
+services:
+  - type: web
+    name: almacen-pos-nube
+    runtime: docker
+    plan: free
+    # No hay región en Sudamérica; Virginia es la de menor latencia hacia Chile.
+    region: virginia
+    dockerfilePath: ./apps/cloud/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    # Solo se vuelve a publicar cuando cambia algo que usa la nube.
+    buildFilter:
+      paths:
+        - apps/cloud/**
+        - packages/**
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLOUD_HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: '8080'
+      - key: SUPABASE_STORAGE_BUCKET
+        value: respaldos
+      # Conexión del pooler de Supabase (IPv4): Render no sale por IPv6.
+      - key: CLOUD_DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      # O `SUPABASE_SECRET_KEY` (sb_secret_…): activa el respaldo cifrado en Storage.
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

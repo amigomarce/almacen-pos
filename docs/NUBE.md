@@ -1,4 +1,44 @@
-# Nube (apps/cloud) en Fly.io
+# Nube (apps/cloud)
+
+> **Desde 2026-10-30 la nube va en Render, plan gratis (ADR-023).** Terminó la prueba de Fly.io
+> y la máquina no enciende sin tarjeta. Lo de Fly queda abajo como referencia, por si se vuelve
+> a un servidor siempre encendido.
+
+## Render (actual)
+
+`render.yaml` (raíz del repo) define el servicio: Docker con `apps/cloud/Dockerfile`, plan
+gratis, región Virginia, health check `/health` y despliegue automático al subir cambios de la
+nube o de `packages/`.
+
+**Crear el servicio (una vez, lo hace el dueño de las cuentas):**
+
+1. Entra a <https://render.com> con GitHub (el plan gratis no pide tarjeta).
+2. **New → Blueprint**, elige el repositorio `almacen-pos` y la rama `main`.
+3. Render pide los secretos marcados `sync: false`; cópialos del `.env` de la raíz:
+   - `CLOUD_DATABASE_URL`: la del **pooler** de Supabase (`…pooler.supabase.com:5432`, IPv4).
+     No la conexión directa `db.<ref>.supabase.co`: es IPv6 y Render no la alcanza.
+   - `SUPABASE_URL` y `SUPABASE_JWT_SECRET`.
+   - `SUPABASE_SERVICE_ROLE_KEY` (o `SUPABASE_SECRET_KEY` = `sb_secret_…`), del panel de
+     Supabase → Project Settings → API. Activa el respaldo cifrado.
+4. Espera el primer despliegue y anota la dirección (`https://almacen-pos-nube.onrender.com`
+   o la que asigne Render). Verifica: `curl https://<dirección>/health`.
+
+**Después de crear el servicio:**
+
+- **Caja instalada:** Configuración → Nube y respaldo cifrado → la dirección nueva → Guardar →
+  Probar conexión (si la nube dormía, tarda hasta un minuto). No hace falta reinstalar.
+- **Instaladores nuevos:** `gh variable set ALMACEN_CLOUD_URL --body <dirección>`.
+- **App del dueño:** `EXPO_PUBLIC_CLOUD_URL` en los entornos `preview` y `production` de EAS
+  (`docs/APP_DUENO.md`) y un APK nuevo.
+
+**Limitaciones del plan gratis:** se duerme tras 15 min sin tráfico y despierta en ~1 min. La
+caja sincroniza cada 10 s, así que con la caja encendida no se duerme. Con la caja apagada, la
+app del dueño muestra "Despertando la nube…" y reintenta hasta 90 s. 750 h gratis al mes
+alcanzan para tenerla encendida todo el mes.
+
+---
+
+# Referencia: Fly.io (ADR-018, detenida)
 
 La nube es el punto de encuentro entre la caja y la app del dueño: la caja sube ventas, stock y
 cierres cada 10 s y baja los cambios del dueño; el celular lee y escribe solo en la nube. Por
