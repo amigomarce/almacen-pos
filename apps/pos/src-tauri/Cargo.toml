@@ -15,6 +15,8 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-shell = "2"
+# Rutas sin el prefijo \\?\ de Windows para el servidor Node (ya viene con Tauri).
+dunce = "1"
 
 # Modo kiosco en Windows (ADR-019): ajustes de WebView2 y hook de teclado. Mismas versiones
 # que usa Tauri 2.12.

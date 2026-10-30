@@ -19,6 +19,14 @@ struct ServidorSidecar(Mutex<Option<CommandChild>>);
 /// Si está al arrancar, la vez anterior terminó con un cierre forzado o un corte de luz.
 struct MarcaEnUso(std::path::PathBuf);
 
+/// Ruta que Node acepta. En Windows, Tauri entrega las rutas con el prefijo `\\?\` (por
+/// ejemplo `\\?\C:\Program Files\...`) y Node no puede cargar así el script principal: se cae
+/// con `EISDIR: lstat 'C:'` antes de arrancar (nodejs/node#62446). `dunce` lo quita cuando es
+/// seguro; en macOS y Linux no cambia nada.
+fn ruta_para_node(ruta: &std::path::Path) -> std::path::PathBuf {
+    dunce::simplified(ruta).to_path_buf()
+}
+
 /// Linux (ADR-020): WebKitGTK con el renderizador DMA-BUF deja la ventana en blanco en muchos
 /// equipos con gráficos antiguos (Intel viejos, NVIDIA con driver libre). La caja no necesita
 /// esa aceleración. Se respeta si el equipo ya define la variable.
@@ -65,8 +73,8 @@ pub fn run() {
                 return Ok(());
             }
 
-            let recursos = app.path().resource_dir()?;
-            let datos = app.path().app_data_dir()?;
+            let recursos = ruta_para_node(&app.path().resource_dir()?);
+            let datos = ruta_para_node(&app.path().app_data_dir()?);
             std::fs::create_dir_all(&datos)?;
 
             // Cierre inesperado de la ejecución anterior (ADR-019): el servidor lo anota en el
@@ -185,4 +193,25 @@ pub fn run() {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ruta_para_node;
+    use std::path::Path;
+
+    #[test]
+    fn una_ruta_normal_no_cambia() {
+        let ruta = Path::new("datos").join("server").join("server.mjs");
+        assert_eq!(ruta_para_node(&ruta), ruta);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn quita_el_prefijo_que_node_no_acepta() {
+        assert_eq!(
+            ruta_para_node(Path::new(r"\\?\C:\Program Files\Almacén POS\server")),
+            Path::new(r"C:\Program Files\Almacén POS\server")
+        );
+    }
 }
