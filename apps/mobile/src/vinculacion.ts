@@ -18,7 +18,9 @@ export function parsearQrVinculacion(data: string): DatosVinculacionQr | null {
     const i = parte.indexOf('=');
     if (i < 0) continue;
     try {
-      params[decodeURIComponent(parte.slice(0, i))] = decodeURIComponent(parte.slice(i + 1));
+      // La caja arma el QR con URLSearchParams, que codifica el espacio como "+" ("Caja+1").
+      const decodificar = (t: string) => decodeURIComponent(t.replace(/\+/g, ' '));
+      params[decodificar(parte.slice(0, i))] = decodificar(parte.slice(i + 1));
     } catch {
       return null;
     }

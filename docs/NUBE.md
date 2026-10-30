@@ -31,6 +31,12 @@ nube o de `packages/`.
 - **App del dueño:** `EXPO_PUBLIC_CLOUD_URL` en los entornos `preview` y `production` de EAS
   (`docs/APP_DUENO.md`) y un APK nuevo.
 
+**Estado (2026-10-30):** la cuenta del dueño tiene vinculada solo la caja real de Windows
+(`01a18f1e…`, "Caja 1"). Los datos de prueba de la caja de desarrollo del Mac (`01a17677…`: 11
+productos, 1 venta, 12 movimientos, 1 cierre, 7 categorías y 2 registros de respaldo) se
+borraron de la nube a pedido del dueño. Los 2 archivos de esos respaldos siguen en el bucket
+`respaldos` de Supabase Storage (carpeta de esa instalación) y se pueden borrar desde el panel.
+
 **Limitaciones del plan gratis:** se duerme tras 15 min sin tráfico y despierta en ~1 min. La
 caja sincroniza cada 10 s, así que con la caja encendida no se duerme. Con la caja apagada, la
 app del dueño muestra "Despertando la nube…" y reintenta hasta 90 s. 750 h gratis al mes
