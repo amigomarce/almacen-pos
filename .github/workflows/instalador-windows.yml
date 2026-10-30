@@ -41,6 +41,32 @@ jobs:
           ALMACEN_CLOUD_URL: ${{ vars.ALMACEN_CLOUD_URL }}
           ALMACEN_CONTACTO: ${{ vars.ALMACEN_CONTACTO }}
 
+      # Tests de la envoltura en Windows (incluye las rutas \\?\ que Node no acepta).
+      - name: Tests de Rust
+        run: cargo test --manifest-path apps/pos/src-tauri/Cargo.toml --release
+
+      # Prueba de humo: la caja compilada debe levantar su servidor. Si Node no arranca (como
+      # con las rutas \\?\), el instalador no se publica.
+      - name: Prueba de humo del servidor
+        shell: pwsh
+        run: |
+          $exe = "apps/pos/src-tauri/target/release/almacen-pos.exe"
+          $app = Start-Process -FilePath $exe -PassThru
+          $ok = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            Start-Sleep -Seconds 1
+            try {
+              $r = Invoke-RestMethod -Uri "http://127.0.0.1:3001/health" -TimeoutSec 2
+              if ($r.status -eq "ok") { $ok = $true; break }
+            } catch {}
+          }
+          $log = Join-Path $env:APPDATA "cl.almacenpos.caja\server.log"
+          if (Test-Path $log) { Get-Content $log -Tail 40 }
+          Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
+          Get-Process almacen-node -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $ok) { throw "El servidor de la caja no respondió en 60 s" }
+          Write-Host "Servidor de la caja OK"
+
       - uses: actions/upload-artifact@v7
         with:
           name: instalador-windows

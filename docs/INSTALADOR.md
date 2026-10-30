@@ -97,6 +97,25 @@ migraciones, los CSV de categorías y marcas, `better-sqlite3` con el binario `w
 `seed.sqlite` con 11.039 productos y su atribución ODbL. Se revisó abriéndolo con 7-Zip
 (`brew install sevenzip`; `7zz x instalador.exe`), sin ejecutarlo.
 
+Antes de publicar el `.exe`, el workflow corre `cargo test` y una **prueba de humo**: abre la
+caja compilada y espera hasta 60 s a que `http://127.0.0.1:3001/health` responda. Si el servidor
+no arranca, la corrida falla y muestra el final de `server.log`.
+
+### Probado en Windows 10 Lite
+
+El primer PC de prueba usa una edición **Windows 10 Lite** (recortada). Ahí apareció el primer
+fallo real: Tauri entrega en Windows las rutas con el prefijo `\\?\` y Node no carga el
+servidor así (`EISDIR: lstat 'C:'`, nodejs/node#62446); la caja quedaba en "Esperando al
+servidor de la caja…". Desde el commit que agrega `ruta_para_node` (`lib.rs`) las rutas van sin
+ese prefijo. El fallo no era del Lite, pero estas ediciones pueden venir sin componentes:
+
+- **WebView2:** si la ventana de la caja abre en blanco o no abre, instala el *Evergreen
+  Runtime* de WebView2 de Microsoft.
+- **Si algo falla:** el log del servidor está en `%APPDATA%\cl.almacenpos.caja\server.log`
+  (escríbelo en la barra del Explorador). Para salir de la pantalla completa sin servidor:
+  Ctrl+Alt+Supr. Con la caja abierta, `http://127.0.0.1:3001/health` en Edge debe responder
+  `{"status":"ok",…}`.
+
 ### Si compilas desde otro sistema
 
 El script del sidecar acepta el runtime y el target:
