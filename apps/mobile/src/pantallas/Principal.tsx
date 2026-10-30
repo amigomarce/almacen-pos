@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { salir } from '../auth';
+import { api } from '../cliente';
 import { estilos } from '../estilos';
 import { CambioMasivo } from './CambioMasivo';
 import { Inicio } from './Inicio';
@@ -22,8 +23,18 @@ const TABS: { id: Tab; etiqueta: string }[] = [
 
 export function Principal() {
   const [tab, setTab] = useState<Tab>('inicio');
+  // La nube gratis se duerme sin uso; la primera consulta puede tardar cerca de un minuto.
+  const [despertando, setDespertando] = useState(false);
+  useEffect(() => api.alDespertar(setDespertando), []);
   return (
     <View style={{ flex: 1 }}>
+      {despertando ? (
+        <View style={{ backgroundColor: '#fef3c7', padding: 10 }}>
+          <Text style={{ color: '#92400e', fontWeight: '600' }}>
+            Despertando la nube… puede tardar hasta un minuto.
+          </Text>
+        </View>
+      ) : null}
       <View style={estilos.tabs}>
         {TABS.map((t) => (
           <Pressable

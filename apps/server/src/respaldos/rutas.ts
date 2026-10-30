@@ -83,7 +83,8 @@ export function registrarRespaldos(app: FastifyInstance, deps: DependenciasRespa
     }
     try {
       const res = await (deps.fetchFn ?? fetch)(`${url.replace(/\/+$/, '')}/health`, {
-        signal: AbortSignal.timeout(5_000),
+        // La nube gratis de Render tarda cerca de un minuto en despertar (ADR-023).
+        signal: AbortSignal.timeout(75_000),
       });
       const cuerpo = (await res.json().catch(() => null)) as { version?: string } | null;
       return { ok: res.ok, status: res.status, version: cuerpo?.version ?? null };

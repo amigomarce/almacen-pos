@@ -1,5 +1,23 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ClienteApi, ErrorApi, MENSAJE_SIN_CONEXION } from './api.js';
+import { ClienteApi, ESPERA_DESPERTAR_MS, ErrorApi, MENSAJE_SIN_CONEXION } from './api.js';
+
+/** Reloj de mentira: cada pausa adelanta el tiempo sin esperar de verdad. */
+function relojFalso() {
+  let t = 0;
+  return {
+    ahora: () => t,
+    pausa: (ms: number) => {
+      t += ms;
+      return Promise.resolve();
+    },
+  };
+}
+
+const json = (estado: number, cuerpo: unknown) =>
+  new Response(JSON.stringify(cuerpo), {
+    status: estado,
+    headers: { 'content-type': 'application/json' },
+  });
 
 const responder = (estado: number, cuerpo: unknown) =>
   vi.fn<typeof fetch>().mockResolvedValue(
@@ -69,14 +87,18 @@ describe('ClienteApi (app del dueño)', () => {
     });
   });
 
-  it('avisa sin conexión si la nube no responde', async () => {
+  it('avisa sin conexión si la nube no responde ni después de esperar que despierte', async () => {
     const fetchFn = vi.fn<typeof fetch>().mockRejectedValue(new TypeError('Failed to fetch'));
-    const error = await new ClienteApi('http://nube', fetchFn).estado().catch((e: unknown) => e);
+    const reloj = relojFalso();
+    const error = await new ClienteApi('http://nube', fetchFn, reloj.pausa, reloj.ahora)
+      .estado()
+      .catch((e: unknown) => e);
     expect(error).toMatchObject({
       estado: 0,
       codigo: 'SIN_CONEXION',
       message: MENSAJE_SIN_CONEXION,
     });
+    expect(reloj.ahora()).toBeGreaterThanOrEqual(ESPERA_DESPERTAR_MS);
   });
 
   it('el cambio masivo envía filtro y porcentaje', async () => {
@@ -96,6 +118,55 @@ describe('ClienteApi (app del dueño)', () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ installationId: 'inst-1', deviceToken: 'tok-123', name: 'Caja 1' }),
+    });
+  });
+
+  describe('nube dormida (Render gratis)', () => {
+    it('reintenta mientras despierta (503) y avisa que está despertando', async () => {
+      const fetchFn = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(json(503, {}))
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockResolvedValueOnce(json(200, { status: 'ok', version: '0.1.0' }));
+      const reloj = relojFalso();
+      const cliente = new ClienteApi('http://nube', fetchFn, reloj.pausa, reloj.ahora);
+      const avisos: boolean[] = [];
+      cliente.alDespertar((d) => avisos.push(d));
+      await expect(cliente.estado()).resolves.toEqual({ status: 'ok', version: '0.1.0' });
+      expect(fetchFn).toHaveBeenCalledTimes(3);
+      expect(avisos).toEqual([true, false]);
+    });
+
+    it('un POST sin respuesta no se repite (podría haber llegado)', async () => {
+      const fetchFn = vi.fn<typeof fetch>().mockRejectedValue(new TypeError('Failed to fetch'));
+      const reloj = relojFalso();
+      const cliente = new ClienteApi('http://nube', fetchFn, reloj.pausa, reloj.ahora);
+      await expect(cliente.vincularCaja('i', 't', 'Caja 1')).rejects.toMatchObject({
+        codigo: 'SIN_CONEXION',
+      });
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+    });
+
+    it('un POST con 502 del proxy sí se repite: no llegó a la nube', async () => {
+      const fetchFn = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(json(502, {}))
+        .mockResolvedValueOnce(json(200, { id: 'c1', name: 'Caja 1', linkedAt: null }));
+      const reloj = relojFalso();
+      const cliente = new ClienteApi('http://nube', fetchFn, reloj.pausa, reloj.ahora);
+      await expect(cliente.vincularCaja('i', 't', 'Caja 1')).resolves.toMatchObject({
+        name: 'Caja 1',
+      });
+      expect(fetchFn).toHaveBeenCalledTimes(2);
+    });
+
+    it('si sigue en 503 pasado el plazo, informa el error', async () => {
+      const fetchFn = vi
+        .fn<typeof fetch>()
+        .mockImplementation(() => Promise.resolve(json(503, {})));
+      const reloj = relojFalso();
+      const cliente = new ClienteApi('http://nube', fetchFn, reloj.pausa, reloj.ahora);
+      await expect(cliente.estado()).rejects.toMatchObject({ estado: 503 });
     });
   });
 });

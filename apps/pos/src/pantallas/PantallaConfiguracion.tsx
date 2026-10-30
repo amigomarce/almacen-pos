@@ -940,7 +940,11 @@ function SeccionNube({ api }: { api: ClienteApi }) {
     try {
       const r = await api.probarNube();
       setPrueba(
-        r.ok ? `Nube conectada (versión ${r.version ?? '?'})` : `La nube respondió ${r.status}`,
+        r.ok
+          ? `Nube conectada (versión ${r.version ?? '?'})`
+          : r.status === 0
+            ? 'La nube no respondió. Revisa la dirección y la conexión a internet de este equipo.'
+            : `La nube respondió con error ${String(r.status)}`,
       );
     } catch (e) {
       setPrueba(e instanceof ErrorApi ? e.message : 'No se pudo probar la nube');
@@ -1014,7 +1018,7 @@ function SeccionNube({ api }: { api: ClienteApi }) {
           {guardando ? 'Guardando…' : 'Guardar nube'}
         </button>
         <button type="button" className="boton" disabled={probando} onClick={() => void probar()}>
-          {probando ? 'Probando…' : 'Probar conexión'}
+          {probando ? 'Probando… (si la nube dormía, hasta 1 min)' : 'Probar conexión'}
         </button>
         <button type="button" className="boton boton-texto" onClick={() => void verClave()}>
           Ver clave de respaldo
