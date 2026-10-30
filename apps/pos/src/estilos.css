@@ -962,11 +962,16 @@ body {
 }
 
 .qr {
+  /* Tamaño fijado por el componente: píxeles enteros por módulo (no escalar). */
   display: block;
-  width: 200px;
-  height: 200px;
+  flex-shrink: 0;
   margin: 0.75rem 0;
   background: #fff;
+}
+
+.dato-vinculacion code {
+  word-break: break-all;
+  user-select: all;
 }
 
 .aviso-privado {

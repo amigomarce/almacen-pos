@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toQR } from 'toqr';
+import { Modal } from '../componentes/Modal.js';
 import { SeccionPantallaCompleta } from '../configuracion/SeccionPantallaCompleta.js';
 import { crearPantallaCompleta, type PantallaCompleta } from '../kiosco.js';
 import {
@@ -603,34 +604,51 @@ function payloadVinculacion(v: ConfiguracionInicial['vinculacion']): string {
   return `almacenpos://vincular?${q.toString()}`;
 }
 
-/** Matriz QR generada en el navegador; no requiere red ni servicio externo. */
-function MatrizQr({ texto }: { texto: string }) {
-  const matriz = useMemo(() => toQR(texto), [texto]);
+const QR_BORDE = 4;
+
+/** Dibujo del QR: un solo trazo con los módulos oscuros, en coordenadas de módulo. */
+export function trazoQr(texto: string): { trazo: string; total: number } {
+  // Corrección de errores baja (L, la de `toqr` por omisión): en pantalla el QR no se daña y
+  // es el menos denso.
+  const matriz = toQR(texto);
   const lado = Math.sqrt(matriz.length);
-  const borde = 4;
-  const total = lado + borde * 2;
+  let trazo = '';
+  matriz.forEach((valor, i) => {
+    if (valor)
+      trazo += `M${String(QR_BORDE + (i % lado))} ${String(QR_BORDE + Math.floor(i / lado))}h1v1h-1z`;
+  });
+  return { trazo, total: lado + QR_BORDE * 2 };
+}
+
+/**
+ * Matriz QR generada en el navegador; no requiere red ni servicio externo. Cada módulo mide un
+ * número entero de píxeles y se dibuja sin suavizado: con módulos de 3,5 px y costuras grises
+ * la cámara del celular no lo reconocía.
+ */
+function MatrizQr({ texto, pxModulo = 7 }: { texto: string; pxModulo?: number }) {
+  const { trazo, total } = useMemo(() => trazoQr(texto), [texto]);
+  const lado = total * pxModulo;
   return (
     <svg
       className="qr"
       role="img"
       aria-label="Código QR para vincular el celular"
-      viewBox={`0 0 ${total} ${total}`}
+      viewBox={`0 0 ${String(total)} ${String(total)}`}
+      width={lado}
+      height={lado}
+      shapeRendering="crispEdges"
     >
       <rect width={total} height={total} fill="white" />
-      {Array.from(matriz).map((valor, i) =>
-        valor ? (
-          <rect
-            key={i}
-            x={borde + (i % lado)}
-            y={borde + Math.floor(i / lado)}
-            width="1"
-            height="1"
-            fill="black"
-          />
-        ) : null,
-      )}
+      <path d={trazo} fill="black" />
     </svg>
   );
+}
+
+/** Píxeles por módulo para el QR ampliado: lo más grande que quepa en ~70 % del alto. */
+function pxModuloAmpliado(texto: string): number {
+  const { total } = trazoQr(texto);
+  const alto = typeof window === 'undefined' ? 800 : window.innerHeight;
+  return Math.max(8, Math.floor(Math.min(alto * 0.7, 600) / total));
 }
 
 function Paso({
@@ -667,6 +685,8 @@ function SeccionPrimeraConfiguracion({ api }: { api: ClienteApi }) {
   const [codigo, setCodigo] = useState('');
   const [probando, setProbando] = useState(false);
   const [escaneo, setEscaneo] = useState<{ ok: boolean; texto: string } | null>(null);
+  const [qrAmpliado, setQrAmpliado] = useState(false);
+  const [verDatos, setVerDatos] = useState(false);
 
   useEffect(() => {
     let vigente = true;
@@ -812,13 +832,51 @@ function SeccionPrimeraConfiguracion({ api }: { api: ClienteApi }) {
           <div className="vinculacion">
             <h3>Vincula el celular del dueño</h3>
             <p className="suave">
-              En la app del dueño entra a Caja → Vincular y escanea este código. También puedes
-              escribir la instalación y el token a mano.
+              En la app del dueño entra a Caja → Escanear QR de la caja y apunta a este código: se
+              vincula sola. Si cuesta leerlo, usa Ampliar QR.
             </p>
             <MatrizQr texto={payloadVinculacion(setup.vinculacion)} />
+            <div className="fila-botones">
+              <button
+                type="button"
+                className="boton boton-chico"
+                onClick={() => {
+                  setQrAmpliado(true);
+                }}
+              >
+                Ampliar QR
+              </button>
+              <button
+                type="button"
+                className="boton boton-chico"
+                onClick={() => {
+                  setVerDatos((v) => !v);
+                }}
+              >
+                {verDatos ? 'Ocultar datos' : 'Ver datos para escribir a mano'}
+              </button>
+            </div>
             <p className="suave">
               Caja: {setup.vinculacion.caja} · Instalación: {setup.vinculacion.installationId}
             </p>
+            {verDatos && (
+              <p className="suave dato-vinculacion">
+                Token: <code>{setup.vinculacion.deviceToken}</code>
+              </p>
+            )}
+            {qrAmpliado && (
+              <Modal
+                titulo="Escanea con la app del dueño"
+                alCerrar={() => {
+                  setQrAmpliado(false);
+                }}
+              >
+                <MatrizQr
+                  texto={payloadVinculacion(setup.vinculacion)}
+                  pxModulo={pxModuloAmpliado(payloadVinculacion(setup.vinculacion))}
+                />
+              </Modal>
+            )}
             <p className="aviso-privado">
               No compartas este código: permite vincular la caja a una cuenta.
             </p>

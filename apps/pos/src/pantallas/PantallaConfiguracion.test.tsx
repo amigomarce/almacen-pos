@@ -118,6 +118,34 @@ describe('primera configuración', () => {
   });
 });
 
+describe('QR de vinculación', () => {
+  it('se dibuja nítido, con píxeles enteros por módulo, y se puede ampliar', async () => {
+    const { u } = montar();
+    const qr = await screen.findByRole('img', { name: 'Código QR para vincular el celular' });
+    expect(qr).toHaveAttribute('shape-rendering', 'crispEdges');
+    expect(qr.querySelectorAll('path')).toHaveLength(1);
+    const lado = Number(qr.getAttribute('width'));
+    const modulos = Number(qr.getAttribute('viewBox')?.split(' ')[2]);
+    expect(lado % modulos).toBe(0);
+    expect(lado).toBeGreaterThanOrEqual(250);
+
+    await u.click(screen.getByRole('button', { name: 'Ampliar QR' }));
+    const ventana = screen.getByRole('dialog', { name: 'Escanea con la app del dueño' });
+    const grande = within(ventana).getByRole('img', { name: 'Código QR para vincular el celular' });
+    expect(Number(grande.getAttribute('width'))).toBeGreaterThan(lado);
+    await u.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('muestra el token solo si se pide, para escribirlo a mano', async () => {
+    const { u } = montar();
+    await screen.findByRole('img', { name: 'Código QR para vincular el celular' });
+    expect(screen.queryByText(/Token:/)).not.toBeInTheDocument();
+    await u.click(screen.getByRole('button', { name: 'Ver datos para escribir a mano' }));
+    expect(screen.getByText(/Token:/)).toBeInTheDocument();
+  });
+});
+
 describe('respaldos', () => {
   it('muestra el último respaldo y crea uno nuevo', async () => {
     const s = servidorConSesion();
