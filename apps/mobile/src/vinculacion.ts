@@ -32,3 +32,34 @@ export function parsearQrVinculacion(data: string): DatosVinculacionQr | null {
     caja: params['caja'] || 'Caja 1',
   };
 }
+
+export type ResultadoLecturaQr =
+  | { tipo: 'NO_ES_CAJA' }
+  | { tipo: 'VINCULADA'; nombre: string }
+  | { tipo: 'ERROR'; mensaje: string; datos: DatosVinculacionQr };
+
+/**
+ * Lo que pasa al leer un QR: si es de una caja, se vincula de inmediato (sin que el dueño tenga
+ * que revisar y confirmar). Si falla, se devuelven los datos para dejarlos en el formulario.
+ */
+export async function vincularDesdeQr(
+  data: string,
+  vincular: (
+    installationId: string,
+    deviceToken: string,
+    nombre: string,
+  ) => Promise<{ name: string }>,
+): Promise<ResultadoLecturaQr> {
+  const datos = parsearQrVinculacion(data);
+  if (!datos) return { tipo: 'NO_ES_CAJA' };
+  try {
+    const r = await vincular(datos.installationId, datos.deviceToken, datos.caja);
+    return { tipo: 'VINCULADA', nombre: r.name };
+  } catch (e) {
+    return {
+      tipo: 'ERROR',
+      mensaje: e instanceof Error ? e.message : 'No se pudo vincular',
+      datos,
+    };
+  }
+}
