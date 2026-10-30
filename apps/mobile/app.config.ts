@@ -14,6 +14,18 @@ const entorno = process.env as Record<string, string | undefined>;
 const perfil = entorno['EAS_BUILD_PROFILE'] ?? 'development';
 const permitirHttp = perfil !== 'production';
 
+/**
+ * El APK se compacta con R8, que cambia los nombres de las clases. `expo-camera` solo enciende
+ * el lector de códigos si encuentra `com.google.mlkit.vision.barcode.BarcodeScanning` por su
+ * nombre (`Class.forName`): con el nombre cambiado, la cámara se veía pero nunca leía el QR de
+ * la caja ni los códigos de barras. Se conservan los nombres de ML Kit y del módulo de cámara.
+ */
+export const REGLAS_LECTOR_CODIGOS = [
+  '-keep class com.google.mlkit.vision.barcode.** { *; }',
+  '-keep class com.google.mlkit.vision.common.** { *; }',
+  '-keep class expo.modules.camera.** { *; }',
+].join('\n');
+
 /** Proyecto @amigomarce/almacen-dueno en expo.dev (lo entregó `eas init`). */
 const EAS_PROJECT_ID = '1fe8ed33-1ffd-46d4-a431-a58d286e4d69';
 
@@ -41,7 +53,15 @@ const config: ExpoConfig = {
   },
   plugins: [
     ['expo-camera', { cameraPermission: 'Escanear códigos de barras de productos' }],
-    ['expo-build-properties', { android: { usesCleartextTraffic: permitirHttp } }],
+    [
+      'expo-build-properties',
+      {
+        android: {
+          usesCleartextTraffic: permitirHttp,
+          extraProguardRules: REGLAS_LECTOR_CODIGOS,
+        },
+      },
+    ],
   ],
   extra: { eas: { projectId: EAS_PROJECT_ID } },
 };
