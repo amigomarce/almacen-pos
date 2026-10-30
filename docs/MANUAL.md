@@ -13,7 +13,8 @@
 3. En **Configuración → Primera configuración** completa RUT, razón social, giro, dirección y
    comuna; configura la impresora y prueba el lector.
 4. Para vincular el celular: en la caja abre **Configuración → Primera configuración** y muestra
-   el QR. En la app del dueño entra a **Caja → Escanear QR de la caja**.
+   el QR. En la app del dueño entra a **Caja → Escanear QR de la caja**: al leerlo se vincula
+   sola. Si al celular le cuesta leerlo, en la caja usa **Ampliar QR**.
 
 ## 2. Vender en la caja
 
