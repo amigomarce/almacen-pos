@@ -261,3 +261,14 @@ los flejes en la impresora real; definir con el SII la nota de crédito parcial 
   ≤ 3 acciones; la imagen se reemplaza sola con el siguiente escaneo), un recuadro con el
   nombre si el producto no tiene foto y, más adelante, la opción de mostrarla en una segunda
   pantalla orientada al cliente. El dueño puede subir o cambiar la foto desde la app móvil.
+- **Crear cuenta y recuperar contraseña en la app del dueño.** Hoy la app solo tiene "Entrar"
+  (`signInWithPassword` en `apps/mobile/src/auth.ts`) y la única cuenta es
+  `arrayan.labs@gmail.com`, creada a mano en Supabase; por ahora se queda así. Para escalar:
+  - **Crear cuenta abierta**: cualquiera se registra con correo y contraseña desde la app
+    (`supabase.auth.signUp`), con confirmación por correo. Sin vincular una caja no ve nada.
+  - **Enlace con la caja por QR**: después de crear la cuenta, el dueño escanea el QR de su
+    caja (**Caja → Escanear QR**, que ya existe) y solo ve los datos de ese local.
+  - **"¿Olvidaste tu contraseña?"**: correo de recuperación (`resetPasswordForEmail`) y pantalla
+    para elegir la nueva, con enlace profundo a la app.
+  - Configurar una vez en Supabase: confirmación de correo, URL de retorno (esquema de la app)
+    y plantillas de correo en español.
