@@ -63,7 +63,7 @@ Generado por el workflow **`instalador-windows`** de GitHub Actions (run `408851
 `b797242`). Es una instalación **por usuario** (no pide administrador) y trae como valor inicial:
 
 ```text
-ALMACEN_CLOUD_URL = https://almacen-pos-nube.fly.dev
+ALMACEN_CLOUD_URL = https://almacen-pos-nube.onrender.com
 ALMACEN_CONTACTO  = arrayan.labs@gmail.com
 ```
 
@@ -105,7 +105,7 @@ Al terminar, descarga el `.apk` desde el enlace de EAS y guárdalo como:
 instalables/Android/Almacen-Dueno-0.1.0-Android.apk
 ```
 
-La app usa `EXPO_PUBLIC_CLOUD_URL=https://almacen-pos-nube.fly.dev` en el perfil `preview`.
+La app usa `EXPO_PUBLIC_CLOUD_URL=https://almacen-pos-nube.onrender.com` en el perfil `preview`.
 Detalle en [`manuales/Guia-App-Dueno.md`](manuales/Guia-App-Dueno.md).
 
 ## iPhone (TestFlight)
@@ -147,8 +147,8 @@ SHA-256 del manual PDF:
 - Tener el respaldo automático activo y **descargar `respaldo.key`** desde
   Configuración → Nube y respaldo cifrado. Sin esa clave no se puede restaurar un respaldo
   remoto.
-- En Fly, agregar una tarjeta para que la nube quede siempre encendida. Con la cuenta en trial
-  la máquina se detiene a los 5 minutos y el primer acceso puede demorar.
+- La nube está en Render gratis: con la caja apagada se duerme y la app del dueño tarda cerca
+  de un minuto en la primera consulta ("Despertando la nube…").
 - Probar primero con datos de prueba; si se usan ventas reales, hacer un respaldo antes.
 
 ## Verificación rápida

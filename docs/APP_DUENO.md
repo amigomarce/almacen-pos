@@ -34,8 +34,8 @@ en la constante `EAS_PROJECT_ID` de `apps/mobile/app.config.ts` y haz commit.
 
 ### 1. La nube que usará el teléfono
 
-- **Uso real (configurado):** `https://almacen-pos-nube.fly.dev`, publicada en Fly.io y
-  siempre encendida ([`NUBE.md`](NUBE.md)). Es la que usa el perfil `preview` hoy. Con ella la
+- **Uso real (configurado):** `https://almacen-pos-nube.onrender.com`, publicada en Render
+  gratis (se duerme sin uso; la app espera a que despierte) ([`NUBE.md`](NUBE.md)). Es la que usa el perfil `preview` hoy. Con ella la
   app funciona desde cualquier red.
 - **Solo para pruebas en la red local:** levanta la nube escuchando en la red y usa la IP del Mac:
   ```bash
@@ -49,7 +49,7 @@ en la constante `EAS_PROJECT_ID` de `apps/mobile/app.config.ts` y haz commit.
 
 ```bash
 cd apps/mobile
-npx eas-cli env:create --environment preview --name EXPO_PUBLIC_CLOUD_URL --value https://almacen-pos-nube.fly.dev --visibility plaintext
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_CLOUD_URL --value https://almacen-pos-nube.onrender.com --visibility plaintext
 npx eas-cli env:create --environment preview --name EXPO_PUBLIC_SUPABASE_URL --value https://<proyecto>.supabase.co --visibility plaintext
 npx eas-cli env:create --environment preview --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value <anon key> --visibility sensitive
 ```
@@ -79,7 +79,7 @@ apps distribuidas).
 ```bash
 cd apps/mobile
 # Variables del perfil production (URL https)
-npx eas-cli env:create --environment production --name EXPO_PUBLIC_CLOUD_URL --value https://almacen-pos-nube.fly.dev --visibility plaintext
+npx eas-cli env:create --environment production --name EXPO_PUBLIC_CLOUD_URL --value https://almacen-pos-nube.onrender.com --visibility plaintext
 npx eas-cli env:create --environment production --name EXPO_PUBLIC_SUPABASE_URL --value https://<proyecto>.supabase.co --visibility plaintext
 npx eas-cli env:create --environment production --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value <anon key> --visibility sensitive
 

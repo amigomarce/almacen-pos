@@ -4,8 +4,12 @@ Guía operativa para dejar funcionando el respaldo cifrado de la caja en **Supab
 través de la nube publicada en Fly.io ([`NUBE.md`](NUBE.md), ADR-016). Son pasos manuales: el
 bucket y la secret key se crean en el panel de Supabase y el secreto se carga en Fly.
 
+> **Desde 2026-10-30 la nube está en Render (ADR-023).** Donde esta guía dice `fly secrets set`,
+> en Render el secreto se escribe en el panel del servicio → **Environment** (Render redespliega
+> solo). Los pasos de Supabase y de la caja son los mismos.
+
 - Proyecto Supabase: `https://wynrzwmtsxyowncecdfl.supabase.co` (`sa-east-1`).
-- Nube: `https://almacen-pos-nube.fly.dev` (app `almacen-pos-nube`, región `gru`).
+- Nube: `https://almacen-pos-nube.onrender.com` (servicio `almacen-pos-nube` en Render, ADR-023).
 - Bucket: `respaldos` (**privado**).
 
 > La caja nunca recibe la secret key: sube el paquete cifrado a `apps/cloud` con su token de
@@ -19,7 +23,7 @@ bucket y la secret key se crean en el panel de Supabase y el secreto se carga en
 
 ```bash
 fly auth whoami                       # sesión de Fly activa
-curl -s https://almacen-pos-nube.fly.dev/health
+curl -s https://almacen-pos-nube.onrender.com/health
 ```
 
 Debe responder `{"status":"ok","db":"ok",...}`. Si la cuenta de Fly está en trial, la máquina
@@ -103,7 +107,7 @@ pnpm deploy:cloud
 Espera a que termine y comprueba:
 
 ```bash
-curl -s https://almacen-pos-nube.fly.dev/health
+curl -s https://almacen-pos-nube.onrender.com/health
 fly logs --app almacen-pos-nube
 ```
 
@@ -140,7 +144,7 @@ Debe haber **una** fila con `owner_id` y `linked_at` no nulos.
 
 En la caja: **Configuración → Nube y respaldo cifrado**.
 
-1. **Dirección de la nube:** `https://almacen-pos-nube.fly.dev`.
+1. **Dirección de la nube:** `https://almacen-pos-nube.onrender.com`.
 2. **Copias a conservar en la nube:** por ejemplo `7` (rango 1–30).
 3. Marca **Respaldar automáticamente en la nube**.
 4. **Guardar nube**.

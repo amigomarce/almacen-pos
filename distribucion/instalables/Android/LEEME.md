@@ -1,6 +1,6 @@
 # App del dueño — Android
 
-En esta carpeta está el APK generado con EAS Build (build `edb8e71f`, commit `d06de21`, con la
+En esta carpeta está el APK generado con EAS Build (build `60c35150`, commit `fcd9cde`, con la
 pestaña **Reportes**). No se versiona en git (pesa ~88 MB):
 
 ```text
@@ -10,7 +10,7 @@ Almacen-Dueno-0.1.0-Android.apk
 SHA-256:
 
 ```text
-5c60f8e10ae71ae5127b0ddbb4f7ccf502a1b0908e8d1569be91ab4d7fe8f241
+5cb206011f44e5e93c5aefbd89a553fb235a32fc1a9c20c95486c6dea708d519
 ```
 
 Si falta (por ejemplo, en un clon nuevo del repositorio), se genera así:
@@ -32,7 +32,7 @@ Almacen-Dueno-0.1.0-Android.apk
 El perfil `preview` usa:
 
 ```text
-EXPO_PUBLIC_CLOUD_URL=https://almacen-pos-nube.fly.dev
+EXPO_PUBLIC_CLOUD_URL=https://almacen-pos-nube.onrender.com
 ```
 
 y la anon key de Supabase configurada en las variables de EAS. Detalle en
@@ -48,4 +48,4 @@ y la anon key de Supabase configurada en las variables de EAS. Detalle en
 6. Probar: ventas del día, stock bajo, editar precio, cambio masivo y recepción.
 
 > La app del dueño **no se conecta directo a la caja**: habla con
-> `https://almacen-pos-nube.fly.dev`. La caja sube sus datos cada 10 s.
+> `https://almacen-pos-nube.onrender.com`. La caja sube sus datos cada 10 s.

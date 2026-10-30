@@ -62,11 +62,12 @@ ventas/stock de la caja → nube; cierre de caja → aviso en Inicio del móvil.
 **Pendiente en esta fase:**
 - Probar la app en un emulador o teléfono (no se ejecutó en el entorno de desarrollo) y
   pulir la UI; el escáner con cámara necesita un dispositivo real.
-- ~~Provisionar Supabase y publicar la nube~~: hecho 2026-10-26. La nube corre en Fly.io
-  (`https://almacen-pos-nube.fly.dev`, ADR-018, [`NUBE.md`](NUBE.md)) sobre Supabase
+- ~~Provisionar Supabase y publicar la nube~~: hecho 2026-10-26. La nube corre en Render gratis desde 2026-10-30
+  (`https://almacen-pos-nube.onrender.com`, ADR-023; antes Fly.io, ADR-018, [`NUBE.md`](NUBE.md)) sobre Supabase
   `sa-east-1`. El respaldo en Storage está activo con la `service_role` legacy; la nube ya acepta
-  la secret key nueva (`SUPABASE_SECRET_KEY`, `sb_secret_…`). Mientras la cuenta de Fly siga en
-  *trial* (sin tarjeta), la máquina se detiene a los 5 min y no está siempre encendida.
+  la secret key nueva (`SUPABASE_SECRET_KEY`, `sb_secret_…`). La prueba de Fly
+  terminó el 2026-10-30 y la nube pasó a Render gratis: se duerme tras 15 min sin uso y la app
+  del dueño espera a que despierte.
 - App del dueño instalable: EAS Build configurado (APK `preview`, TestFlight `production`,
   [`APP_DUENO.md`](APP_DUENO.md)); falta instalar el APK y probar la vinculación con la caja.
 - ~~Fiado / cuenta corriente~~: hecho 2026-10-30 (ADR-022): venta fiada con límite, abonos,
@@ -218,8 +219,8 @@ renombrado a `almacen-node`, `better-sqlite3` solo con el binario del target y s
 - Guía operativa en [`ACTIVAR_RESPALDO_NUBE.md`](ACTIVAR_RESPALDO_NUBE.md).
 
 **Pendiente de la Fase 6:**
-- Agregar tarjeta en Fly: la cuenta está en trial y la máquina se detiene a los 5 minutos;
-  `auto_start` la despierta con la primera petición, pero hoy **no** es always-on.
+- Nube siempre encendida (opcional): Render gratis se duerme sin uso (ADR-023). Si molesta la
+  espera de ~1 min, pasar a un plan pagado (Render o Fly con tarjeta); solo cambia la dirección.
 - Rotar `SUPABASE_SERVICE_ROLE_KEY` a la secret key nueva `SUPABASE_SECRET_KEY` cuando se cree
   en el panel de Supabase.
 - Instalar y probar el `.exe` en un PC Windows real (sidecar, semilla, impresora USB).

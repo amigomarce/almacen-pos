@@ -9,7 +9,7 @@ Almacen-POS-0.1.0-macOS-AppleSilicon.dmg
 Si falta (por ejemplo, en un clon nuevo del repositorio), se genera desde la raíz del proyecto:
 
 ```bash
-ALMACEN_CLOUD_URL=https://almacen-pos-nube.fly.dev ALMACEN_CONTACTO=arrayan.labs@gmail.com \
+ALMACEN_CLOUD_URL=https://almacen-pos-nube.onrender.com ALMACEN_CONTACTO=arrayan.labs@gmail.com \
   pnpm --filter @almacen/pos tauri build --bundles app
 
 APP="apps/pos/src-tauri/target/release/bundle/macos/Almacén POS.app"
@@ -30,5 +30,5 @@ xattr -dr com.apple.quarantine "/Applications/Almacén POS.app"
 SHA-256 esperado del DMG de esta entrega:
 
 ```text
-6a87b8bf293cda2962eb6c2a368422c24887491a71fa1f0fd2c817127c555590
+b0a4503ad121508af8d315bad0f44777be5f96aafd19eeb74e5e004e7902bb2e
 ```
