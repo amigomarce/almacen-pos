@@ -221,8 +221,8 @@ renombrado a `almacen-node`, `better-sqlite3` solo con el binario del target y s
 **Pendiente de la Fase 6:**
 - Nube siempre encendida (opcional): Render gratis se duerme sin uso (ADR-023). Si molesta la
   espera de ~1 min, pasar a un plan pagado (Render o Fly con tarjeta); solo cambia la dirección.
-- Rotar `SUPABASE_SERVICE_ROLE_KEY` a la secret key nueva `SUPABASE_SECRET_KEY` cuando se cree
-  en el panel de Supabase.
+- Rotar `SUPABASE_SERVICE_ROLE_KEY` a la secret key nueva `SUPABASE_SECRET_KEY`: ahora es parte
+  de la rotación completa de secretos (ver «Estado al 2026-11-02 — revisión de seguridad»).
 - Instalar y probar el `.exe` en un PC Windows real (sidecar, semilla, impresora USB).
 - Instalar y probar el `.deb` en el equipo con Zorin OS Lite (RAM, escáner, impresora térmica,
   atajos de XFCE quitados).
@@ -244,6 +244,50 @@ renombrado a `almacen-node`, `better-sqlite3` solo con el binario del target y s
 
 Pendiente: desplegar la nube y generar un APK nuevo para ver Reportes en el celular; probar
 los flejes en la impresora real; definir con el SII la nota de crédito parcial (§6).
+
+### Estado al 2026-11-02 — revisión de seguridad (claves y RLS)
+
+**Revisado, sin problemas:**
+- El repositorio `amigomarce/almacen-pos` es **público**, pero ninguno de sus 155 commits
+  contiene claves, JWT, `sb_secret_…` ni contraseñas reales (solo marcadores como
+  `sb_secret_...` o `<password>`). Ningún `.env` se ha subido nunca a Git; `.gitignore` correcto.
+- `render.yaml` y `apps/cloud/fly.toml` solo nombran las variables; los valores viven en los
+  paneles de Render y Fly.
+- La app del dueño solo lleva la clave `anon` (pública por diseño) y la usa solo para
+  Supabase Auth; los datos pasan por `apps/cloud`.
+
+**Pendiente — prioridad alta:**
+1. **Activar RLS en las tablas de la nube.** Las 12 tablas de `apps/cloud/src/db/schema.ts`
+   están en el esquema `public` de Supabase y ninguna migración activa RLS. Si la Data API de
+   Supabase está activa, cualquiera que extraiga la clave `anon` del APK podría leer o
+   modificar ventas, productos y fiado por `/rest/v1/` sin pasar por la nube.
+   - Confirmar primero en Supabase → *Advisors → Security Advisor* ("RLS disabled in public").
+   - Solución: migración `0005` con `ALTER TABLE … ENABLE ROW LEVEL SECURITY` en las 12 tablas,
+     sin políticas. `apps/cloud` se conecta como `postgres` (dueño de las tablas), así que no
+     se ve afectado. Probar después sincronización de la caja, app del dueño y respaldos.
+2. **Rotar los secretos de la nube.** El `.env` local (contraseña de `CLOUD_DATABASE_URL` y
+   `SUPABASE_JWT_SECRET`) y la `service_role` pasaron por sesiones de asistentes de IA en la
+   nube: se tratan como expuestos. El JWT secret es el más delicado (permite fabricar una
+   `service_role`). Orden:
+   - **Supabase:** crear las claves nuevas (`sb_publishable_…` y `sb_secret_…`), resetear la
+     contraseña de la base y rotar el JWT secret (invalida la `anon` y la `service_role` legacy).
+   - **Render** (en uso, ADR-023): actualizar `CLOUD_DATABASE_URL`, `SUPABASE_JWT_SECRET` y
+     `SUPABASE_SECRET_KEY`; quitar `SUPABASE_SERVICE_ROLE_KEY` (el código ya prioriza la
+     secret key nueva) y redesplegar.
+   - **App del dueño:** clave pública nueva en `EXPO_PUBLIC_SUPABASE_ANON_KEY` (`apps/mobile/.env`
+     y EAS) y APK nuevo.
+   - **`.env` local:** actualizarlo a mano.
+   - **Probar:** login del dueño, sincronización de la caja y respaldo en Storage.
+   - Hacerlo desde la terminal propia, sin pegar los valores nuevos en un asistente de IA.
+3. **Limpiar Fly.io.** La app `almacen-pos-nube` está detenida (ADR-023) pero conserva los
+   secretos antiguos: `fly secrets unset` de todos, o eliminar la app si no se volverá a usar.
+
+**Pendiente — recomendado:**
+- Impedir que Claude Code lea los `.env` con reglas `permissions.deny` en
+  `.claude/settings.json` (`Read(./.env)`, `Read(./apps/mobile/.env)`). No cubre comandos de
+  terminal como `cat`, así que es una barrera, no una garantía.
+- Evaluar dejar **privado** el repositorio: no tiene secretos, pero es el código de un negocio
+  y expone la arquitectura y los nombres de los servicios.
 
 ## Mejoras futuras (backlog)
 
